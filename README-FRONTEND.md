@@ -1,14 +1,15 @@
-# PSPG Requisitions - Frontend Setup
+# PSP Group Jobs - Frontend Setup
 
 ## 🚀 Estado Actual del Proyecto
 
-El frontend de la aplicación PSPG Requisitions ha sido creado exitosamente con NextJS y está listo para desarrollo.
+El frontend de la aplicación PSP Group Jobs ha sido creado exitosamente con NextJS y está listo para desarrollo.
 
 ### ✅ Componentes Implementados
 
 - **Estructura NextJS 14** con App Router
 - **Tailwind CSS** para estilos
 - **TypeScript** para tipado estático
+- **Pantalla de Inicio de Sesión** con formulario de correo electrónico y contraseña
 - **Formulario de Requisición Completo** basado en la imagen proporcionada
 
 ### 📋 Formulario Implementado
@@ -66,7 +67,7 @@ El formulario está preparado para conectarse con un backend futuro:
 
 ## 🎨 Diseño
 
-- Colores corporativos con tonos teal/verde azulado
+- **Colores de Marca**: #00253F (azul oscuro) y #FF1556 (rosa/rojo)
 - Diseño responsive
 - Interfaz limpia y profesional
 - Formulario organizado por secciones como en la imagen original
