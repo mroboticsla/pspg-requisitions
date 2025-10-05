@@ -97,7 +97,7 @@ export default function RequisitionForm() {
     <div className="max-w-4xl mx-auto">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         {/* Header with instructions */}
-        <div className="bg-teal-800 text-white p-4">
+        <div className="bg-brand-dark text-white p-4">
           <h2 className="text-lg font-bold text-center">INSTRUCCIONES</h2>
           <p className="text-sm text-center mt-1">
             Recuerde realizar su requisición de personal con <strong>mínimo 15 días hábiles de ANTICIPACIÓN</strong> a la fecha de inicio de labores solicitadas.
@@ -612,13 +612,13 @@ export default function RequisitionForm() {
           <div className="flex justify-end space-x-4 pt-6">
             <button
               type="button"
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent"
             >
               Guardar como Borrador
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="px-6 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent"
             >
               Enviar Requisición
             </button>

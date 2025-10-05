@@ -20,7 +20,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="bg-surface-primary p-8 rounded-xl shadow-lg border border-neutral-200">
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-brand-accent to-brand-dark rounded-xl flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-brand-dark rounded-xl flex items-center justify-center mx-auto mb-4">
                 <span className="text-white font-bold text-2xl">PSP</span>
               </div>
               <h1 className="text-2xl font-bold text-neutral-800 mb-2">Bienvenido de vuelta</h1>
@@ -65,7 +65,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-gradient-to-r from-brand-accent to-brand-dark hover:from-brand-dark hover:to-brand-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">Iniciar Sesión</button>
+              <button type="submit" className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-brand-dark hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">Iniciar Sesión</button>
             </form>
 
             <div className="mt-8 text-center">

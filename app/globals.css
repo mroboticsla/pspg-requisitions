@@ -32,7 +32,7 @@ body {
 }
 
 .form-section-header {
-  @apply bg-teal-700 text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide;
+  @apply bg-brand-dark text-white px-4 py-2 font-semibold text-sm uppercase tracking-wide;
 }
 
 .form-section-content {
@@ -48,7 +48,7 @@ body {
 }
 
 .checkbox-item input[type="checkbox"] {
-  @apply h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded;
+  @apply h-4 w-4 text-brand-accent focus:ring-brand-accent border-gray-300 rounded;
 }
 
 .checkbox-item label {
@@ -56,9 +56,9 @@ body {
 }
 
 .form-input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500;
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-accent focus:border-brand-accent;
 }
 
 .form-textarea {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 resize-y;
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-accent focus:border-brand-accent resize-y;
 }

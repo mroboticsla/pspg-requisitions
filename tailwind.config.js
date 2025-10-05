@@ -22,6 +22,7 @@ module.exports = {
         brand: {
           dark: '#00253F',
           accent: '#FF1556',
+          accentDark: '#E8134E',
         },
         neutral: {
           25: '#fcfcfd',
