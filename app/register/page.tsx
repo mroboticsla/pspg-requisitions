@@ -18,8 +18,17 @@ export default function RegisterPage() {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
+
+      // Crear perfil en public.profiles con role 'viewer' si existe
+      const userId = (data?.user as any)?.id || (data as any)?.id
+      if (userId) {
+        // buscar role viewer
+        const { data: roleData } = await supabase.from('roles').select('id').eq('name', 'viewer').limit(1).single()
+        const roleId = (roleData as any)?.id ?? null
+        await supabase.from('profiles').insert({ id: userId, first_name: null, last_name: null, phone: null, is_active: true, role_id: roleId })
+      }
+
       setMessage('Revisa tu correo para verificar tu cuenta (si aplica).')
-      // opcional: redirigir al login
       setTimeout(() => router.push('/login'), 1500)
     } catch (err: any) {
       setMessage(err.message || 'Error en el registro')
