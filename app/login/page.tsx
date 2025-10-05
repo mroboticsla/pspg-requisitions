@@ -2,17 +2,38 @@
 
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
+import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Aquí iría la lógica de autenticación
-    console.log("Login attempt:", { email, password });
-  };
+    setErrorMsg(null)
+    setLoading(true)
+    try {
+      const result = await supabase.auth.signInWithPassword({ email, password })
+      if (result.error) {
+        setErrorMsg(result.error.message)
+        setLoading(false)
+        return
+      }
+      // Inicio de sesión correcto
+      // Puedes redirigir a la página principal o dashboard
+      router.push('/request')
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Error en autenticación')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-full bg-surface-secondary">
@@ -100,10 +121,16 @@ export default function LoginPage() {
                 </div>
               </div>
 
+              {errorMsg && (
+                <p className="text-sm text-red-600 mb-2">{errorMsg}</p>
+              )}
+
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-brand-dark hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]">
-                Iniciar Sesión
+                disabled={loading}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-brand-dark hover:bg-brand-accent'} `}
+              >
+                {loading ? 'Iniciando...' : 'Iniciar Sesión'}
               </button>
             </form>
 
