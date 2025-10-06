@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from '../providers/AuthProvider'
 
 interface HeaderProps {
@@ -14,6 +14,7 @@ export default function Header({ showNavigation }: HeaderProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, profile, loading, signOut } = useAuth()
+  const router = useRouter();
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
   const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/login");
 
@@ -83,7 +84,7 @@ export default function Header({ showNavigation }: HeaderProps) {
               <>
                 <span className="text-xs sm:text-sm text-gray-700 hidden lg:inline truncate max-w-[120px] sm:max-w-none">{user.email}</span>
                 <button
-                  onClick={() => signOut()}
+                  onClick={async () => { await signOut(); router.push('/auth'); }}
                   className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md text-gray-700 hover:bg-gray-100 whitespace-nowrap"
                 >
                   Cerrar sesión
