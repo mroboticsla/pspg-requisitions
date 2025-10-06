@@ -59,18 +59,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     load()
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
-      // Si no hay sesión (logout), evitamos llamar a getFullUserData
-      if (!session) {
+      
+      // Log del evento en desarrollo para debug
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('Auth state change:', event, session ? 'session exists' : 'no session')
+      }
+
+      // Si no hay sesión (logout, token expirado, etc.), limpiar el estado
+      if (!session || event === 'SIGNED_OUT') {
         setUser(null)
         setProfile(null)
         setLoading(false)
         return
       }
 
-      // refrescar datos completos cuando cambia el estado de auth y hay sesión
-      await load()
+      // Para eventos de token refresh o sign in, recargar los datos del usuario
+      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        await load()
+      }
     })
 
     return () => {

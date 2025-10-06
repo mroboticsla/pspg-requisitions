@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../providers/AuthProvider'
 
@@ -9,6 +10,7 @@ type RoleRow = { id: string, name: string, permissions?: any }
 
 export default function AdminPage() {
   const { user, profile, loading } = useAuth()
+  const router = useRouter()
   const [users, setUsers] = useState<ProfileRow[]>([])
   const [roles, setRoles] = useState<RoleRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -18,6 +20,20 @@ export default function AdminPage() {
     const roleName = (profile as any)?.roles?.name
     return ['admin', 'superadmin'].includes(roleName)
   }
+
+  // Timeout de seguridad: Si loading se queda en true por más de 10 segundos, redirigir al login
+  useEffect(() => {
+    if (!loading) return
+
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('Timeout de verificación de sesión alcanzado, redirigiendo al login')
+        router.replace('/login')
+      }
+    }, 10000) // 10 segundos
+
+    return () => clearTimeout(timeoutId)
+  }, [loading, router])
 
   useEffect(() => {
     if (loading) return // Esperar a que termine de cargar

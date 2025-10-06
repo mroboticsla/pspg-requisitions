@@ -35,15 +35,18 @@ export async function getFullUserData() {
       msg.includes('User from sub claim in JWT does not exist') || 
       err?.status === 403 ||
       msg.includes('JWT expired') ||
-      msg.includes('Invalid token')
+      msg.includes('Invalid token') ||
+      msg.includes('Auth session missing') ||
+      msg.includes('refresh_token_not_found')
     
     if (isExpectedError) {
       // Solo mostrar en modo debug para no llenar la consola
       if (process.env.NODE_ENV === 'development') {
         console.debug('getFullUserData: sesión inválida o expirada, limpiando estado de auth')
       }
-      // Limpiar la sesión local si está corrupta
-      supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+      // Limpiar la sesión completamente (no solo local) para disparar el evento onAuthStateChange
+      // Esto asegura que la aplicación actualice su estado correctamente
+      await supabase.auth.signOut().catch(() => {})
       return null
     }
 
