@@ -28,15 +28,15 @@ export default function Header({ showNavigation }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center py-3 sm:py-4">
           {/* Logo y título */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-3">
-              <img src="/images/favicon.png" alt="PSP logo" className="w-10 h-10 rounded-lg object-cover" />
-              <div>
-                <h1 className="text-xl sm:text-xl font-bold text-gray-900">PSP Group</h1>
-                <p className="text-xs sm:text-sm text-gray-500">Sistema de Requisiciones</p>
+          <div className="flex items-center min-w-0 flex-1">
+            <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <img src="/images/favicon.png" alt="PSP logo" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0" />
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">PSP Group</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Sistema de Requisiciones</p>
               </div>
             </Link>
           </div>
@@ -76,21 +76,25 @@ export default function Header({ showNavigation }: HeaderProps) {
           )}
 
           {/* Estado de usuario / acciones */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
             {!loading && user ? (
               <>
-                <span className="text-sm text-gray-700">{user.email}</span>
+                <span className="text-xs sm:text-sm text-gray-700 hidden lg:inline truncate max-w-[120px] sm:max-w-none">{user.email}</span>
                 <button
                   onClick={() => signOut()}
-                  className="text-sm px-3 py-1 border rounded-md text-gray-700 hover:bg-gray-100"
+                  className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md text-gray-700 hover:bg-gray-100 whitespace-nowrap"
                 >
                   Cerrar sesión
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" className="text-sm text-brand-accent font-medium">Iniciar sesión</Link>
-                <Link href="/register" className="text-sm text-gray-700">Registrarse</Link>
+                <Link href="/auth" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 bg-brand-dark text-white rounded-md font-medium hover:bg-brand-accent transition-colors whitespace-nowrap">
+                  Iniciar sesión
+                </Link>
+                <Link href="/auth?mode=register" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 border border-brand-accent text-brand-accent rounded-md font-medium hover:bg-brand-accent hover:text-white transition-colors whitespace-nowrap hidden sm:inline-block">
+                  Registrarse
+                </Link>
               </>
             )}
             {/* Botón de menú móvil */}
@@ -102,7 +106,7 @@ export default function Header({ showNavigation }: HeaderProps) {
                   aria-expanded="false">
                   <span className="sr-only">Abrir menú principal</span>
                   <svg
-                    className={`${isMobileMenuOpen ? "hidden" : "block"} h-6 w-6`}
+                    className={`${isMobileMenuOpen ? "hidden" : "block"} h-5 w-5 sm:h-6 sm:w-6`}
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -110,7 +114,7 @@ export default function Header({ showNavigation }: HeaderProps) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                   </svg>
                   <svg
-                    className={`${isMobileMenuOpen ? "block" : "hidden"} h-6 w-6`}
+                    className={`${isMobileMenuOpen ? "block" : "hidden"} h-5 w-5 sm:h-6 sm:w-6`}
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -125,12 +129,12 @@ export default function Header({ showNavigation }: HeaderProps) {
 
         {/* Menú móvil */}
         {resolvedShowNavigation && isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 pt-4 pb-3">
-            <div className="space-y-1">
+          <div className="md:hidden border-t border-gray-200 py-3 bg-surface-secondary">
+            <div className="space-y-1 px-2">
               {canAccess('dashboard') && (
                 <Link
                   href="/dashboard"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}>
                   Dashboard
                 </Link>
@@ -138,7 +142,7 @@ export default function Header({ showNavigation }: HeaderProps) {
               {canAccess('requisitions') && (
                 <Link
                   href="/requisitions"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}>
                   Requisiciones
                 </Link>
@@ -146,7 +150,7 @@ export default function Header({ showNavigation }: HeaderProps) {
               {canAccess('reports') && (
                 <Link
                   href="/reports"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}>
                   Reportes
                 </Link>
@@ -154,7 +158,7 @@ export default function Header({ showNavigation }: HeaderProps) {
               {canAccess('profile') && (
                 <Link
                   href="/profile"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}>
                   Perfil
                 </Link>

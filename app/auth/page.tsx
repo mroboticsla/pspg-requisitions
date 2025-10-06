@@ -1,0 +1,439 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { Mail, Lock, Eye, EyeOff, Phone } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "../providers/AuthProvider";
+import AuthTabSwitch from "../components/AuthTabSwitch";
+
+export default function AuthPage() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("mode") === "register" ? "register" : "login";
+  
+  const [activeTab, setActiveTab] = useState<"login" | "register">(initialTab);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState("+52");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const router = useRouter();
+  const { profile, loading } = useAuth();
+
+  // Actualizar el tab activo cuando cambien los parámetros de URL
+  useEffect(() => {
+    const mode = searchParams.get("mode");
+    if (mode === "register") {
+      setActiveTab("register");
+    } else {
+      setActiveTab("login");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!loading && profile?.role?.name) {
+      const roleName = String(profile.role.name).toLowerCase();
+      if (roleName === "admin" || roleName === "superadmin") {
+        router.replace("/admin");
+      }
+    }
+  }, [loading, profile, router]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    setFormLoading(true);
+    try {
+      const result = await supabase.auth.signInWithPassword({ email, password });
+      if (result.error) {
+        setErrorMsg(result.error.message);
+        setFormLoading(false);
+        return;
+      }
+      router.push("/request");
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? "Error en autenticación");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormLoading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const digits = phoneNumber.replace(/\D/g, "");
+      if ((phoneCountry === "+52" || phoneCountry === "+1") && digits.length !== 10) {
+        setErrorMsg("El número de teléfono debe tener 10 dígitos para el código seleccionado.");
+        setFormLoading(false);
+        return;
+      }
+
+      const phone = `${phoneCountry}${digits}`.trim();
+
+      const { data: existingPhone, error: phoneError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("phone", phone)
+        .limit(1);
+
+      if (phoneError) {
+        console.error("Error verificando teléfono:", phoneError);
+        setErrorMsg("Error al verificar el teléfono. Inténtalo de nuevo.");
+        setFormLoading(false);
+        return;
+      }
+
+      if (existingPhone && existingPhone.length > 0) {
+        setErrorMsg("El número de teléfono ya está registrado.");
+        setFormLoading(false);
+        return;
+      }
+
+      const userMetadata = { first_name: firstName, last_name: lastName, phone };
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: userMetadata },
+      });
+      if (error) throw error;
+
+      const userId = (data?.user as any)?.id || (data as any)?.id;
+      if (userId) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 7000);
+
+          const res = await fetch("/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, first_name: firstName, last_name: lastName, phone }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+
+          const resJson = await res.json();
+          if (!res.ok) {
+            console.error("Profile creation failed", resJson);
+            const errorMsg = resJson.error || "Error desconocido al crear el perfil";
+            throw new Error(
+              `Error al crear perfil: ${errorMsg}. Detalles: ${JSON.stringify(resJson.details || {})}`
+            );
+          }
+
+          console.log("Profile created successfully", resJson);
+        } catch (e: any) {
+          if (e.name === "AbortError") {
+            console.error("Profile creation request aborted (timeout)");
+            throw new Error(
+              "La creación del perfil tardó demasiado. Por favor, intenta nuevamente o contacta a soporte."
+            );
+          } else {
+            console.error("Failed to create profile via API", e);
+            throw new Error(
+              e.message || "No se pudo crear el perfil automáticamente. Por favor contacta a soporte."
+            );
+          }
+        }
+      } else {
+        throw new Error("No se pudo obtener el ID del usuario creado");
+      }
+
+      setSuccessMsg("Cuenta registrada exitosamente.");
+      setTimeout(() => {
+        setActiveTab("login");
+        setSuccessMsg(null);
+      }, 1500);
+    } catch (err: any) {
+      if (err.message && err.message.toLowerCase().includes("already registered")) {
+        setErrorMsg("El correo electrónico ya está registrado.");
+      } else {
+        setErrorMsg(err.message || "Error en el registro");
+      }
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-surface-secondary flex items-center justify-center px-4 py-8 sm:py-12">
+      <div className="w-full max-w-md sm:max-w-lg space-y-6">
+        {/* Logo y título */}
+        <div className="text-center">
+          <div className="h-16 flex items-center justify-center mx-auto mb-4">
+            <img
+              src="/images/logo-web-dark.png"
+              alt="PSP logo"
+              className="h-12 rounded-lg object-cover"
+            />
+          </div>
+        </div>
+
+        {/* Control de pestañas flotante */}
+        <AuthTabSwitch activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {/* Contenedor del formulario */}
+        <div className="bg-surface-primary p-6 sm:p-8 rounded-xl shadow-lg border border-neutral-200">
+          {/* Formulario de Login */}
+          {activeTab === "login" && (
+            <form onSubmit={handleLoginSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="email" className="block text-sm font-semibold text-neutral-700 mb-2">
+                  Correo Electrónico
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                  </span>
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                    placeholder="tu@email.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-neutral-700 mb-2">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                  </span>
+
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                    placeholder="••••••••"
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
+                  >
+                    {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Sección "Recordarme" y "Olvidaste tu contraseña" optimizada para móvil */}
+              <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-brand-accent focus:ring-brand-accent border-neutral-300 rounded"
+                  />
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-neutral-600">
+                    Recordarme
+                  </label>
+                </div>
+
+                <div className="text-sm">
+                  <a
+                    href="/forgot-password"
+                    className="font-medium text-brand-accent hover:text-brand-dark transition-colors"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </a>
+                </div>
+              </div>
+
+              {errorMsg && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-300">
+                  <p className="text-sm text-red-800">{errorMsg}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={formLoading}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${
+                  formLoading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-brand-dark hover:bg-brand-accent hover:scale-[1.02]"
+                } `}
+              >
+                {formLoading ? "Iniciando..." : "Iniciar Sesión"}
+              </button>
+            </form>
+          )}
+
+          {/* Formulario de Registro */}
+          {activeTab === "register" && (
+            <form onSubmit={handleRegisterSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-semibold text-neutral-700 mb-2">
+                    Nombre
+                  </label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                    placeholder="Nombre"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-semibold text-neutral-700 mb-2">
+                    Apellido
+                  </label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                    placeholder="Apellido"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="email-register" className="block text-sm font-semibold text-neutral-700 mb-2">
+                  Correo Electrónico
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                  </span>
+                  <input
+                    type="email"
+                    id="email-register"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                    placeholder="tu@email.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-neutral-700 mb-2">Teléfono</label>
+                <div className="flex items-stretch border border-neutral-300 rounded-lg overflow-hidden bg-surface-secondary focus-within:ring-2 focus-within:ring-brand-accent">
+                  <select
+                    value={phoneCountry}
+                    onChange={(e) => setPhoneCountry(e.target.value)}
+                    className="px-3 py-3 bg-surface-secondary text-brand-dark border-none outline-none text-sm"
+                    aria-label="Código de país"
+                  >
+                    <option value="+52">MX +52</option>
+                    <option value="+1">US +1</option>
+                  </select>
+
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    required
+                    placeholder="1234567890"
+                    className="flex-1 px-4 py-3 bg-surface-secondary text-brand-dark border-none focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="password-register" className="block text-sm font-semibold text-neutral-700 mb-2">
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                  </span>
+
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password-register"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                    placeholder="••••••••"
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
+                  >
+                    {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {errorMsg && (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-300">
+                  <p className="text-sm text-red-800">{errorMsg}</p>
+                </div>
+              )}
+
+              {successMsg && (
+                <div className="p-3 rounded-lg bg-green-50 border border-green-300">
+                  <p className="text-sm text-green-800">{successMsg}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={formLoading}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${
+                  formLoading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-brand-accent hover:bg-brand-dark hover:scale-[1.02]"
+                } `}
+              >
+                {formLoading ? "Creando..." : "Crear cuenta"}
+              </button>
+            </form>
+          )}
+
+          {/* Footer del formulario */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-neutral-500">© 2025 PSP Group. Todos los derechos reservados.</p>
+          </div>
+        </div>
+
+        {/* Información adicional */}
+        <div className="text-center">
+          <p className="text-sm text-neutral-600">
+            ¿Necesitas ayuda?{" "}
+            <a
+              href="#"
+              className="font-medium text-brand-accent hover:text-brand-dark transition-colors"
+            >
+              Contacta soporte técnico
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
