@@ -149,3 +149,22 @@ USING (true);
 -- la clave de administrador (service_role_key) en un entorno seguro (backend).
 -- Esta es la práctica recomendada para proteger la estructura de roles.
 ```
+
+## Actualización para usuarios de servicio en Supabase
+
+```
+-- Ver políticas actuales
+SELECT * FROM pg_policies WHERE tablename = 'profiles';
+
+-- Crear política para que usuarios vean su perfil
+CREATE POLICY "Users can view own profile"
+ON profiles FOR SELECT
+TO authenticated
+USING (auth.uid() = id);
+
+-- Crear política para que service role pueda insertar
+CREATE POLICY "Service role can insert profiles"
+ON profiles FOR INSERT
+TO service_role
+WITH CHECK (true);
+```

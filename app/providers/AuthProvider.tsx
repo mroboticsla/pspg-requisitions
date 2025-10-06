@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
+import getFullUserData from '../../lib/getFullUserData'
 
 type Role = {
   id: string
@@ -41,63 +42,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true
 
     const load = async () => {
-      const { data } = await supabase.auth.getUser()
+      setLoading(true)
+      const full = await getFullUserData()
       if (!mounted) return
-      const currentUser = data?.user ? { id: data.user.id, email: data.user.email } : null
-      setUser(currentUser)
-
-      if (currentUser) {
-        // cargar profile y role (incluye permissions)
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone, is_active, role_id, roles(id, name, permissions)')
-          .eq('id', currentUser.id)
-          .single()
-
-        if (!mounted) return
-        if (profileData) {
-          // Supabase puede devolver la relación como array cuando se usa select sobre una FK
-          const rolesField = (profileData as any).roles
-          const roleObj = Array.isArray(rolesField) ? rolesField[0] : rolesField
-          const role = roleObj ? { id: roleObj.id, name: roleObj.name, permissions: roleObj.permissions } : null
-          setProfile({ id: profileData.id, first_name: profileData.first_name, last_name: profileData.last_name, phone: profileData.phone, is_active: profileData.is_active, role })
-        } else {
-          setProfile(null)
-        }
-      } else {
+      if (!full) {
+        setUser(null)
         setProfile(null)
+      } else {
+        // full contains user fields + profile under `profile`
+        const u = { id: (full as any).id, email: (full as any).email }
+        setUser(u)
+        setProfile((full as any).profile)
       }
-
       setLoading(false)
     }
 
     load()
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return
-      if (session?.user) {
-        const u = { id: session.user.id, email: session.user.email }
-        setUser(u)
-        // cargar profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone, is_active, role_id, roles(id, name, permissions)')
-          .eq('id', u.id)
-          .single()
-
-        if (!mounted) return
-        if (profileData) {
-          const rolesField = (profileData as any).roles
-          const roleObj = Array.isArray(rolesField) ? rolesField[0] : rolesField
-          const role = roleObj ? { id: roleObj.id, name: roleObj.name, permissions: roleObj.permissions } : null
-          setProfile({ id: profileData.id, first_name: profileData.first_name, last_name: profileData.last_name, phone: profileData.phone, is_active: profileData.is_active, role })
-        } else {
-          setProfile(null)
-        }
-      } else {
+      // Si no hay sesión (logout), evitamos llamar a getFullUserData
+      if (!session) {
         setUser(null)
         setProfile(null)
+        setLoading(false)
+        return
       }
+
+      // refrescar datos completos cuando cambia el estado de auth y hay sesión
+      await load()
     })
 
     return () => {

@@ -1,28 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from 'next/navigation'
+import { useAuth } from '../providers/AuthProvider'
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const router = useRouter()
+  const { profile, loading } = useAuth()
+
+  useEffect(() => {
+    // Si ya cargó el estado de auth y existe un role, redirigir a /admin
+    if (!loading && profile?.role?.name) {
+      const roleName = String(profile.role.name).toLowerCase()
+      if (roleName === 'admin' || roleName === 'superadmin') {
+        router.replace('/admin')
+      }
+    }
+  }, [loading, profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null)
-    setLoading(true)
+  setErrorMsg(null)
+  setFormLoading(true)
     try {
       const result = await supabase.auth.signInWithPassword({ email, password })
       if (result.error) {
         setErrorMsg(result.error.message)
-        setLoading(false)
+        setFormLoading(false)
         return
       }
       // Inicio de sesión correcto
@@ -31,7 +43,7 @@ export default function LoginPage() {
     } catch (err: any) {
       setErrorMsg(err?.message ?? 'Error en autenticación')
     } finally {
-      setLoading(false)
+      setFormLoading(false)
     }
   }
 
@@ -127,10 +139,10 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading}
-                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-brand-dark hover:bg-brand-accent'} `}
+                disabled={formLoading}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${formLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-brand-dark hover:bg-brand-accent'} `}
               >
-                {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+                {formLoading ? 'Iniciando...' : 'Iniciar Sesión'}
               </button>
             </form>
 
