@@ -16,7 +16,7 @@ export async function getFullUserData() {
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('*, roles(*)')
       .eq('id', user.id)
       .single()
 

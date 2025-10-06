@@ -16,7 +16,7 @@ type Profile = {
   last_name?: string | null
   phone?: string | null
   is_active?: boolean
-  role?: Role | null
+  roles?: Role | null
 }
 
 type User = {

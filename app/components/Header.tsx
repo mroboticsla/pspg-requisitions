@@ -20,7 +20,7 @@ export default function Header({ showNavigation }: HeaderProps) {
   if (pathname?.startsWith("/auth")) return null;
 
   const canAccess = (moduleName: string) => {
-    const role = (profile as any)?.role
+    const role = (profile as any)?.roles
     if (!role) return false
     const modules = role.permissions?.modules
     if (!modules) return false

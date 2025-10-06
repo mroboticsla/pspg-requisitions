@@ -15,7 +15,7 @@ export default function AdminPage() {
   const [loadingData, setLoadingData] = useState(false)
 
   const isAllowed = () => {
-    const roleName = (profile as any)?.role?.name
+    const roleName = (profile as any)?.roles?.name
     return ['admin', 'superadmin'].includes(roleName)
   }
 

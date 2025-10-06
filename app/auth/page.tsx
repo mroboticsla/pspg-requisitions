@@ -10,7 +10,7 @@ import AuthTabSwitch from "../components/AuthTabSwitch";
 export default function AuthPage() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("mode") === "register" ? "register" : "login";
-  
+
   const [activeTab, setActiveTab] = useState<"login" | "register">(initialTab);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,10 +37,12 @@ export default function AuthPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!loading && profile?.role?.name) {
-      const roleName = String(profile.role.name).toLowerCase();
+    if (!loading && profile?.roles?.name) {
+      const roleName = String(profile.roles.name).toLowerCase();
       if (roleName === "admin" || roleName === "superadmin") {
         router.replace("/admin");
+      } else {
+        router.replace("/request");
       }
     }
   }, [loading, profile, router]);
@@ -79,11 +81,7 @@ export default function AuthPage() {
 
       const phone = `${phoneCountry}${digits}`.trim();
 
-      const { data: existingPhone, error: phoneError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("phone", phone)
-        .limit(1);
+      const { data: existingPhone, error: phoneError } = await supabase.from("profiles").select("id").eq("phone", phone).limit(1);
 
       if (phoneError) {
         console.error("Error verificando teléfono:", phoneError);
@@ -125,23 +123,17 @@ export default function AuthPage() {
           if (!res.ok) {
             console.error("Profile creation failed", resJson);
             const errorMsg = resJson.error || "Error desconocido al crear el perfil";
-            throw new Error(
-              `Error al crear perfil: ${errorMsg}. Detalles: ${JSON.stringify(resJson.details || {})}`
-            );
+            throw new Error(`Error al crear perfil: ${errorMsg}. Detalles: ${JSON.stringify(resJson.details || {})}`);
           }
 
           console.log("Profile created successfully", resJson);
         } catch (e: any) {
           if (e.name === "AbortError") {
             console.error("Profile creation request aborted (timeout)");
-            throw new Error(
-              "La creación del perfil tardó demasiado. Por favor, intenta nuevamente o contacta a soporte."
-            );
+            throw new Error("La creación del perfil tardó demasiado. Por favor, intenta nuevamente o contacta a soporte.");
           } else {
             console.error("Failed to create profile via API", e);
-            throw new Error(
-              e.message || "No se pudo crear el perfil automáticamente. Por favor contacta a soporte."
-            );
+            throw new Error(e.message || "No se pudo crear el perfil automáticamente. Por favor contacta a soporte.");
           }
         }
       } else {
@@ -170,11 +162,7 @@ export default function AuthPage() {
         {/* Logo y título */}
         <div className="text-center">
           <div className="h-16 flex items-center justify-center mx-auto mb-4">
-            <img
-              src="/images/logo-web-dark.png"
-              alt="PSP logo"
-              className="h-12 rounded-lg object-cover"
-            />
+            <img src="/images/logo-web-dark.png" alt="PSP logo" className="h-12 rounded-lg object-cover" />
           </div>
         </div>
 
@@ -229,8 +217,7 @@ export default function AuthPage() {
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
                     aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
-                  >
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none">
                     {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
                   </button>
                 </div>
@@ -238,23 +225,8 @@ export default function AuthPage() {
 
               {/* Sección "Recordarme" y "Olvidaste tu contraseña" optimizada para móvil */}
               <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-brand-accent focus:ring-brand-accent border-neutral-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-neutral-600">
-                    Recordarme
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <a
-                    href="/forgot-password"
-                    className="font-medium text-brand-accent hover:text-brand-dark transition-colors"
-                  >
+                <div className="text-sm w-full text-right">
+                  <a href="/forgot-password" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
                     ¿Olvidaste tu contraseña?
                   </a>
                 </div>
@@ -270,11 +242,8 @@ export default function AuthPage() {
                 type="submit"
                 disabled={formLoading}
                 className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${
-                  formLoading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-brand-dark hover:bg-brand-accent hover:scale-[1.02]"
-                } `}
-              >
+                  formLoading ? "bg-gray-400 cursor-not-allowed" : "bg-brand-dark hover:bg-brand-accent hover:scale-[1.02]"
+                } `}>
                 {formLoading ? "Iniciando..." : "Iniciar Sesión"}
               </button>
             </form>
@@ -342,8 +311,7 @@ export default function AuthPage() {
                     value={phoneCountry}
                     onChange={(e) => setPhoneCountry(e.target.value)}
                     className="px-3 py-3 bg-surface-secondary text-brand-dark border-none outline-none text-sm"
-                    aria-label="Código de país"
-                  >
+                    aria-label="Código de país">
                     <option value="+52">MX +52</option>
                     <option value="+1">US +1</option>
                   </select>
@@ -382,8 +350,7 @@ export default function AuthPage() {
                     type="button"
                     onClick={() => setShowPassword((s) => !s)}
                     aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
-                  >
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none">
                     {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
                   </button>
                 </div>
@@ -405,11 +372,8 @@ export default function AuthPage() {
                 type="submit"
                 disabled={formLoading}
                 className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${
-                  formLoading
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-brand-accent hover:bg-brand-dark hover:scale-[1.02]"
-                } `}
-              >
+                  formLoading ? "bg-gray-400 cursor-not-allowed" : "bg-brand-accent hover:bg-brand-dark hover:scale-[1.02]"
+                } `}>
                 {formLoading ? "Creando..." : "Crear cuenta"}
               </button>
             </form>
@@ -425,10 +389,7 @@ export default function AuthPage() {
         <div className="text-center">
           <p className="text-sm text-neutral-600">
             ¿Necesitas ayuda?{" "}
-            <a
-              href="#"
-              className="font-medium text-brand-accent hover:text-brand-dark transition-colors"
-            >
+            <a href="#" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
               Contacta soporte técnico
             </a>
           </p>
