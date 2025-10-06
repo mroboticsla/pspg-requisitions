@@ -7,7 +7,7 @@ import { AuthProvider } from './providers/AuthProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'PSPG Requisitions',
+  title: 'PSPG Requisiciones',
   description: 'Plataforma interna para la gestión y aprobación de requisiciones de nuevo personal para PSP Group',
 }
 
