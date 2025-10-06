@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient'
 type Role = {
   id: string
   name: string
+  permissions?: any
 }
 
 type Profile = {
@@ -46,10 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser)
 
       if (currentUser) {
-        // cargar profile y role
+        // cargar profile y role (incluye permissions)
         const { data: profileData, error } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, phone, is_active, role_id, roles(id, name)')
+          .select('id, first_name, last_name, phone, is_active, role_id, roles(id, name, permissions)')
           .eq('id', currentUser.id)
           .single()
 
@@ -58,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Supabase puede devolver la relación como array cuando se usa select sobre una FK
           const rolesField = (profileData as any).roles
           const roleObj = Array.isArray(rolesField) ? rolesField[0] : rolesField
-          const role = roleObj ? { id: roleObj.id, name: roleObj.name } : null
+          const role = roleObj ? { id: roleObj.id, name: roleObj.name, permissions: roleObj.permissions } : null
           setProfile({ id: profileData.id, first_name: profileData.first_name, last_name: profileData.last_name, phone: profileData.phone, is_active: profileData.is_active, role })
         } else {
           setProfile(null)
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // cargar profile
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, phone, is_active, role_id, roles(id, name)')
+          .select('id, first_name, last_name, phone, is_active, role_id, roles(id, name, permissions)')
           .eq('id', u.id)
           .single()
 
@@ -88,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profileData) {
           const rolesField = (profileData as any).roles
           const roleObj = Array.isArray(rolesField) ? rolesField[0] : rolesField
-          const role = roleObj ? { id: roleObj.id, name: roleObj.name } : null
+          const role = roleObj ? { id: roleObj.id, name: roleObj.name, permissions: roleObj.permissions } : null
           setProfile({ id: profileData.id, first_name: profileData.first_name, last_name: profileData.last_name, phone: profileData.phone, is_active: profileData.is_active, role })
         } else {
           setProfile(null)

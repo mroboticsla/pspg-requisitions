@@ -19,13 +19,10 @@ export default function RegisterPage() {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
 
-      // Crear perfil en public.profiles con role 'viewer' si existe
+      // Crear perfil mínimo en public.profiles; la DB (trigger) puede asignar role por defecto
       const userId = (data?.user as any)?.id || (data as any)?.id
       if (userId) {
-        // buscar role viewer
-        const { data: roleData } = await supabase.from('roles').select('id').eq('name', 'viewer').limit(1).single()
-        const roleId = (roleData as any)?.id ?? null
-        await supabase.from('profiles').insert({ id: userId, first_name: null, last_name: null, phone: null, is_active: true, role_id: roleId })
+        await supabase.from('profiles').insert({ id: userId, is_active: true })
       }
 
       setMessage('Revisa tu correo para verificar tu cuenta (si aplica).')

@@ -13,9 +13,18 @@ interface HeaderProps {
 export default function Header({ showNavigation }: HeaderProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, loading, signOut } = useAuth()
+  const { user, profile, loading, signOut } = useAuth()
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
   const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/login");
+
+  const canAccess = (moduleName: string) => {
+    const role = (profile as any)?.role
+    if (!role) return false
+    const modules = role.permissions?.modules
+    if (!modules) return false
+    // Si el módulo existe en permissions, permitimos el acceso (puedes afinar por acciones)
+    return Boolean(modules[moduleName])
+  }
 
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
@@ -35,26 +44,34 @@ export default function Header({ showNavigation }: HeaderProps) {
           {/* Navegación desktop */}
           {resolvedShowNavigation && (
             <nav className="hidden md:flex items-center space-x-6">
-              <Link
-                href="/dashboard"
-                className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                Dashboard
-              </Link>
-              <Link
-                href="/requisitions"
-                className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                Requisiciones
-              </Link>
-              <Link
-                href="/reports"
-                className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                Reportes
-              </Link>
-              <Link
-                href="/profile"
-                className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                Perfil
-              </Link>
+              {canAccess('dashboard') && (
+                <Link
+                  href="/dashboard"
+                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                  Dashboard
+                </Link>
+              )}
+              {canAccess('requisitions') && (
+                <Link
+                  href="/requisitions"
+                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                  Requisiciones
+                </Link>
+              )}
+              {canAccess('reports') && (
+                <Link
+                  href="/reports"
+                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                  Reportes
+                </Link>
+              )}
+              {canAccess('profile') && (
+                <Link
+                  href="/profile"
+                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
+                  Perfil
+                </Link>
+              )}
             </nav>
           )}
 
@@ -110,30 +127,38 @@ export default function Header({ showNavigation }: HeaderProps) {
         {resolvedShowNavigation && isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 pt-4 pb-3">
             <div className="space-y-1">
-              <Link
-                href="/dashboard"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}>
-                Dashboard
-              </Link>
-              <Link
-                href="/requisitions"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}>
-                Requisiciones
-              </Link>
-              <Link
-                href="/reports"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}>
-                Reportes
-              </Link>
-              <Link
-                href="/profile"
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
-                onClick={() => setIsMobileMenuOpen(false)}>
-                Perfil
-              </Link>
+              {canAccess('dashboard') && (
+                <Link
+                  href="/dashboard"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  onClick={() => setIsMobileMenuOpen(false)}>
+                  Dashboard
+                </Link>
+              )}
+              {canAccess('requisitions') && (
+                <Link
+                  href="/requisitions"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  onClick={() => setIsMobileMenuOpen(false)}>
+                  Requisiciones
+                </Link>
+              )}
+              {canAccess('reports') && (
+                <Link
+                  href="/reports"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  onClick={() => setIsMobileMenuOpen(false)}>
+                  Reportes
+                </Link>
+              )}
+              {canAccess('profile') && (
+                <Link
+                  href="/profile"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-brand-dark hover:bg-gray-100"
+                  onClick={() => setIsMobileMenuOpen(false)}>
+                  Perfil
+                </Link>
+              )}
             </div>
           </div>
         )}
