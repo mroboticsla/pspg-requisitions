@@ -11,6 +11,14 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'PSPG Requisiciones',
   description: 'Plataforma interna para la gestión y aprobación de requisiciones de nuevo personal para PSP Group',
+  icons: {
+    icon: [
+      '/favicon.ico',
+      '/images/favicon.png',
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/images/favicon.png',
+  },
 }
 
 export default function RootLayout({
