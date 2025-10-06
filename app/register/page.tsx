@@ -32,6 +32,27 @@ export default function RegisterPage() {
       }
 
       const phone = `${phoneCountry}${digits}`.trim()
+
+      // Verificar si el teléfono ya existe en la tabla profiles
+      const { data: existingPhone, error: phoneError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', phone)
+        .limit(1)
+
+      if (phoneError) {
+        console.error('Error verificando teléfono:', phoneError)
+        setMessage('Error al verificar el teléfono. Inténtalo de nuevo.')
+        setLoading(false)
+        return
+      }
+
+      if (existingPhone && existingPhone.length > 0) {
+        setMessage('El número de teléfono ya está registrado.')
+        setLoading(false)
+        return
+      }
+
       const userMetadata = { first_name: firstName, last_name: lastName, phone }
 
       // Incluir metadata en el signUp para que aparezca en user.user_metadata
@@ -74,10 +95,14 @@ export default function RegisterPage() {
         throw new Error('No se pudo obtener el ID del usuario creado')
       }
 
-      setMessage('Revisa tu correo para verificar tu cuenta (si aplica).')
+      setMessage('Cuenta registrada exitosamente.')
       setTimeout(() => router.push('/login'), 1500)
     } catch (err: any) {
-      setMessage(err.message || 'Error en el registro')
+      if (err.message && err.message.toLowerCase().includes('already registered')) {
+        setMessage('El correo electrónico ya está registrado.')
+      } else {
+        setMessage(err.message || 'Error en el registro')
+      }
     } finally {
       setLoading(false)
     }
@@ -195,7 +220,15 @@ export default function RegisterPage() {
               </div>
 
               {message && (
-                <p className="text-sm text-neutral-700 mb-2">{message}</p>
+                <div className={`p-4 rounded-lg border ${
+                  message.toLowerCase().includes('error') || 
+                  message.toLowerCase().includes('ya está registrado') ||
+                  message.toLowerCase().includes('no se pudo')
+                    ? 'bg-red-50 border-red-300 text-red-800'
+                    : 'bg-green-50 border-green-300 text-green-800'
+                }`}>
+                  <p className="text-sm font-medium">{message}</p>
+                </div>
               )}
 
               <button
