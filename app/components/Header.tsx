@@ -17,6 +17,8 @@ export default function Header({ showNavigation }: HeaderProps) {
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
   const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/login");
 
+  if (pathname?.startsWith("/auth")) return null;
+
   const canAccess = (moduleName: string) => {
     const role = (profile as any)?.role
     if (!role) return false

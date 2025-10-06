@@ -56,44 +56,46 @@ export default function AdminPage() {
   if (!isAllowed()) return <div>Acceso restringido</div>
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Panel de administración</h1>
-      {error && <div className="text-red-600 mb-4">{error}</div>}
-      <div className="grid grid-cols-2 gap-6">
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="font-semibold mb-2">Usuarios</h2>
-          {loadingData ? <p>Cargando...</p> : (
-            <ul className="space-y-2">
-              {users.map(u => (
-                <li key={u.id} className="p-2 border rounded flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{u.first_name} {u.last_name}</div>
-                    <div className="text-xs text-gray-500">{u.id} {u.roles && `- ${Array.isArray(u.roles) ? u.roles[0]?.name : u.roles?.name}`}</div>
-                  </div>
-                  <div className="space-x-2">
-                    {/* Permitiremos asignar roles si el role del admin lo permite (handled server-side) */}
-                    <button onClick={() => {/* implement assign UI later */}} className="px-2 py-1 bg-gray-100 rounded">Acciones</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+    <div className="py-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">Panel de administración</h1>
+        {error && <div className="text-red-600 mb-4">{error}</div>}
+        <div className="grid grid-cols-2 gap-6">
+          <div className="bg-white p-4 rounded shadow">
+            <h2 className="font-semibold mb-2">Usuarios</h2>
+            {loadingData ? <p>Cargando...</p> : (
+              <ul className="space-y-2">
+                {users.map(u => (
+                  <li key={u.id} className="p-2 border rounded flex justify-between items-center">
+                    <div>
+                      <div className="font-medium">{u.first_name} {u.last_name}</div>
+                      <div className="text-xs text-gray-500">{u.id} {u.roles && `- ${Array.isArray(u.roles) ? u.roles[0]?.name : u.roles?.name}`}</div>
+                    </div>
+                    <div className="space-x-2">
+                      {/* Permitiremos asignar roles si el role del admin lo permite (handled server-side) */}
+                      <button onClick={() => {/* implement assign UI later */}} className="px-2 py-1 bg-gray-100 rounded">Acciones</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-        <div className="bg-white p-4 rounded shadow">
-          <h2 className="font-semibold mb-2">Roles</h2>
-          {loadingData ? <p>Cargando...</p> : (
-            <ul className="space-y-2">
-              {roles.map(r => (
-                <li key={r.id} className="p-2 border rounded flex justify-between items-center">
-                  <div>
-                    <div className="font-medium">{r.name}</div>
-                    <div className="text-xs text-gray-500">{JSON.stringify(r.permissions)}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="bg-white p-4 rounded shadow">
+            <h2 className="font-semibold mb-2">Roles</h2>
+            {loadingData ? <p>Cargando...</p> : (
+              <ul className="space-y-2">
+                {roles.map(r => (
+                  <li key={r.id} className="p-2 border rounded flex justify-between items-center">
+                    <div>
+                      <div className="font-medium">{r.name}</div>
+                      <div className="text-xs text-gray-500">{JSON.stringify(r.permissions)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>

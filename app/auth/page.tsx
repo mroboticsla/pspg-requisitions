@@ -165,7 +165,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-secondary flex items-center justify-center px-4 py-8 sm:py-12">
+    <div className="h-screen bg-surface-secondary flex items-center justify-center px-4">
       <div className="w-full max-w-md sm:max-w-lg space-y-6">
         {/* Logo y título */}
         <div className="text-center">
