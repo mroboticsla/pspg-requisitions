@@ -80,7 +80,12 @@ export default function Header({ showNavigation }: HeaderProps) {
 
           {/* Estado de usuario / acciones */}
           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-            {!loading && user ? (
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
+                <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">Verificando...</span>
+              </div>
+            ) : user ? (
               <>
                 <span className="text-xs sm:text-sm text-gray-700 hidden lg:inline truncate max-w-[120px] sm:max-w-none">{user.email}</span>
                 <button

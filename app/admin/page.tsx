@@ -20,10 +20,11 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
+    if (loading) return // Esperar a que termine de cargar
     if (!user || !profile) return
     if (!isAllowed()) return
     fetchData()
-  }, [user, profile])
+  }, [user, profile, loading]) // Agregar loading a las dependencias
 
   const getToken = async () => {
     const s = await supabase.auth.getSession()
@@ -51,9 +52,32 @@ export default function AdminPage() {
     }
   }
 
-  if (loading) return <div>Verificando sesión...</div>
-  if (!user || !profile) return <div>No autorizado</div>
-  if (!isAllowed()) return <div>Acceso restringido</div>
+  // Mostrar loading mientras se verifica la sesión
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <p className="text-gray-600">Verificando sesión...</p>
+      </div>
+    </div>
+  )
+  
+  // Solo mostrar "No autorizado" si ya terminó de cargar y no hay usuario
+  if (!user || !profile) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <p className="text-red-600">No autorizado. Por favor, inicie sesión.</p>
+      </div>
+    </div>
+  )
+  
+  if (!isAllowed()) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <p className="text-red-600">Acceso restringido. No tiene permisos suficientes.</p>
+      </div>
+    </div>
+  )
 
   return (
     <div className="py-8">

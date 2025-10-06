@@ -156,6 +156,16 @@ function AuthPageContent() {
     }
   };
 
+  // Mostrar loading mientras se verifica la sesión
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <p className="text-gray-600">Verificando sesión...</p>
+      </div>
+    </div>
+  )
+
   return (
     <div className="h-screen bg-surface-secondary flex items-center justify-center px-4">
       <div className="w-full max-w-md sm:max-w-lg space-y-6">
