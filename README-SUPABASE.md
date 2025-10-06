@@ -2,7 +2,7 @@
 
 ## Roles y Usuarios
 
-´´´
+```
 -- 1. Tabla de Roles
 -- Almacena los diferentes roles y sus permisos asociados.
 CREATE TABLE public.roles (
@@ -39,11 +39,11 @@ VALUES
   ('admin',       '{"description": "Acceso administrativo a la plataforma. Gestiona partners y candidatos."}'),
   ('partner',     '{"description": "Acceso para socios. Puede ver candidatos y gestionar sus propias ofertas."}'),
   ('candidate',   '{"description": "Acceso para candidatos. Puede ver ofertas y gestionar su perfil."}');
-´´´
+```
 
 ## Actualización de Políticas RLS
 
-´´´
+```
 /******************************************************************
 * SCRIPT COMPLETO DE SEGURIDAD RLS PARA SUPABASE        *
 * *
@@ -148,4 +148,4 @@ USING (true);
 -- forma de crear, modificar o eliminar roles es desde el panel de Supabase o usando
 -- la clave de administrador (service_role_key) en un entorno seguro (backend).
 -- Esta es la práctica recomendada para proteger la estructura de roles.
-´´´
+```
