@@ -21,7 +21,7 @@ export default function RootLayout({
 
   return (
     <html lang="es">
-      <body className={inter.className}>
+      <body className={`${inter.className} text-brand-dark`}>
         <AuthProvider>
           <div className="min-h-screen bg-surface-secondary">
             <Header />
