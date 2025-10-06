@@ -19,10 +19,19 @@ export default function RegisterPage() {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
 
-      // Crear perfil mínimo en public.profiles; la DB (trigger) puede asignar role por defecto
+      // Crear perfil mínimo en backend para que use la service role key y asigne role
       const userId = (data?.user as any)?.id || (data as any)?.id
       if (userId) {
-        await supabase.from('profiles').insert({ id: userId, is_active: true })
+        try {
+          await fetch('/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+          })
+        } catch (e) {
+          // no bloquear el flujo principal si falla la creación del profile
+          console.warn('Failed to create profile via API', e)
+        }
       }
 
       setMessage('Revisa tu correo para verificar tu cuenta (si aplica).')
