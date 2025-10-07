@@ -6,6 +6,8 @@ import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Unlock } from "lucide-react";
 import PhoneInput, { COUNTRY_CODES, getUnformattedPhone, formatPhoneNumber } from "../components/PhoneInput";
+import SessionHistory from "../components/SessionHistory";
+import { SessionMetadata } from "../../lib/sessionTracking";
 
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth();
@@ -24,6 +26,7 @@ export default function ProfilePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [sessionMetadata, setSessionMetadata] = useState<SessionMetadata | null>(null);
 
   // Cargar datos del perfil cuando estén disponibles
   useEffect(() => {
@@ -56,6 +59,9 @@ export default function ProfilePage() {
         email: user?.email || "",
         currentPassword: "",
       });
+      
+      // Cargar metadata de sesión
+      setSessionMetadata(profile.metadata || null);
     }
   }, [profile, user]);
 
@@ -458,6 +464,14 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Historial de Sesiones */}
+        <div className="mt-8">
+          <SessionHistory 
+            sessionHistory={sessionMetadata?.sessionHistory} 
+            currentSession={sessionMetadata?.currentSession}
+          />
         </div>
       </div>
     </div>

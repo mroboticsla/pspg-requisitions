@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import AuthTabSwitch from "../components/AuthTabSwitch";
 import PhoneInput, { COUNTRY_CODES, getUnformattedPhone } from "../components/PhoneInput";
+import { captureSessionInfo, saveSessionToProfile } from "../../lib/sessionTracking";
 
 function AuthPageContent() {
   const searchParams = useSearchParams();
@@ -74,6 +75,18 @@ function AuthPageContent() {
         setFormLoading(false);
         return;
       }
+      
+      // Capturar y guardar información de sesión
+      if (result.data?.user?.id) {
+        try {
+          const sessionInfo = await captureSessionInfo();
+          await saveSessionToProfile(result.data.user.id, sessionInfo);
+        } catch (sessionError) {
+          // No bloqueamos el login si falla el tracking de sesión
+          console.error('Error al guardar información de sesión:', sessionError);
+        }
+      }
+      
       router.push("/request");
     } catch (err: any) {
       setErrorMsg(err?.message ?? "Error en autenticación");

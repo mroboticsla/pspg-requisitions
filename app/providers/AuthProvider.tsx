@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import { usePathname } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import getFullUserData from '../../lib/getFullUserData'
+import { updateLastAction } from '../../lib/sessionTracking'
 
 type Role = {
   id: string
@@ -18,6 +19,7 @@ type Profile = {
   phone?: string | null
   is_active?: boolean
   roles?: Role | null
+  metadata?: any
 }
 
 type User = {
@@ -197,8 +199,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       // Actualizar el tiempo de última verificación en cada navegación
       lastCheckTime.current = now
+      
+      // Actualizar la última acción del usuario si está autenticado
+      if (user?.id) {
+        updateLastAction(user.id).catch(error => {
+          console.error('Error al actualizar última acción:', error)
+        })
+      }
     }
-  }, [pathname]) // Se ejecuta cada vez que cambia la ruta
+  }, [pathname, user]) // Se ejecuta cada vez que cambia la ruta
 
   const signOut = async () => {
     await supabase.auth.signOut()
