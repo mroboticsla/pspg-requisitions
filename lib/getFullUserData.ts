@@ -57,7 +57,7 @@ export async function getFullUserData(retryCount = 0): Promise<any> {
     const profileStartTime = Date.now()
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*, roles(*)')
+      .select('id, first_name, last_name, phone, is_active, role_id, metadata, updated_at, roles(*)')
       .eq('id', user.id)
       .single()
 

@@ -10,6 +10,9 @@ export type SessionInfo = {
   userAgent?: string
   browser?: string
   os?: string
+  country?: string
+  countryCode?: string
+  city?: string
   loginAt?: string
   lastActionAt?: string
 }
@@ -20,21 +23,48 @@ export type SessionMetadata = {
 }
 
 /**
- * Obtiene la IP del cliente
+ * Obtiene la IP del cliente y su geolocalización
  * En producción, puede requerir configuración del servidor/proxy
  */
-async function getClientIP(): Promise<string | undefined> {
+async function getClientIPAndLocation(): Promise<{ 
+  ip?: string; 
+  country?: string; 
+  countryCode?: string; 
+  city?: string 
+}> {
   try {
-    // Intenta obtener la IP desde un servicio externo
-    // En producción, mejor obtenerla desde el servidor
-    const response = await fetch('https://api.ipify.org?format=json', {
-      signal: AbortSignal.timeout(3000) // timeout de 3 segundos
+    // Usar ipapi.co que proporciona IP + geolocalización en una sola llamada
+    // Límite gratuito: 1000 requests/día
+    const response = await fetch('https://ipapi.co/json/', {
+      signal: AbortSignal.timeout(5000) // timeout de 5 segundos
     })
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch IP location')
+    }
+    
     const data = await response.json()
-    return data.ip
+    
+    return {
+      ip: data.ip,
+      country: data.country_name,
+      countryCode: data.country_code,
+      city: data.city
+    }
   } catch (error) {
-    console.warn('No se pudo obtener la IP del cliente:', error)
-    return undefined
+    console.warn('No se pudo obtener la geolocalización:', error)
+    
+    // Fallback: intentar solo obtener la IP sin geolocalización
+    try {
+      const response = await fetch('https://api.ipify.org?format=json', {
+        signal: AbortSignal.timeout(3000)
+      })
+      const data = await response.json()
+      return { ip: data.ip }
+    } catch (fallbackError) {
+      console.warn('No se pudo obtener la IP del cliente:', fallbackError)
+      return {}
+    }
   }
 }
 
@@ -79,7 +109,7 @@ function parseBrowserInfo(userAgent: string): { browser: string; os: string } {
 export async function captureSessionInfo(): Promise<SessionInfo> {
   const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'
   const { browser, os } = parseBrowserInfo(userAgent)
-  const ip = await getClientIP()
+  const { ip, country, countryCode, city } = await getClientIPAndLocation()
   const now = new Date().toISOString()
 
   return {
@@ -87,6 +117,9 @@ export async function captureSessionInfo(): Promise<SessionInfo> {
     userAgent,
     browser,
     os,
+    country,
+    countryCode,
+    city,
     loginAt: now,
     lastActionAt: now
   }
@@ -98,6 +131,8 @@ export async function captureSessionInfo(): Promise<SessionInfo> {
  */
 export async function saveSessionToProfile(userId: string, sessionInfo: SessionInfo): Promise<void> {
   try {
+    console.log('saveSessionToProfile - Guardando sesión:', sessionInfo);
+    
     // Obtener metadata actual
     const { data: profile, error: fetchError } = await supabase
       .from('profiles')
@@ -109,6 +144,8 @@ export async function saveSessionToProfile(userId: string, sessionInfo: SessionI
       console.error('Error al obtener perfil para guardar sesión:', fetchError)
       return
     }
+
+    console.log('saveSessionToProfile - metadata actual:', profile?.metadata);
 
     const currentMetadata: SessionMetadata = profile?.metadata || {}
     const sessionHistory = currentMetadata.sessionHistory || []
@@ -125,6 +162,8 @@ export async function saveSessionToProfile(userId: string, sessionInfo: SessionI
       sessionHistory: updatedHistory
     }
 
+    console.log('saveSessionToProfile - nuevo metadata a guardar:', updatedMetadata);
+
     // Guardar en la base de datos
     const { error: updateError } = await supabase
       .from('profiles')
@@ -137,9 +176,7 @@ export async function saveSessionToProfile(userId: string, sessionInfo: SessionI
     if (updateError) {
       console.error('Error al actualizar metadata de sesión:', updateError)
     } else {
-      if (process.env.NODE_ENV === 'development') {
-        console.debug('Información de sesión guardada exitosamente')
-      }
+      console.log('✅ Información de sesión guardada exitosamente en la base de datos');
     }
   } catch (error) {
     console.error('Error al guardar información de sesión:', error)
