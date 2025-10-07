@@ -47,6 +47,21 @@ function AuthPageContent() {
     }
   }, [loading, profile, router]);
 
+  // Timeout de seguridad: Si loading se queda en true por más de 10 segundos, continuar mostrando el formulario
+  useEffect(() => {
+    if (!loading) return
+
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('Timeout de verificación de sesión alcanzado en auth page')
+        // En la página de auth, no redirigimos, solo dejamos que muestre el formulario
+        // La página se encargará de manejar esto cuando loading cambie
+      }
+    }, 10000) // 10 segundos
+
+    return () => clearTimeout(timeoutId)
+  }, [loading]);
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);

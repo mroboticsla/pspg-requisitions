@@ -40,22 +40,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    let loadingTimeout: NodeJS.Timeout | null = null
+    let maxLoadingTimeout: NodeJS.Timeout | null = null
 
     const load = async () => {
-      setLoading(true)
-      const full = await getFullUserData()
-      if (!mounted) return
-      if (!full) {
+      try {
+        setLoading(true)
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('AuthProvider: Iniciando carga de datos del usuario')
+        }
+        
+        // Timeout de seguridad para evitar que load() se quede colgado
+        const timeoutPromise = new Promise<null>((resolve) => {
+          loadingTimeout = setTimeout(() => {
+            console.warn('AuthProvider: load() timeout alcanzado, limpiando sesión')
+            resolve(null)
+          }, 5000) // Reducido a 5 segundos
+        })
+        
+        const full = await Promise.race([
+          getFullUserData(),
+          timeoutPromise
+        ])
+        
+        if (loadingTimeout) clearTimeout(loadingTimeout)
+        
+        if (!mounted) return
+        
+        if (!full) {
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('AuthProvider: No hay datos de usuario, limpiando estado')
+          }
+          setUser(null)
+          setProfile(null)
+        } else {
+          if (process.env.NODE_ENV === 'development') {
+            console.debug('AuthProvider: Datos de usuario cargados correctamente')
+          }
+          // full contains user fields + profile under `profile`
+          const u = { id: (full as any).id, email: (full as any).email }
+          setUser(u)
+          setProfile((full as any).profile)
+        }
+      } catch (error) {
+        console.error('AuthProvider: Error en load()', error)
+        if (!mounted) return
         setUser(null)
         setProfile(null)
-      } else {
-        // full contains user fields + profile under `profile`
-        const u = { id: (full as any).id, email: (full as any).email }
-        setUser(u)
-        setProfile((full as any).profile)
+      } finally {
+        if (!mounted) return
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('AuthProvider: Finalizando carga, setLoading(false)')
+        }
+        setLoading(false)
       }
-      setLoading(false)
     }
+
+    // Timeout máximo absoluto: forzar loading = false después de 7 segundos sin importar qué
+    maxLoadingTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.error('AuthProvider: Timeout máximo alcanzado (7s), forzando loading = false')
+        setLoading(false)
+        setUser(null)
+        setProfile(null)
+      }
+    }, 7000)
 
     load()
 
@@ -83,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false
+      if (loadingTimeout) clearTimeout(loadingTimeout)
+      if (maxLoadingTimeout) clearTimeout(maxLoadingTimeout)
       subscription?.subscription.unsubscribe()
     }
   }, [])

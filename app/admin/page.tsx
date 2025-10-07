@@ -35,6 +35,14 @@ export default function AdminPage() {
     return () => clearTimeout(timeoutId)
   }, [loading, router])
 
+  // Redirigir al login si no hay usuario autenticado (después de terminar de cargar)
+  useEffect(() => {
+    if (!loading && (!user || !profile)) {
+      console.debug('Admin: No hay usuario autenticado, redirigiendo al login')
+      router.replace('/login')
+    }
+  }, [loading, user, profile, router])
+
   useEffect(() => {
     if (loading) return // Esperar a que termine de cargar
     if (!user || !profile) return
@@ -78,11 +86,12 @@ export default function AdminPage() {
     </div>
   )
   
-  // Solo mostrar "No autorizado" si ya terminó de cargar y no hay usuario
+  // Si no hay usuario, mostrar loading mientras redirige (evita flash de "No autorizado")
   if (!user || !profile) return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <p className="text-red-600">No autorizado. Por favor, inicie sesión.</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <p className="text-gray-600">Redirigiendo...</p>
       </div>
     </div>
   )

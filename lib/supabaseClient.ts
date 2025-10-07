@@ -9,4 +9,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('WARNING: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    // Agregar timeout para las operaciones de auth
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'x-client-info': 'pspg-requisitions'
+    }
+  }
+})

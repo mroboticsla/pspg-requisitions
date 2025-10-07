@@ -8,12 +8,38 @@ type Profile = Record<string, any> | null
  */
 export async function getFullUserData() {
   try {
+    // PRIMERO: Verificar que tengamos una sesión válida
+    // Esto previene el "flash" de contenido autenticado con sesiones expiradas
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('getFullUserData: Error al obtener sesión', sessionError.message)
+      }
+      throw sessionError
+    }
+    
+    // Si no hay sesión activa, retornar null inmediatamente
+    if (!sessionData?.session) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('getFullUserData: No hay sesión activa')
+      }
+      return null
+    }
+
+    // SEGUNDO: Ahora sí obtener los datos del usuario
     const { data: userData, error: userError } = await supabase.auth.getUser()
     if (userError) throw userError
 
     const user = (userData as any)?.user
-    if (!user) return null
+    if (!user) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('getFullUserData: no hay usuario autenticado')
+      }
+      return null
+    }
 
+    // TERCERO: Obtener el perfil del usuario
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*, roles(*)')
@@ -42,11 +68,17 @@ export async function getFullUserData() {
     if (isExpectedError) {
       // Solo mostrar en modo debug para no llenar la consola
       if (process.env.NODE_ENV === 'development') {
-        console.debug('getFullUserData: sesión inválida o expirada, limpiando estado de auth')
+        console.debug('getFullUserData: sesión inválida o expirada', msg)
       }
-      // Limpiar la sesión completamente (no solo local) para disparar el evento onAuthStateChange
-      // Esto asegura que la aplicación actualice su estado correctamente
-      await supabase.auth.signOut().catch(() => {})
+      // Limpiar la sesión de forma no bloqueante con timeout
+      // Usamos Promise.race para evitar que se quede colgado
+      Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 2000))
+      ]).catch(() => {
+        // Si falla el signOut, limpiar solo localmente
+        supabase.auth.signOut({ scope: 'local' }).catch(() => {})
+      })
       return null
     }
 
