@@ -9,7 +9,6 @@ import PhoneInput, { COUNTRY_CODES, getUnformattedPhone, formatPhoneNumber } fro
 import SessionHistory from "../components/SessionHistory";
 import { SessionMetadata } from "../../lib/sessionTracking";
 import AvatarUpload from "../components/AvatarUpload";
-import UserAvatar from "../components/UserAvatar";
 
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth();

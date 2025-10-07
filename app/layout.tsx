@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import Header from './components/Header'
 import { AuthProvider } from './providers/AuthProvider'
+import { ToastProvider } from '@/lib/useToast'
 import ToastContainer from './components/ToastContainer'
 
 
@@ -35,13 +36,15 @@ export default function RootLayout({
     <html lang="es">
       <body className={`${inter.className} text-brand-dark`}>
         <AuthProvider>
-          <div className="min-h-screen bg-surface-secondary">
-            <Header />
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              {children}
-            </main>
-          </div>
-          <ToastContainer />
+          <ToastProvider>
+            <div className="min-h-screen bg-surface-secondary">
+              <Header />
+              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                {children}
+              </main>
+            </div>
+            <ToastContainer />
+          </ToastProvider>
         </AuthProvider>
         <SpeedInsights />
         <Analytics/>
