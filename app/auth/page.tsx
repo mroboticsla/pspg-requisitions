@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import AuthTabSwitch from "../components/AuthTabSwitch";
-import PhoneInput from "../components/PhoneInput";
+import PhoneInput, { COUNTRY_CODES, getUnformattedPhone } from "../components/PhoneInput";
 
 function AuthPageContent() {
   const searchParams = useSearchParams();
@@ -88,9 +88,13 @@ function AuthPageContent() {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const digits = phoneNumber.replace(/\D/g, "");
-      if ((phoneCountry === "+52" || phoneCountry === "+1") && digits.length !== 10) {
-        setErrorMsg("El número de teléfono debe tener 10 dígitos para el código seleccionado.");
+      // Obtener solo los dígitos del teléfono
+      const digits = getUnformattedPhone(phoneNumber);
+      
+      // Validar longitud según el país seleccionado
+      const countryConfig = COUNTRY_CODES.find(c => c.code === phoneCountry);
+      if (countryConfig && digits.length !== countryConfig.length) {
+        setErrorMsg(`El número de teléfono debe tener ${countryConfig.length} dígitos para ${countryConfig.name}.`);
         setFormLoading(false);
         return;
       }

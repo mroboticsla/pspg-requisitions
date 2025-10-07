@@ -5,7 +5,7 @@ import { useAuth } from "../providers/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Unlock } from "lucide-react";
-import PhoneInput from "../components/PhoneInput";
+import PhoneInput, { COUNTRY_CODES, getUnformattedPhone, formatPhoneNumber } from "../components/PhoneInput";
 
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth();
@@ -45,11 +45,14 @@ export default function ProfilePage() {
         }
       }
       
+      // Aplicar formato al número cargado desde la BD
+      const formattedNumber = number ? formatPhoneNumber(number, countryCode) : "";
+      
       setFormData({
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
         phoneCountry: countryCode,
-        phoneNumber: number,
+        phoneNumber: formattedNumber,
         email: user?.email || "",
         currentPassword: "",
       });
@@ -92,13 +95,14 @@ export default function ProfilePage() {
         throw new Error("La contraseña actual es incorrecta");
       }
 
-      // Construir el teléfono completo
-      const phoneDigits = formData.phoneNumber.replace(/\D/g, "");
+      // Construir el teléfono completo (solo dígitos)
+      const phoneDigits = getUnformattedPhone(formData.phoneNumber);
       const fullPhone = `${formData.phoneCountry}${phoneDigits}`.trim();
 
       // Validar longitud del teléfono según el código de país
-      if ((formData.phoneCountry === "+52" || formData.phoneCountry === "+1") && phoneDigits.length !== 10) {
-        throw new Error("El número de teléfono debe tener 10 dígitos para el código seleccionado");
+      const countryConfig = COUNTRY_CODES.find(c => c.code === formData.phoneCountry);
+      if (countryConfig && phoneDigits.length !== countryConfig.length) {
+        throw new Error(`El número de teléfono debe tener ${countryConfig.length} dígitos para ${countryConfig.name}`);
       }
 
       // Actualizar perfil en la tabla profiles
