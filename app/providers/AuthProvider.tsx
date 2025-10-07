@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import getFullUserData from '../../lib/getFullUserData'
 
@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const loadingRef = useRef(true)
 
   useEffect(() => {
     let mounted = true
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const load = async () => {
       try {
         setLoading(true)
+        loadingRef.current = true
         
         if (process.env.NODE_ENV === 'development') {
           console.debug('AuthProvider: Iniciando carga de datos del usuario')
@@ -94,14 +96,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.debug('AuthProvider: Finalizando carga, setLoading(false)')
         }
         setLoading(false)
+        loadingRef.current = false
       }
     }
 
     // Timeout máximo absoluto: forzar loading = false después de 7 segundos sin importar qué
     maxLoadingTimeout = setTimeout(() => {
-      if (mounted && loading) {
+      if (mounted && loadingRef.current) {
         console.error('AuthProvider: Timeout máximo alcanzado (7s), forzando loading = false')
         setLoading(false)
+        loadingRef.current = false
         setUser(null)
         setProfile(null)
       }
@@ -122,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null)
         setProfile(null)
         setLoading(false)
+        loadingRef.current = false
         return
       }
 

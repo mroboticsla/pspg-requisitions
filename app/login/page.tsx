@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useSafeRouter } from "../../lib/useSafeRouter";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const router = useSafeRouter();
 
   useEffect(() => {
     // Redirigir a la nueva página de autenticación unificada

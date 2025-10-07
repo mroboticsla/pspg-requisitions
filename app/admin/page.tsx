@@ -1,16 +1,16 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../providers/AuthProvider'
+import { useSafeRouter } from '../../lib/useSafeRouter'
 
 type ProfileRow = { id: string, first_name?: string, last_name?: string, is_active?: boolean, roles?: any }
 type RoleRow = { id: string, name: string, permissions?: any }
 
 export default function AdminPage() {
   const { user, profile, loading } = useAuth()
-  const router = useRouter()
+  const router = useSafeRouter()
   const [users, setUsers] = useState<ProfileRow[]>([])
   const [roles, setRoles] = useState<RoleRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +28,7 @@ export default function AdminPage() {
     const timeoutId = setTimeout(() => {
       if (loading) {
         console.warn('Timeout de verificación de sesión alcanzado, redirigiendo al login')
-        router.replace('/login')
+        router.replace('/auth')
       }
     }, 10000) // 10 segundos
 
@@ -39,7 +39,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!loading && (!user || !profile)) {
       console.debug('Admin: No hay usuario autenticado, redirigiendo al login')
-      router.replace('/login')
+      router.replace('/auth')
     }
   }, [loading, user, profile, router])
 
