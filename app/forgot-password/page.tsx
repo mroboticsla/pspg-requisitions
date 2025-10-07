@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     setMessage(null)
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login` })
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth` })
       if (error) throw error
       setMessage('Se envió un correo con instrucciones para restablecer la contraseña.')
     } catch (err: any) {

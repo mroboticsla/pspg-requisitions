@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
 export default function Page() {
-  // Redirige la raíz a la pantalla de login
-  redirect('/login')
+  // Redirige la raíz directamente a la pantalla de autenticación
+  redirect('/auth')
 }

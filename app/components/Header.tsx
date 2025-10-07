@@ -17,7 +17,7 @@ export default function Header({ showNavigation }: HeaderProps) {
   const { user, profile, loading, signOut } = useAuth()
   
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
-  const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/login");
+  const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/auth");
 
   if (pathname?.startsWith("/auth")) return null;
 
