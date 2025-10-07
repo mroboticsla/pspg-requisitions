@@ -5,12 +5,20 @@ type Profile = Record<string, any> | null
 /**
  * Devuelve el user (auth) combinado con la fila de `profiles` (si existe).
  * Retorna null si no hay user autenticado.
+ * Incluye retry logic para conexiones lentas.
  */
-export async function getFullUserData() {
+export async function getFullUserData(retryCount = 0): Promise<any> {
+  const maxRetries = 2
+  
   try {
     // PRIMERO: Verificar que tengamos una sesión válida
     // Esto previene el "flash" de contenido autenticado con sesiones expiradas
+    const startTime = Date.now()
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`getFullUserData: getSession() tomó ${Date.now() - startTime}ms`)
+    }
     
     if (sessionError) {
       if (process.env.NODE_ENV === 'development') {
@@ -28,7 +36,13 @@ export async function getFullUserData() {
     }
 
     // SEGUNDO: Ahora sí obtener los datos del usuario
+    const userStartTime = Date.now()
     const { data: userData, error: userError } = await supabase.auth.getUser()
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`getFullUserData: getUser() tomó ${Date.now() - userStartTime}ms`)
+    }
+    
     if (userError) throw userError
 
     const user = (userData as any)?.user
@@ -40,11 +54,17 @@ export async function getFullUserData() {
     }
 
     // TERCERO: Obtener el perfil del usuario
+    const profileStartTime = Date.now()
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*, roles(*)')
       .eq('id', user.id)
       .single()
+
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`getFullUserData: fetch profile tomó ${Date.now() - profileStartTime}ms`)
+      console.debug(`getFullUserData: Tiempo total: ${Date.now() - startTime}ms`)
+    }
 
     if (profileError && (profileError as any).code !== 'PGRST116') {
       // PGRST116 => no rows found; ignorar y devolver solo user
@@ -80,6 +100,20 @@ export async function getFullUserData() {
         supabase.auth.signOut({ scope: 'local' }).catch(() => {})
       })
       return null
+    }
+
+    // Verificar si es un error de timeout/red y si podemos reintentar
+    const isNetworkError = 
+      msg.includes('fetch') || 
+      msg.includes('network') || 
+      msg.includes('timeout') ||
+      err.name === 'AbortError'
+    
+    if (isNetworkError && retryCount < maxRetries) {
+      const waitTime = (retryCount + 1) * 1000 // 1s, 2s
+      console.warn(`getFullUserData: Error de red, reintentando en ${waitTime}ms (intento ${retryCount + 1}/${maxRetries})`)
+      await new Promise(resolve => setTimeout(resolve, waitTime))
+      return getFullUserData(retryCount + 1)
     }
 
     console.error('getFullUserData error inesperado:', err)

@@ -21,16 +21,16 @@ export default function AdminPage() {
     return ['admin', 'superadmin'].includes(roleName)
   }
 
-  // Timeout de seguridad: Si loading se queda en true por más de 10 segundos, redirigir al login
+  // Timeout de seguridad: Si loading se queda en true por más de 25 segundos, redirigir al login
   useEffect(() => {
     if (!loading) return
 
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.warn('Timeout de verificación de sesión alcanzado, redirigiendo al login')
+        console.warn('Timeout de verificación de sesión alcanzado (25s), redirigiendo al login')
         router.replace('/auth')
       }
-    }, 10000) // 10 segundos
+    }, 25000) // 25 segundos - debe ser mayor que el maxLoadingTimeout del AuthProvider
 
     return () => clearTimeout(timeoutId)
   }, [loading, router])
