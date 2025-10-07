@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import getFullUserData from '../../lib/getFullUserData'
 
@@ -38,6 +39,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const loadingRef = useRef(true)
+  const lastCheckTime = useRef<number>(Date.now())
+  const pathname = usePathname()
 
   useEffect(() => {
     let mounted = true
@@ -98,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setLoading(false)
         loadingRef.current = false
+        lastCheckTime.current = Date.now() // Actualizar tiempo de última verificación
       }
     }
 
@@ -145,6 +149,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription?.subscription.unsubscribe()
     }
   }, [])
+
+  // Efecto para re-validar la sesión cuando cambia la ruta después de inactividad
+  useEffect(() => {
+    // No hacer nada si ya está cargando
+    if (loadingRef.current) return
+    
+    const now = Date.now()
+    const timeSinceLastCheck = now - lastCheckTime.current
+    const REVALIDATE_THRESHOLD = 5 * 60 * 1000 // 5 minutos
+
+    // Si ha pasado más de 5 minutos desde la última verificación, re-validar
+    if (timeSinceLastCheck > REVALIDATE_THRESHOLD) {
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(`AuthProvider: Re-validando sesión después de ${Math.round(timeSinceLastCheck / 1000 / 60)} minutos de inactividad`)
+      }
+      
+      lastCheckTime.current = now
+      
+      // Re-verificar la sesión
+      const revalidate = async () => {
+        setLoading(true)
+        loadingRef.current = true
+        
+        try {
+          const full = await getFullUserData()
+          
+          if (!full) {
+            setUser(null)
+            setProfile(null)
+          } else {
+            const u = { id: (full as any).id, email: (full as any).email }
+            setUser(u)
+            setProfile((full as any).profile)
+          }
+        } catch (error) {
+          console.error('Error al re-validar sesión:', error)
+          setUser(null)
+          setProfile(null)
+        } finally {
+          setLoading(false)
+          loadingRef.current = false
+        }
+      }
+      
+      revalidate()
+    } else {
+      // Actualizar el tiempo de última verificación en cada navegación
+      lastCheckTime.current = now
+    }
+  }, [pathname]) // Se ejecuta cada vez que cambia la ruta
 
   const signOut = async () => {
     await supabase.auth.signOut()
