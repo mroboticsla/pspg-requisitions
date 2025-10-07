@@ -3,8 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from '../providers/AuthProvider'
+import { usePathname } from "next/navigation";
+import { useAuth } from '../providers/AuthProvider';
+import UserMenu from './UserMenu';
 
 interface HeaderProps {
   showNavigation?: boolean;
@@ -14,7 +15,7 @@ export default function Header({ showNavigation }: HeaderProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, profile, loading, signOut } = useAuth()
-  const router = useRouter();
+  
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
   const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/login");
 
@@ -86,15 +87,7 @@ export default function Header({ showNavigation }: HeaderProps) {
                 <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">Verificando...</span>
               </div>
             ) : user ? (
-              <>
-                <span className="text-xs sm:text-sm text-gray-700 hidden lg:inline truncate max-w-[120px] sm:max-w-none">{user.email}</span>
-                <button
-                  onClick={async () => { await signOut(); router.push('/auth'); }}
-                  className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 border rounded-md text-gray-700 hover:bg-gray-100 whitespace-nowrap"
-                >
-                  Cerrar sesión
-                </button>
-              </>
+              <UserMenu user={user} profile={profile} signOut={signOut} />
             ) : (
               <>
                 <Link href="/auth" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 bg-brand-dark text-white rounded-md font-medium hover:bg-brand-accent transition-colors whitespace-nowrap">
