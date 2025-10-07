@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import UserAvatar from "./UserAvatar";
+import { supabase } from "@/lib/supabaseClient";
 
 interface UserMenuProps {
   user: { id: string; email?: string | null };
@@ -18,8 +20,50 @@ interface UserMenuProps {
 
 export default function UserMenu({ user, profile, signOut }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  // Cargar avatar del usuario
+  useEffect(() => {
+    const loadAvatar = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_metadata')
+          .select('avatar_url')
+          .eq('user_id', user.id)
+          .maybeSingle(); // maybeSingle() no falla si no encuentra registro
+        
+        if (!error && data?.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+        } else {
+          setAvatarUrl(null);
+        }
+      } catch (error) {
+        console.error('Error al cargar avatar:', error);
+      }
+    };
+
+    loadAvatar();
+
+    // Escuchar evento de actualización de avatar
+    const handleAvatarUpdate = (event: CustomEvent) => {
+      const newAvatarUrl = event.detail?.avatarUrl;
+      if (!newAvatarUrl || newAvatarUrl === '') {
+        setAvatarUrl(null);
+      } else {
+        setAvatarUrl(newAvatarUrl);
+      }
+    };
+
+    window.addEventListener('avatar-updated', handleAvatarUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('avatar-updated', handleAvatarUpdate as EventListener);
+    };
+  }, [user?.id]);
 
   // Cerrar el menú al hacer click fuera
   useEffect(() => {
@@ -71,9 +115,11 @@ export default function UserMenu({ user, profile, signOut }: UserMenuProps) {
         aria-haspopup="true"
       >
         {/* Avatar */}
-        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-brand-accent to-brand-dark flex items-center justify-center text-white font-semibold text-sm sm:text-base shadow-md">
-          {getInitials()}
-        </div>
+        <UserAvatar 
+          avatarUrl={avatarUrl}
+          initials={getInitials()}
+          size="md"
+        />
         
         {/* Nombre del usuario (hidden en mobile) */}
         <div className="hidden lg:flex flex-col items-start">
@@ -102,9 +148,11 @@ export default function UserMenu({ user, profile, signOut }: UserMenuProps) {
           {/* Información del usuario */}
           <div className="px-4 py-3 border-b border-gray-100">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-accent to-brand-dark flex items-center justify-center text-white font-semibold text-lg shadow-md">
-                {getInitials()}
-              </div>
+              <UserAvatar 
+                avatarUrl={avatarUrl}
+                initials={getInitials()}
+                size="lg"
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate">
                   {getDisplayName()}

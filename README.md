@@ -11,6 +11,8 @@ Plataforma interna para la gestión y aprobación de requisiciones de nuevo pers
 * **Gestión de Roles:** Tres niveles de usuario con distintos permisos para una seguridad y control adecuados.
 * **Dashboard de Seguimiento:** Paneles visuales para que tanto gerentes como RRHH puedan ver el estado de las requisiciones en tiempo real.
 * **Historial de Solicitudes:** Archivo centralizado de todas las requisiciones pasadas y presentes.
+* **Perfiles de Usuario:** Sistema completo de perfiles con fotos de avatar, recorte inteligente y almacenamiento optimizado.
+* **Auditoría de Sesiones:** Seguimiento detallado de sesiones de usuario con geolocalización y metadatos de dispositivo.
 
 ---
 
@@ -26,9 +28,21 @@ Plataforma interna para la gestión y aprobación de requisiciones de nuevo pers
 
 * **Frontend:** [Next.js](https://nextjs.org/) (con React 18)
 * **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
-* **Backend:** [Next.js API Routes](https://nextjs.org/docs/api-routes/introduction)
-* **Base de Datos:** [PostgreSQL](https://www.postgresql.org/)
-* **ORM:** [Prisma](https://www.prisma.io/) (Para la interacción con la base de datos)
+* **Backend/Autenticación:** [Supabase](https://supabase.com/) (PostgreSQL + Auth + Storage)
+* **Procesamiento de Imágenes:** react-image-crop, browser-image-compression
+* **Iconos:** [Lucide React](https://lucide.dev/)
+
+---
+
+## 📚 Documentación
+
+- [README-SUPABASE.md](docs/README-SUPABASE.md) - Configuración de Supabase y base de datos
+- [README-FRONTEND.md](docs/README-FRONTEND.md) - Arquitectura del frontend
+- [README-ADMIN.md](docs/README-ADMIN.md) - Panel de administración
+- [README-SESSION-AUDIT.md](docs/README-SESSION-AUDIT.md) - Sistema de auditoría de sesiones
+- [README-AVATARS.md](docs/README-AVATARS.md) - **Sistema de avatares de usuario** ⭐ NUEVO
+- [TROUBLESHOOTING-SESSION.md](docs/TROUBLESHOOTING-SESSION.md) - Solución de problemas
+- [VISUAL-GUIDE-SESSION.md](docs/VISUAL-GUIDE-SESSION.md) - Guía visual de sesiones
 
 ---
 

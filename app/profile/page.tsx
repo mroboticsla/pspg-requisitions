@@ -8,6 +8,8 @@ import { Mail, Lock, Eye, EyeOff, Unlock } from "lucide-react";
 import PhoneInput, { COUNTRY_CODES, getUnformattedPhone, formatPhoneNumber } from "../components/PhoneInput";
 import SessionHistory from "../components/SessionHistory";
 import { SessionMetadata } from "../../lib/sessionTracking";
+import AvatarUpload from "../components/AvatarUpload";
+import UserAvatar from "../components/UserAvatar";
 
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth();
@@ -27,6 +29,7 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [sessionMetadata, setSessionMetadata] = useState<SessionMetadata | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Cargar datos del perfil cuando estén disponibles
   useEffect(() => {
@@ -62,8 +65,46 @@ export default function ProfilePage() {
       
       // Cargar metadata de sesión
       setSessionMetadata(profile.metadata || null);
+      
+      // Cargar avatar URL desde user_metadata
+      loadAvatarUrl();
     }
   }, [profile, user]);
+
+  // Función para cargar el avatar desde user_metadata
+  const loadAvatarUrl = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_metadata')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle(); // maybeSingle() no falla si no encuentra registro
+      
+      if (!error && data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    } catch (error) {
+      console.error('Error al cargar avatar:', error);
+    }
+  };
+
+  // Callback para cuando se actualiza el avatar
+  const handleAvatarUpdate = (newAvatarUrl: string) => {
+    // Si la URL está vacía, significa que se eliminó el avatar
+    if (!newAvatarUrl || newAvatarUrl === '') {
+      setAvatarUrl(null);
+    } else {
+      setAvatarUrl(newAvatarUrl);
+    }
+    
+    // Forzar recarga del avatar en otros componentes
+    // Esto se propagará a través del contexto de autenticación
+    window.dispatchEvent(new CustomEvent('avatar-updated', { 
+      detail: { avatarUrl: newAvatarUrl } 
+    }));
+  };
 
   // Redireccionar si no hay usuario autenticado
   useEffect(() => {
@@ -203,19 +244,33 @@ export default function ProfilePage() {
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
           {/* Avatar y nombre */}
           <div className="bg-gradient-to-r from-brand-dark to-brand-accent px-6 py-8">
-            <div className="flex items-center space-x-4">
-              <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-brand-dark font-bold text-2xl shadow-lg">
-                {formData.first_name || formData.last_name
-                  ? `${formData.first_name.charAt(0)}${formData.last_name.charAt(0)}`.toUpperCase()
-                  : formData.email.charAt(0).toUpperCase()}
+            <div className="flex items-start gap-6">
+              {/* Avatar con opción de editar */}
+              <div className="flex-shrink-0">
+                {user && (
+                  <AvatarUpload 
+                    user={user}
+                    currentAvatarUrl={avatarUrl}
+                    onAvatarUpdate={handleAvatarUpdate}
+                  />
+                )}
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">
+              
+              {/* Información del usuario */}
+              <div className="flex-1 min-w-0 pt-2">
+                <h2 className="text-2xl font-bold text-white truncate">
                   {formData.first_name || formData.last_name
                     ? `${formData.first_name} ${formData.last_name}`.trim()
                     : "Usuario"}
                 </h2>
-                <p className="text-white/80">{formData.email}</p>
+                <p className="text-white/80 mt-1 truncate">{formData.email}</p>
+                <div className="mt-3 flex items-center gap-2 text-white/70 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="hidden sm:inline">Pasa el cursor sobre tu foto para cambiarla o eliminarla</span>
+                  <span className="sm:hidden">Toca tu foto para editarla</span>
+                </div>
               </div>
             </div>
           </div>
