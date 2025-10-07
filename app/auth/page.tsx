@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Mail, Lock, Eye, EyeOff, Phone } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import AuthTabSwitch from "../components/AuthTabSwitch";
+import PhoneInput from "../components/PhoneInput";
 
 function AuthPageContent() {
   const searchParams = useSearchParams();
@@ -331,25 +332,15 @@ function AuthPageContent() {
 
               <div>
                 <label className="block text-sm font-semibold text-neutral-700 mb-2">Teléfono</label>
-                <div className="flex items-stretch border border-neutral-300 rounded-lg overflow-hidden bg-surface-secondary focus-within:ring-2 focus-within:ring-brand-accent">
-                  <select
-                    value={phoneCountry}
-                    onChange={(e) => setPhoneCountry(e.target.value)}
-                    className="px-3 py-3 bg-surface-secondary text-brand-dark border-none outline-none text-sm"
-                    aria-label="Código de país">
-                    <option value="+52">MX +52</option>
-                    <option value="+1">US +1</option>
-                  </select>
-
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    required
-                    placeholder="1234567890"
-                    className="flex-1 px-4 py-3 bg-surface-secondary text-brand-dark border-none focus:outline-none"
-                  />
-                </div>
+                <PhoneInput
+                  phoneCountry={phoneCountry}
+                  phoneNumber={phoneNumber}
+                  onCountryChange={setPhoneCountry}
+                  onNumberChange={setPhoneNumber}
+                  required
+                  placeholder="1234567890"
+                  className="border-neutral-300 bg-surface-secondary"
+                />
               </div>
 
               <div>
