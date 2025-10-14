@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import getFullUserData from '../../lib/getFullUserData'
 import { updateLastAction } from '../../lib/sessionTracking'
@@ -36,6 +36,9 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
+const INACTIVITY_LIMIT_MS = 15 * 60 * 1000 // 15 minutos
+const INACTIVITY_EVENTS: Array<keyof WindowEventMap> = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll']
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -43,6 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadingRef = useRef(true)
   const lastCheckTime = useRef<number>(Date.now())
   const pathname = usePathname()
+  const router = useRouter()
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const handlingInactivityRef = useRef(false)
 
   useEffect(() => {
     let mounted = true
@@ -214,6 +220,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setProfile(null)
   }
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const clearTimer = () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current)
+        inactivityTimerRef.current = null
+      }
+    }
+
+    if (!user) {
+      clearTimer()
+      handlingInactivityRef.current = false
+      return
+    }
+
+    const handleInactivity = async () => {
+      if (handlingInactivityRef.current) return
+      handlingInactivityRef.current = true
+
+      console.warn('AuthProvider: Sesión cerrada por inactividad')
+
+      try {
+        await supabase.auth.signOut({ scope: 'global' })
+      } catch (error) {
+        console.error('Error al cerrar sesión por inactividad:', error)
+        await supabase.auth.signOut().catch(() => {})
+      } finally {
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+        loadingRef.current = false
+        clearTimer()
+        if (pathname !== '/auth') {
+          router.replace('/auth?reason=timeout')
+        }
+        handlingInactivityRef.current = false
+      }
+    }
+
+    const resetTimer = () => {
+      if (handlingInactivityRef.current) return
+      clearTimer()
+      inactivityTimerRef.current = setTimeout(handleInactivity, INACTIVITY_LIMIT_MS)
+    }
+
+    INACTIVITY_EVENTS.forEach(event => window.addEventListener(event, resetTimer, { passive: true }))
+    resetTimer()
+
+    return () => {
+      clearTimer()
+      INACTIVITY_EVENTS.forEach(event => window.removeEventListener(event, resetTimer))
+    }
+  }, [user, pathname, router])
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signOut }}>
