@@ -76,15 +76,16 @@ function AuthPageContent() {
         return;
       }
       
-      // Capturar y guardar información de sesión
+      // Capturar y guardar información de sesión de forma NO BLOQUEANTE
+      // Esto evita que el login se retrase esperando la geolocalización
       if (result.data?.user?.id) {
-        try {
-          const sessionInfo = await captureSessionInfo();
-          await saveSessionToProfile(result.data.user.id, sessionInfo);
-        } catch (sessionError) {
-          // No bloqueamos el login si falla el tracking de sesión
-          console.error('Error al guardar información de sesión:', sessionError);
-        }
+        // Ejecutar en background sin await
+        captureSessionInfo()
+          .then(sessionInfo => saveSessionToProfile(result.data.user.id, sessionInfo))
+          .catch(sessionError => {
+            // No bloqueamos el login si falla el tracking de sesión
+            console.warn('Error al guardar información de sesión:', sessionError);
+          });
       }
       
       router.push("/request");

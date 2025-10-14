@@ -35,8 +35,9 @@ async function getClientIPAndLocation(): Promise<{
   try {
     // Usar ipapi.co que proporciona IP + geolocalización en una sola llamada
     // Límite gratuito: 1000 requests/día
+    // Reducido timeout a 2 segundos para evitar retrasos en la UX
     const response = await fetch('https://ipapi.co/json/', {
-      signal: AbortSignal.timeout(5000) // timeout de 5 segundos
+      signal: AbortSignal.timeout(2000) // timeout de 2 segundos
     })
     
     if (!response.ok) {
@@ -52,17 +53,21 @@ async function getClientIPAndLocation(): Promise<{
       city: data.city
     }
   } catch (error) {
-    console.warn('No se pudo obtener la geolocalización:', error)
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Geolocalización no disponible, continuando sin ella')
+    }
     
     // Fallback: intentar solo obtener la IP sin geolocalización
     try {
       const response = await fetch('https://api.ipify.org?format=json', {
-        signal: AbortSignal.timeout(3000)
+        signal: AbortSignal.timeout(1500) // timeout de 1.5 segundos
       })
       const data = await response.json()
       return { ip: data.ip }
     } catch (fallbackError) {
-      console.warn('No se pudo obtener la IP del cliente:', fallbackError)
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('IP no disponible, continuando sin ella')
+      }
       return {}
     }
   }
@@ -105,24 +110,45 @@ function parseBrowserInfo(userAgent: string): { browser: string; os: string } {
 
 /**
  * Captura la información actual de la sesión
+ * Con timeout total de 3 segundos para evitar bloqueos
  */
 export async function captureSessionInfo(): Promise<SessionInfo> {
   const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'
   const { browser, os } = parseBrowserInfo(userAgent)
-  const { ip, country, countryCode, city } = await getClientIPAndLocation()
   const now = new Date().toISOString()
 
-  return {
-    ip,
+  // Iniciar con información básica
+  const sessionInfo: SessionInfo = {
     userAgent,
     browser,
     os,
-    country,
-    countryCode,
-    city,
     loginAt: now,
     lastActionAt: now
   }
+
+  // Intentar obtener IP y geolocalización con timeout de 3 segundos
+  try {
+    const locationPromise = getClientIPAndLocation()
+    const timeoutPromise = new Promise<null>((resolve) => 
+      setTimeout(() => resolve(null), 3000)
+    )
+    
+    const location = await Promise.race([locationPromise, timeoutPromise])
+    
+    if (location) {
+      sessionInfo.ip = location.ip
+      sessionInfo.country = location.country
+      sessionInfo.countryCode = location.countryCode
+      sessionInfo.city = location.city
+    }
+  } catch (error) {
+    // Continuar sin IP/geolocalización si falla
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('captureSessionInfo: continuando sin geolocalización')
+    }
+  }
+
+  return sessionInfo
 }
 
 /**

@@ -59,12 +59,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         // Timeout de seguridad para evitar que load() se quede colgado
-        // Aumentado a 15 segundos para dar tiempo a conexiones lentas
+        // Reducido a 8 segundos para mejorar la experiencia del usuario
         const timeoutPromise = new Promise<null>((resolve) => {
           loadingTimeout = setTimeout(() => {
-            console.warn('AuthProvider: load() timeout alcanzado después de 15s - posible problema de red')
+            console.warn('AuthProvider: load() timeout alcanzado después de 8s - posible problema de red')
             resolve(null)
-          }, 15000) // 15 segundos en lugar de 5
+          }, 8000) // 8 segundos - suficiente para conexiones lentas pero no excesivo
         })
         
         const full = await Promise.race([
@@ -107,17 +107,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Timeout máximo absoluto: forzar loading = false después de 20 segundos sin importar qué
-    // Aumentado para dar más tiempo a conexiones lentas
+    // Timeout máximo absoluto: forzar loading = false después de 10 segundos sin importar qué
+    // Reducido para mejorar la experiencia del usuario
     maxLoadingTimeout = setTimeout(() => {
       if (mounted && loadingRef.current) {
-        console.error('AuthProvider: Timeout máximo alcanzado (20s), forzando loading = false')
+        console.error('AuthProvider: Timeout máximo alcanzado (10s), forzando loading = false')
         setLoading(false)
         loadingRef.current = false
         setUser(null)
         setProfile(null)
       }
-    }, 20000) // 20 segundos en lugar de 7
+    }, 10000) // 10 segundos - balance entre dar tiempo y no frustrar al usuario
 
     load()
 
