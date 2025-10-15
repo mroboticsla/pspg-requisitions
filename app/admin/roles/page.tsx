@@ -8,10 +8,10 @@ import { RequireRoleClient } from '@/app/components/RequireRole'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
 import { MENU } from '@/app/components/navigation/menuConfig'
+import { Eye, Trash2, Plus } from 'lucide-react'
 
 // Types
 interface RoleRow { id: string; name: string; permissions?: any }
-interface ProfileRow { id: string; first_name?: string | null; last_name?: string | null; roles?: { id: string; name: string } | null }
 
 type FormState = {
   id?: string
@@ -22,15 +22,17 @@ type FormState = {
   extras: Record<string, any> // claves adicionales para conservar compatibilidad
 }
 
+type ViewMode = 'list' | 'create' | 'edit'
+
 export default function RolesAdminPage() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
   const { success, error: showError, info } = useToast()
 
   const [roles, setRoles] = useState<RoleRow[]>([])
-  const [users, setUsers] = useState<ProfileRow[]>([])
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   // Derivar módulos disponibles desde el menú principal para evitar duplicación
   const availableModules = useMemo(() => {
@@ -58,14 +60,13 @@ export default function RolesAdminPage() {
       setBusy(true)
       const s = await supabase.auth.getSession()
       const token = (s as any).data?.session?.access_token ?? null
-      const [r1, r2] = await Promise.all([
-        fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'list-roles' }) }),
-        fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'list-users' }) }),
-      ])
+      const r1 = await fetch('/api/admin/secure', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+        body: JSON.stringify({ action: 'list-roles' }) 
+      })
       const b1 = await r1.json(); if (!r1.ok) throw new Error(b1.error || 'No se pudo obtener roles')
-      const b2 = await r2.json(); if (!r2.ok) throw new Error(b2.error || 'No se pudo obtener usuarios')
       setRoles(b1.data || [])
-      setUsers(b2.data || [])
     } catch (err: any) {
       showError(err.message || String(err))
     } finally {
@@ -94,6 +95,7 @@ export default function RolesAdminPage() {
   const beginCreate = () => {
     setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
     setFormErrors({})
+    setViewMode('create')
   }
 
   const beginEdit = (r: RoleRow) => {
@@ -107,6 +109,13 @@ export default function RolesAdminPage() {
     const { description, can_do, modules, ...rest } = (p || {})
     setForm({ id: r.id, name: r.name, description: desc, modules: mergedModules, canDo, extras: rest })
     setFormErrors({})
+    setViewMode('edit')
+  }
+
+  const cancelEdit = () => {
+    setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
+    setFormErrors({})
+    setViewMode('list')
   }
 
   const save = async () => {
@@ -144,6 +153,7 @@ export default function RolesAdminPage() {
       }
       setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
       setFormErrors({})
+      setViewMode('list')
       await refresh()
     } catch (err: any) {
       showError(err.message || String(err))
@@ -200,155 +210,310 @@ export default function RolesAdminPage() {
     }
   }
 
-  const assignRole = async (userId: string, roleName: string) => {
-    try {
-      setBusy(true)
-      const token = await getToken()
-      const res = await fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'assign-role', userId, roleName }) })
-      const body = await res.json(); if (!res.ok) throw new Error(body.error || 'Error asignando rol')
-      success('Rol asignado')
-      await refresh()
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const content = (
+  // Renderizado de la vista de lista de roles
+  const renderListView = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Administración de roles</h1>
-        <div className="text-sm text-gray-500">Solo super administradores</div>
+        <button 
+          onClick={beginCreate} 
+          disabled={busy}
+          className="flex items-center gap-2 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Crear nuevo rol
+        </button>
       </div>
 
-      {/* Crear / Editar */}
+      {/* Búsqueda */}
       <div className="bg-white rounded shadow p-4">
-        <h2 className="font-semibold mb-3">{form.id ? 'Editar rol' : 'Nuevo rol'}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Nombre</label>
-            <input disabled={busy} value={form.name} onChange={e=>{ setForm(f=>({ ...f, name: e.target.value })); setFormErrors(errs => ({ ...errs, name: undefined })) }} className="w-full rounded border px-3 py-2" placeholder="p. ej. partner" />
-            {formErrors.name && <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Descripción</label>
-            <input disabled={busy} value={form.description} onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setFormErrors(errs => ({ ...errs, description: undefined })) }} className="w-full rounded border px-3 py-2" placeholder="Describe brevemente el alcance del rol" />
-          </div>
-          <div className="md:col-span-2">
-            <div>
-              <div className="text-sm font-medium mb-2">Módulos del menú</div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {availableModules.map(m => (
-                  <label key={m.id} className="inline-flex items-center gap-2 text-sm p-2 rounded border">
-                    <input type="checkbox" disabled={busy} checked={Boolean(form.modules[m.id])} onChange={e => setModule(m.id, e.target.checked)} />
-                    <span>{m.label}</span>
-                  </label>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Estos toggles controlan qué módulos aparecen en la navegación para usuarios con este rol.</p>
-            </div>
-            <div className="mt-4">
-              <div className="text-sm font-medium mb-2">Acciones</div>
-              <div className="flex flex-wrap gap-3">
-                {suggested.map(s => (
-                  <label key={s.key} className="inline-flex items-center gap-2 text-sm">
-                    <input type="checkbox" disabled={busy} checked={form.canDo.includes(s.key)} onChange={() => toggleCanDo(s.key)} />
-                    <span>{s.label}</span>
-                  </label>
-                ))}
-              </div>
-              <div className="mt-2 flex gap-2">
-                <input value={customPerm} onChange={e => setCustomPerm(e.target.value)} placeholder="Agregar permiso personalizado (ej. export_reports)" className="flex-1 rounded border px-3 py-2 text-sm" />
-                <button type="button" onClick={addCustomPerm} className="px-3 py-2 text-sm rounded border">Agregar</button>
-              </div>
-              {form.canDo.filter(k => !suggested.some(s => s.key === k)).length > 0 && (
-                <div className="mt-2">
-                  <div className="text-xs text-gray-500 mb-1">Permisos personalizados</div>
-                  <div className="flex flex-wrap gap-2">
-                    {form.canDo.filter(k => !suggested.some(s => s.key === k)).map(k => (
-                      <span key={k} className="inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
-                        {k}
-                        <button onClick={() => removeCustomPerm(k)} className="text-gray-500 hover:text-gray-700">×</button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 flex gap-2">
-          <button disabled={busy || !form.name.trim()} onClick={save} className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50">{form.id ? 'Guardar cambios' : 'Crear rol'}</button>
-          {form.id && (
-            <button disabled={busy} onClick={beginCreate} className="px-4 py-2 rounded border">Cancelar</button>
-          )}
-        </div>
+        <input 
+          value={search} 
+          onChange={e => setSearch(e.target.value)} 
+          placeholder="Buscar roles..." 
+          className="w-full rounded border border-neutral-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent" 
+        />
       </div>
 
-      {/* Listado y búsqueda */}
-      <div className="bg-white rounded shadow p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold">Roles</h2>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar..." className="rounded border px-3 py-2" />
-        </div>
+      {/* Listado de roles */}
+      <div className="bg-white rounded shadow overflow-hidden">
         <div className="divide-y">
+          {filteredRoles.length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+              {search.trim() ? 'No se encontraron roles con ese criterio de búsqueda' : 'No hay roles creados aún'}
+            </div>
+          )}
           {filteredRoles.map(r => {
             const p = r.permissions || {}
             const desc = p?.description || ''
             const modules = Object.entries(p?.modules || {}).filter(([, v]) => Boolean(v)).map(([k]) => k)
             const canDo = Array.isArray(p?.can_do) ? (p.can_do as string[]) : []
             return (
-              <div key={r.id} className="py-3 flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="font-medium">{r.name}</div>
-                  {desc && <div className="text-sm text-gray-600 mt-0.5">{desc}</div>}
-                  <div className="mt-1 flex flex-wrap gap-2">
-                    {modules.map(m => (
-                      <span key={m} className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">{m}</span>
-                    ))}
-                    {canDo.length > 0 && (
-                      <span className="inline-block text-xs bg-gray-50 text-gray-700 border border-gray-200 px-2 py-0.5 rounded">{canDo.length} permisos</span>
+              <div 
+                key={r.id} 
+                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                onClick={() => beginEdit(r)}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-semibold text-lg">{r.name}</h3>
+                      {modules.length > 0 && (
+                        <span className="text-xs bg-brand-dark/10 text-brand-dark px-2 py-1 rounded">
+                          {modules.length} {modules.length === 1 ? 'módulo' : 'módulos'}
+                        </span>
+                      )}
+                      {canDo.length > 0 && (
+                        <span className="text-xs bg-neutral-100 text-neutral-700 px-2 py-1 rounded">
+                          {canDo.length} {canDo.length === 1 ? 'permiso' : 'permisos'}
+                        </span>
+                      )}
+                    </div>
+                    {desc && <p className="text-sm text-gray-600 mt-1">{desc}</p>}
+                    {modules.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {modules.map(m => (
+                          <span 
+                            key={m} 
+                            className="inline-block text-xs bg-brand-dark/5 text-brand-dark border border-brand-dark/20 px-2 py-0.5 rounded"
+                          >
+                            {m}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button disabled={busy} onClick={()=>beginEdit(r)} className="px-3 py-1 rounded border">Editar</button>
-                  <button disabled={busy} onClick={()=>requestDelete(r)} className="px-3 py-1 rounded bg-red-600 text-white">Eliminar</button>
+                  <div className="flex gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      disabled={busy} 
+                      onClick={(e) => { e.stopPropagation(); beginEdit(r); }} 
+                      className="flex items-center gap-2 px-3 py-1.5 rounded border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white transition-colors"
+                      title="Ver detalles"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Ver detalles</span>
+                    </button>
+                    <button 
+                      disabled={busy} 
+                      onClick={(e) => { e.stopPropagation(); requestDelete(r); }} 
+                      className="flex items-center gap-2 px-3 py-1.5 rounded bg-brand-accent text-white hover:bg-brand-accentDark transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )
           })}
-          {filteredRoles.length === 0 && (
-            <div className="text-gray-500 text-sm">Sin resultados</div>
-          )}
-        </div>
-      </div>
-
-      {/* Asignación */}
-      <div className="bg-white rounded shadow p-4">
-        <h2 className="font-semibold mb-3">Asignar rol a usuario</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {users.map(u => (
-            <div key={u.id} className="p-3 border rounded flex items-center justify-between gap-3">
-              <div>
-                <div className="font-medium">{u.first_name || ''} {u.last_name || ''}</div>
-                <div className="text-xs text-gray-500">{u.id}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <select disabled={busy} value={u.roles?.name || ''} onChange={(e)=>assignRole(u.id, e.target.value)} className="rounded border px-2 py-1">
-                  <option value="">-- Rol --</option>
-                  {roles.map(r => (
-                    <option key={r.id} value={r.name}>{r.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
   )
+
+  // Renderizado de la vista de creación/edición
+  const renderFormView = () => (
+    <div className="space-y-6">
+      {/* Header con navegación */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={cancelEdit}
+          disabled={busy}
+          className="p-2 rounded hover:bg-neutral-100 transition-colors"
+          title="Volver a la lista"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
+        <h1 className="text-2xl font-bold">
+          {viewMode === 'create' ? 'Crear nuevo rol' : `Editar rol: ${form.name}`}
+        </h1>
+      </div>
+
+      {/* Layout de 2 columnas */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Columna izquierda: Información básica (2/3) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Información básica */}
+          <div className="bg-white rounded shadow p-6">
+            <h2 className="text-lg font-semibold mb-4 text-brand-dark">Información básica</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Nombre del rol <span className="text-brand-accent">*</span>
+                </label>
+                <input 
+                  disabled={busy || viewMode === 'edit'} 
+                  value={form.name} 
+                  onChange={e => { 
+                    setForm(f => ({ ...f, name: e.target.value })); 
+                    setFormErrors(errs => ({ ...errs, name: undefined })) 
+                  }} 
+                  className="w-full rounded border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent disabled:bg-neutral-100 disabled:text-neutral-500" 
+                  placeholder="p. ej. partner" 
+                />
+                {formErrors.name && <p className="text-xs text-brand-accent mt-1">{formErrors.name}</p>}
+                {viewMode === 'edit' && (
+                  <p className="text-xs text-neutral-500 mt-1">El nombre del rol no se puede modificar</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Descripción</label>
+                <textarea 
+                  disabled={busy} 
+                  value={form.description} 
+                  onChange={e => { 
+                    setForm(f => ({ ...f, description: e.target.value })); 
+                    setFormErrors(errs => ({ ...errs, description: undefined })) 
+                  }} 
+                  rows={4}
+                  className="w-full rounded border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent resize-none" 
+                  placeholder="Describe brevemente el alcance y responsabilidades de este rol" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Permisos y acciones */}
+          <div className="bg-white rounded shadow p-6">
+            <h2 className="text-lg font-semibold mb-2 text-brand-dark">Permisos y acciones</h2>
+            <p className="text-sm text-neutral-600 mb-4">
+              Define las acciones específicas que pueden realizar los usuarios con este rol
+            </p>
+            
+            {/* Permisos sugeridos */}
+            <div className="mb-4">
+              <h3 className="text-sm font-medium mb-3">Acciones comunes</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {suggested.map(s => (
+                  <label 
+                    key={s.key} 
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded border hover:bg-neutral-50 cursor-pointer transition-colors"
+                  >
+                    <input 
+                      type="checkbox" 
+                      disabled={busy} 
+                      checked={form.canDo.includes(s.key)} 
+                      onChange={() => toggleCanDo(s.key)} 
+                      className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent"
+                    />
+                    <span className="text-sm">{s.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Permisos personalizados */}
+            <div>
+              <h3 className="text-sm font-medium mb-3">Permisos personalizados</h3>
+              <div className="flex gap-2 mb-3">
+                <input 
+                  value={customPerm} 
+                  onChange={e => setCustomPerm(e.target.value)} 
+                  onKeyPress={e => e.key === 'Enter' && addCustomPerm()}
+                  placeholder="Agregar permiso personalizado (ej. export_reports)" 
+                  className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent" 
+                />
+                <button 
+                  type="button" 
+                  onClick={addCustomPerm} 
+                  disabled={busy || !customPerm.trim()}
+                  className="px-4 py-2 text-sm rounded border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white disabled:opacity-50 transition-colors"
+                >
+                  Agregar
+                </button>
+              </div>
+              {form.canDo.filter(k => !suggested.some(s => s.key === k)).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {form.canDo.filter(k => !suggested.some(s => s.key === k)).map(k => (
+                    <span 
+                      key={k} 
+                      className="inline-flex items-center gap-2 text-sm bg-neutral-100 px-3 py-1 rounded"
+                    >
+                      <code className="text-xs">{k}</code>
+                      <button 
+                        onClick={() => removeCustomPerm(k)} 
+                        className="text-neutral-500 hover:text-brand-accent transition-colors"
+                        title="Eliminar"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Acciones del formulario */}
+          <div className="flex gap-3">
+            <button 
+              disabled={busy || !form.name.trim()} 
+              onClick={save} 
+              className="px-6 py-2 rounded bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {busy ? 'Guardando...' : (viewMode === 'create' ? 'Crear rol' : 'Guardar cambios')}
+            </button>
+            <button 
+              disabled={busy} 
+              onClick={cancelEdit} 
+              className="px-6 py-2 rounded border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+
+        {/* Columna derecha: Módulos del menú (1/3) */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded shadow p-6 sticky top-6">
+            <h2 className="text-lg font-semibold mb-2 text-brand-dark">Módulos del menú</h2>
+            <p className="text-sm text-neutral-600 mb-4">
+              Selecciona los módulos disponibles para este rol
+            </p>
+            <div className="space-y-2">
+              {availableModules.map(m => (
+                <label 
+                  key={m.id} 
+                  className="flex items-center gap-3 p-3 rounded border hover:bg-neutral-50 cursor-pointer transition-colors"
+                >
+                  <input 
+                    type="checkbox" 
+                    disabled={busy} 
+                    checked={Boolean(form.modules[m.id])} 
+                    onChange={e => setModule(m.id, e.target.checked)} 
+                    className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent"
+                  />
+                  <span className="text-sm font-medium">{m.label}</span>
+                </label>
+              ))}
+            </div>
+            
+            {/* Resumen de selección */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="text-xs text-neutral-500 mb-2">Resumen de accesos</div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-600">Módulos:</span>
+                  <span className="font-semibold text-brand-dark">
+                    {Object.values(form.modules).filter(Boolean).length} de {availableModules.length}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-neutral-600">Permisos:</span>
+                  <span className="font-semibold text-brand-dark">{form.canDo.length}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const content = viewMode === 'list' ? renderListView() : renderFormView()
 
   // Loading general del provider
   if (loading) return (
