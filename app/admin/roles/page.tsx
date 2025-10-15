@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { RequireRoleClient } from '@/app/components/RequireRole'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
+import { MENU } from '@/app/components/navigation/menuConfig'
 
 // Types
 interface RoleRow { id: string; name: string; permissions?: any }
@@ -15,7 +16,10 @@ interface ProfileRow { id: string; first_name?: string | null; last_name?: strin
 type FormState = {
   id?: string
   name: string
-  permissionsText: string // JSON text
+  description: string
+  modules: Record<string, boolean>
+  canDo: string[]
+  extras: Record<string, any> // claves adicionales para conservar compatibilidad
 }
 
 export default function RolesAdminPage() {
@@ -28,8 +32,16 @@ export default function RolesAdminPage() {
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const [form, setForm] = useState<FormState>({ name: '', permissionsText: '{\n  "can_do": []\n}' })
-  const [formErrors, setFormErrors] = useState<{ name?: string; permissionsText?: string }>({})
+  // Derivar módulos disponibles desde el menú principal para evitar duplicación
+  const availableModules = useMemo(() => {
+    // Tomamos todos los ids de primer nivel
+    return MENU.map(m => ({ id: m.id, label: m.label }))
+  }, [])
+
+  const defaultModulesMap = useMemo(() => Object.fromEntries(availableModules.map(m => [m.id, false])) as Record<string, boolean>, [availableModules])
+
+  const [form, setForm] = useState<FormState>({ name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
+  const [formErrors, setFormErrors] = useState<{ name?: string; description?: string }>({})
   const [showDelete, setShowDelete] = useState<{ open: boolean; id?: string; name?: string }>({ open: false })
 
   const isSuper = (profile as any)?.roles?.name === 'superadmin'
@@ -80,25 +92,32 @@ export default function RolesAdminPage() {
   }, [roles, search])
 
   const beginCreate = () => {
-    setForm({ id: undefined, name: '', permissionsText: '{\n  "can_do": []\n}' })
+    setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
     setFormErrors({})
   }
 
   const beginEdit = (r: RoleRow) => {
-    setForm({ id: r.id, name: r.name, permissionsText: JSON.stringify(r.permissions ?? {}, null, 2) })
+    const p = r.permissions || {}
+    const desc = typeof p?.description === 'string' ? p.description : ''
+    const canDo = Array.isArray(p?.can_do) ? (p.can_do as string[]) : []
+    const modulesObj = typeof p?.modules === 'object' && p.modules ? p.modules as Record<string, boolean> : {}
+    const mergedModules: Record<string, boolean> = { ...defaultModulesMap }
+    Object.keys(mergedModules).forEach(k => { mergedModules[k] = Boolean(modulesObj[k]) })
+    // extras: conservar cualquier otra clave
+    const { description, can_do, modules, ...rest } = (p || {})
+    setForm({ id: r.id, name: r.name, description: desc, modules: mergedModules, canDo, extras: rest })
     setFormErrors({})
   }
 
   const save = async () => {
     try {
       setBusy(true)
-      let permissions: any
-      try {
-        permissions = form.permissionsText.trim() ? JSON.parse(form.permissionsText) : null
-      } catch (e) {
-        setFormErrors(errs => ({ ...errs, permissionsText: 'JSON de permisos inválido' }))
-        showError('JSON de permisos inválido')
-        return
+      // construir objeto de permisos desde la UI
+      const permissions: any = {
+        description: form.description?.trim() || undefined,
+        can_do: form.canDo,
+        modules: Object.fromEntries(Object.entries(form.modules).filter(([, v]) => Boolean(v))),
+        ...form.extras,
       }
       const normalizedName = form.name.trim().toLowerCase()
       if (!normalizedName) {
@@ -123,7 +142,7 @@ export default function RolesAdminPage() {
         const body = await res.json(); if (!res.ok) throw new Error(body.error || 'Error creando rol')
         success('Rol creado')
       }
-      setForm({ id: undefined, name: '', permissionsText: '{\n  "can_do": []\n}' })
+      setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
       setFormErrors({})
       await refresh()
     } catch (err: any) {
@@ -133,7 +152,7 @@ export default function RolesAdminPage() {
     }
   }
 
-  // Permisos sugeridos simples con checkboxes sincronizados a JSON
+  // Acciones sugeridas
   const suggested = [
     { key: 'manage_users', label: 'Gestionar usuarios' },
     { key: 'manage_roles', label: 'Gestionar roles' },
@@ -141,19 +160,26 @@ export default function RolesAdminPage() {
     { key: 'create_requisitions', label: 'Crear requisiciones' },
   ]
 
-  const togglePermission = (permKey: string) => {
-    try {
-      const obj = form.permissionsText.trim() ? JSON.parse(form.permissionsText) : {}
-      const arr: string[] = Array.isArray(obj.can_do) ? obj.can_do : []
-      const has = arr.includes(permKey)
-      const next = has ? arr.filter(p => p !== permKey) : [...arr, permKey]
-      obj.can_do = next
-      setForm(f => ({ ...f, permissionsText: JSON.stringify(obj, null, 2) }))
-      setFormErrors(errs => ({ ...errs, permissionsText: undefined }))
-    } catch (e) {
-      setFormErrors(errs => ({ ...errs, permissionsText: 'JSON inválido, no se pudo alternar permisos' }))
-    }
+  const toggleCanDo = (key: string) => {
+    setForm(f => {
+      const has = f.canDo.includes(key)
+      return { ...f, canDo: has ? f.canDo.filter(k => k !== key) : [...f.canDo, key] }
+    })
   }
+
+  const setModule = (key: string, value: boolean) => {
+    setForm(f => ({ ...f, modules: { ...f.modules, [key]: value } }))
+  }
+
+  const [customPerm, setCustomPerm] = useState('')
+  const addCustomPerm = () => {
+    const k = customPerm.trim()
+    if (!k) return
+    if (form.canDo.includes(k)) return
+    setForm(f => ({ ...f, canDo: [...f.canDo, k] }))
+    setCustomPerm('')
+  }
+  const removeCustomPerm = (k: string) => setForm(f => ({ ...f, canDo: f.canDo.filter(x => x !== k) }))
 
   const requestDelete = (r: RoleRow) => setShowDelete({ open: true, id: r.id, name: r.name })
 
@@ -205,31 +231,57 @@ export default function RolesAdminPage() {
             <input disabled={busy} value={form.name} onChange={e=>{ setForm(f=>({ ...f, name: e.target.value })); setFormErrors(errs => ({ ...errs, name: undefined })) }} className="w-full rounded border px-3 py-2" placeholder="p. ej. partner" />
             {formErrors.name && <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>}
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Descripción</label>
+            <input disabled={busy} value={form.description} onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setFormErrors(errs => ({ ...errs, description: undefined })) }} className="w-full rounded border px-3 py-2" placeholder="Describe brevemente el alcance del rol" />
+          </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Permisos (JSON)</label>
-            <textarea disabled={busy} value={form.permissionsText} onChange={e=>{ setForm(f=>({ ...f, permissionsText: e.target.value })); setFormErrors(errs => ({ ...errs, permissionsText: undefined })) }} rows={6} className="w-full rounded border px-3 py-2 font-mono text-sm" />
-            {formErrors.permissionsText && <p className="text-xs text-red-600 mt-1">{formErrors.permissionsText}</p>}
-            <div className="mt-2 flex flex-wrap gap-3">
-              {suggested.map(s => {
-                let checked = false
-                try {
-                  const obj = form.permissionsText.trim() ? JSON.parse(form.permissionsText) : {}
-                  checked = Array.isArray(obj.can_do) && obj.can_do.includes(s.key)
-                } catch {}
-                return (
+            <div>
+              <div className="text-sm font-medium mb-2">Módulos del menú</div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {availableModules.map(m => (
+                  <label key={m.id} className="inline-flex items-center gap-2 text-sm p-2 rounded border">
+                    <input type="checkbox" disabled={busy} checked={Boolean(form.modules[m.id])} onChange={e => setModule(m.id, e.target.checked)} />
+                    <span>{m.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Estos toggles controlan qué módulos aparecen en la navegación para usuarios con este rol.</p>
+            </div>
+            <div className="mt-4">
+              <div className="text-sm font-medium mb-2">Acciones</div>
+              <div className="flex flex-wrap gap-3">
+                {suggested.map(s => (
                   <label key={s.key} className="inline-flex items-center gap-2 text-sm">
-                    <input type="checkbox" disabled={busy} checked={checked} onChange={()=>togglePermission(s.key)} />
+                    <input type="checkbox" disabled={busy} checked={form.canDo.includes(s.key)} onChange={() => toggleCanDo(s.key)} />
                     <span>{s.label}</span>
                   </label>
-                )
-              })}
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input value={customPerm} onChange={e => setCustomPerm(e.target.value)} placeholder="Agregar permiso personalizado (ej. export_reports)" className="flex-1 rounded border px-3 py-2 text-sm" />
+                <button type="button" onClick={addCustomPerm} className="px-3 py-2 text-sm rounded border">Agregar</button>
+              </div>
+              {form.canDo.filter(k => !suggested.some(s => s.key === k)).length > 0 && (
+                <div className="mt-2">
+                  <div className="text-xs text-gray-500 mb-1">Permisos personalizados</div>
+                  <div className="flex flex-wrap gap-2">
+                    {form.canDo.filter(k => !suggested.some(s => s.key === k)).map(k => (
+                      <span key={k} className="inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded">
+                        {k}
+                        <button onClick={() => removeCustomPerm(k)} className="text-gray-500 hover:text-gray-700">×</button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
         <div className="mt-3 flex gap-2">
           <button disabled={busy || !form.name.trim()} onClick={save} className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50">{form.id ? 'Guardar cambios' : 'Crear rol'}</button>
           {form.id && (
-            <button disabled={busy} onClick={()=>setForm({ id: undefined, name: '', permissionsText: '{\n  "can_do": []\n}' })} className="px-4 py-2 rounded border">Cancelar</button>
+            <button disabled={busy} onClick={beginCreate} className="px-4 py-2 rounded border">Cancelar</button>
           )}
         </div>
       </div>
@@ -241,18 +293,32 @@ export default function RolesAdminPage() {
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar..." className="rounded border px-3 py-2" />
         </div>
         <div className="divide-y">
-          {filteredRoles.map(r => (
-            <div key={r.id} className="py-3 flex items-start justify-between gap-4">
-              <div>
-                <div className="font-medium">{r.name}</div>
-                <div className="text-xs text-gray-500 overflow-auto max-h-28"><pre className="whitespace-pre-wrap">{JSON.stringify(r.permissions ?? {}, null, 2)}</pre></div>
+          {filteredRoles.map(r => {
+            const p = r.permissions || {}
+            const desc = p?.description || ''
+            const modules = Object.entries(p?.modules || {}).filter(([, v]) => Boolean(v)).map(([k]) => k)
+            const canDo = Array.isArray(p?.can_do) ? (p.can_do as string[]) : []
+            return (
+              <div key={r.id} className="py-3 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="font-medium">{r.name}</div>
+                  {desc && <div className="text-sm text-gray-600 mt-0.5">{desc}</div>}
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {modules.map(m => (
+                      <span key={m} className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">{m}</span>
+                    ))}
+                    {canDo.length > 0 && (
+                      <span className="inline-block text-xs bg-gray-50 text-gray-700 border border-gray-200 px-2 py-0.5 rounded">{canDo.length} permisos</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button disabled={busy} onClick={()=>beginEdit(r)} className="px-3 py-1 rounded border">Editar</button>
+                  <button disabled={busy} onClick={()=>requestDelete(r)} className="px-3 py-1 rounded bg-red-600 text-white">Eliminar</button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button disabled={busy} onClick={()=>beginEdit(r)} className="px-3 py-1 rounded border">Editar</button>
-                <button disabled={busy} onClick={()=>requestDelete(r)} className="px-3 py-1 rounded bg-red-600 text-white">Eliminar</button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
           {filteredRoles.length === 0 && (
             <div className="text-gray-500 text-sm">Sin resultados</div>
           )}

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { MENU, filterMenu, Role } from './menuConfig'
+import { MENU, filterMenu, Role, MenuItem } from './menuConfig'
 import getCurrentUserRole from '@/lib/getCurrentUserRole'
 import { useAuth } from '../../providers/AuthProvider'
 
@@ -13,7 +13,7 @@ type SidebarProps = {
 
 export default function Sidebar({ className = '' }: SidebarProps) {
   const pathname = usePathname()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, profile } = useAuth() as any
   const [collapsed, setCollapsed] = useState<boolean>(false)
   const [mobileOpen, setMobileOpen] = useState<boolean>(false)
   const [role, setRole] = useState<Role | null>(null)
@@ -60,7 +60,21 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   // No renderizar en pantallas de autenticación o cuando no hay usuario
   if (isAuthRoute || authLoading || !user) return null
 
-  const items = filterMenu(MENU, role)
+  const itemsByRole = filterMenu(MENU, role)
+  // Si el rol trae permissions.modules, usamos ese mapa para mostrar/ocultar módulos del sidebar
+  const items = (() => {
+    const modules = (profile?.roles?.permissions?.modules ?? null) as Record<string, boolean> | null
+    if (!modules || typeof modules !== 'object') return itemsByRole
+    const allow = (id: string) => Boolean(modules[id])
+    const topLevelFiltered: MenuItem[] = []
+    for (const it of itemsByRole) {
+      // Si el ítem no tiene restricción por módulos (id ausente), lo mantenemos
+      if (!it.id) { topLevelFiltered.push(it); continue }
+      // Solo mostramos si el módulo está permitido en permissions.modules
+      if (allow(it.id)) topLevelFiltered.push(it)
+    }
+    return topLevelFiltered
+  })()
   const expanded = !collapsed || hoverExpand
 
   const Nav = (

@@ -48,6 +48,15 @@ Notas
 - El ocultamiento en UI no sustituye autorización en backend (APIs y RLS deben validar permisos).
 - Persistencia del estado del sidebar en localStorage (`sidebar-collapsed`).
 
+### Sidebar y permissions.modules
+
+Además de filtrar por los roles permitidos definidos en `menuConfig.ts`, el Sidebar respeta `permissions.modules` del rol actual:
+
+- Si `permissions.modules` existe (por ejemplo `{ "dashboard": true, "reports": true }`), sólo se muestran los módulos de primer nivel cuyo id esté activado.
+- Si no existe `permissions.modules`, se usa únicamente el filtrado por roles del `menuConfig` (comportamiento previo).
+
+La nueva UI de Roles permite activar/desactivar estos módulos fácilmente.
+
 ## Sistema de notificaciones (Toast + ConfirmModal)
 
 Componentes principales:
