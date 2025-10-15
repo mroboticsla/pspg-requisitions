@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
+import { RequireRoleClient } from '../components/RequireRole'
 
 type ProfileRow = { id: string, first_name?: string, last_name?: string, is_active?: boolean, roles?: any }
 type RoleRow = { id: string, name: string, permissions?: any }
@@ -104,7 +105,7 @@ export default function AdminPage() {
     </div>
   )
 
-  return (
+  const content = (
     <div className="py-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold mb-4">Panel de administración</h1>
@@ -148,5 +149,11 @@ export default function AdminPage() {
         </div>
       </div>
     </div>
+  )
+
+  return (
+    <RequireRoleClient allow={['admin','superadmin']} fallback={<div className="p-6 text-red-600">Acceso restringido. No tiene permisos suficientes.</div>}>
+      {content}
+    </RequireRoleClient>
   )
 }

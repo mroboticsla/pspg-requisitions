@@ -71,3 +71,20 @@ El formulario está preparado para conectarse con un backend futuro:
 - Diseño responsive
 - Interfaz limpia y profesional
 - Formulario organizado por secciones como en la imagen original
+
+## 🧭 Navegación y roles
+
+- Sidebar vertical colapsable integrado en `app/layout.tsx` mediante `app/components/navigation/Sidebar.tsx`.
+- Configuración del menú y filtrado por rol en `app/components/navigation/menuConfig.ts`.
+- Rol actual obtenido con `lib/getCurrentUserRole.ts` que usa la RPC `public.current_user_role()` o el perfil cargado.
+- Para proteger páginas o secciones usa el wrapper cliente `app/components/RequireRole.tsx`:
+
+```tsx
+<RequireRoleClient allow={["admin", "superadmin"]}>
+   <AdminContent />
+</RequireRoleClient>
+```
+
+Notas
+- Ocultar elementos del menú no sustituye la autorización en backend (RLS y APIs deben validar permisos).
+- El estado colapsado del sidebar se persiste en localStorage (`sidebar-collapsed`).

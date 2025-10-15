@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Header from './components/Header'
+import Sidebar from './components/navigation/Sidebar'
 import { AuthProvider } from './providers/AuthProvider'
 import { ToastProvider } from '@/lib/useToast'
 import ToastContainer from './components/ToastContainer'
@@ -38,10 +39,15 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             <div className="min-h-screen bg-surface-secondary">
-              <Header />
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {children}
-              </main>
+              <Header showNavigation={false} />
+              <div className="flex">
+                <Sidebar className="shrink-0" />
+                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 md:ml-0">
+                  <div className="max-w-7xl mx-auto">
+                    {children}
+                  </div>
+                </main>
+              </div>
             </div>
             <ToastContainer />
           </ToastProvider>

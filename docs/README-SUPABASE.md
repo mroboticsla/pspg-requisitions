@@ -168,3 +168,22 @@ ON profiles FOR INSERT
 TO service_role
 WITH CHECK (true);
 ```
+
+## Crea la función para consultar el Rol del usuario activo
+
+```
+-- Crea un wrapper que usa auth.uid() y reutiliza get_user_role(user_id)
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN public.get_user_role(auth.uid());
+END;
+$$;
+
+-- Permitir a usuarios autenticados ejecutar la función vía PostgREST
+REVOKE ALL ON FUNCTION public.current_user_role() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
+```
