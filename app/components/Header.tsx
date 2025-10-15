@@ -70,40 +70,6 @@ export default function Header({ showNavigation }: HeaderProps) {
             </Link>
           </div>
 
-          {/* Navegación desktop */}
-          {resolvedShowNavigation && (
-            <nav className="hidden md:flex items-center space-x-6">
-              {canAccess('dashboard') && (
-                <Link
-                  href="/dashboard"
-                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                  Dashboard
-                </Link>
-              )}
-              {canAccess('requisitions') && (
-                <Link
-                  href="/requisitions"
-                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                  Requisiciones
-                </Link>
-              )}
-              {canAccess('reports') && (
-                <Link
-                  href="/reports"
-                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                  Reportes
-                </Link>
-              )}
-              {canAccess('profile') && (
-                <Link
-                  href="/profile"
-                  className="text-gray-600 hover:text-brand-dark transition-colors px-3 py-2 rounded-md text-sm font-medium">
-                  Perfil
-                </Link>
-              )}
-            </nav>
-          )}
-
           {/* Estado de usuario / acciones */}
           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
             {loading ? (
