@@ -71,3 +71,76 @@ npm run dev
 - Tests de integración ligeros para endpoints `/api/admin/*`
 - Endpoints adicionales para requisiciones del negocio
 - Monitoreo y límites de tasa en endpoints admin
+
+---
+
+## Navegación del Sistema
+
+### Estructura de Rutas
+
+- **`/` (Home)**: Redirección automática según estado de autenticación
+  - Usuario autenticado → `/dashboard`
+  - Sin autenticación → `/auth`
+- **`/dashboard`**: Dashboard administrativo completo con estadísticas, gráficos y herramientas de gestión (admin/superadmin)
+- **`/admin`**: Redirección automática a `/dashboard`
+- **`/admin/users`**: Gestión de usuarios del sistema
+- **`/admin/roles`**: Gestión de roles y permisos (solo superadmin)
+- **`/auth`**: Página de autenticación (login/register)
+- **`/profile`**: Perfil del usuario actual
+
+### Menú de Navegación Lateral
+
+El menú se configura en `app/components/navigation/menuConfig.ts` y se filtra automáticamente según el rol del usuario:
+
+- **Dashboard**: Acceso al panel administrativo (`/dashboard`) - Solo admin/superadmin
+- **Requisiciones**: Gestión de requisiciones (nuevas, aprobar, mis requisiciones) - Según rol
+- **Reportes**: Generación de reportes - Solo admin/superadmin
+- **Administración**: Gestión de usuarios y roles - Solo admin/superadmin
+  - Usuarios: `/admin/users`
+  - Roles: `/admin/roles` (solo superadmin)
+- **Mi perfil**: Perfil del usuario actual - Todos los usuarios
+
+### Flujo de Navegación
+
+1. **Inicio de sesión exitoso**: Usuario es redirigido automáticamente a `/dashboard`
+2. **Click en logo**: Usuario autenticado es redirigido a `/dashboard`
+3. **Acceso directo a `/`**: Redirección inteligente según estado de autenticación
+4. **Sin autenticación**: Cualquier ruta protegida redirige a `/auth`
+
+---
+
+## Dashboard Administrativo
+
+El sistema cuenta con un dashboard administrativo completo en `/dashboard` con las siguientes características:
+
+### Características Principales
+
+- **KPIs en tiempo real**: Total usuarios, usuarios activos/inactivos, roles configurados
+- **Gráficos interactivos**: Tendencia de registros (línea) y distribución de roles (pastel)
+- **Filtros por fecha**: 7 días, 30 días o histórico completo
+- **Exportación de datos**: CSV, Excel y JSON
+- **Accesos rápidos**: Navegación directa a gestión de usuarios y roles
+- **Alertas inteligentes**: Notificaciones contextuales según el estado del sistema
+
+### Exportación de Datos
+
+El dashboard permite exportar información en tres formatos:
+
+- **CSV**: Compatible con Excel, Google Sheets (UTF-8 con BOM)
+- **Excel**: Formato nativo .xls
+- **JSON**: Para integraciones y backups
+
+Datos exportados incluyen: ID, nombre, teléfono, rol, estado y fecha de creación.
+
+### Paleta de Colores
+
+El dashboard utiliza los colores de marca PSP Group:
+- Navy/Azul Oscuro (#00253F): Elementos principales
+- Rosa/Magenta (#FF1556): Elementos activos y destacados
+- Grises neutrales: Elementos secundarios y fondos
+
+### Acceso
+
+- **Ruta**: `/dashboard`
+- **Permisos**: Admin y Superadmin
+- **Tecnologías**: Recharts (gráficos), date-fns (fechas)

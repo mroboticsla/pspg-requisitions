@@ -13,7 +13,7 @@ export type MenuItem = {
 }
 
 export const MENU: MenuItem[] = [
-  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', roles: ['superadmin', 'admin'], icon: LayoutDashboard },
   {
     id: 'requisitions', label: 'Requisiciones', roles: ['superadmin', 'admin', 'partner'], children: [
       { id: 'req-new', label: 'Nueva', path: '/requisitions/new', roles: ['partner'], icon: FilePlus2 },
@@ -22,7 +22,7 @@ export const MENU: MenuItem[] = [
     ]
   },
   { id: 'reports', label: 'Reportes', path: '/reports', roles: ['superadmin','admin'], icon: BarChart3 },
-  { id: 'admin', label: 'Administración', roles: ['superadmin','admin'], children: [
+  { id: 'admin', label: 'Administración', path: '/admin', roles: ['superadmin','admin'], children: [
     { id: 'users', label: 'Usuarios', path: '/admin/users', icon: Users },
     { id: 'roles', label: 'Roles', path: '/admin/roles', roles: ['superadmin'], icon: Shield },
   ]},
