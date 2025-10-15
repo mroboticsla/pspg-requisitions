@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { useAuth } from '../providers/AuthProvider';
 import UserMenu from './UserMenu';
 
@@ -61,7 +62,7 @@ export default function Header({ showNavigation }: HeaderProps) {
           {/* Logo y título */}
           <div className="flex items-center min-w-0 flex-1">
             <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-              <img src="/images/favicon.png" alt="PSP logo" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0" />
+              <Image src="/images/favicon.png" alt="PSP logo" width={40} height={40} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0" priority />
               <div className="min-w-0">
                 <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">PSP Group</h1>
                 <p className="text-xs text-gray-500 hidden sm:block">Sistema de Requisiciones</p>

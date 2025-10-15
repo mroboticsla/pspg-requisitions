@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useState, useRef, useCallback } from 'react';
 import ReactCrop, { Crop, PixelCrop } from 'react-image-crop';
@@ -37,12 +38,6 @@ export default function ImageCropModal({
       setImageSrc(reader.result as string);
     };
     reader.readAsDataURL(imageFile);
-
-    return () => {
-      if (imageSrc) {
-        URL.revokeObjectURL(imageSrc);
-      }
-    };
   }, [imageFile]);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {

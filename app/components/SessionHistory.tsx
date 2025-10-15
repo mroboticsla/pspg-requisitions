@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /**
  * Componente para mostrar el historial de sesiones del usuario
  * Útil para auditoría de seguridad

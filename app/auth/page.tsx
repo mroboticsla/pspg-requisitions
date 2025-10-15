@@ -1,4 +1,5 @@
 "use client";
+import Image from 'next/image'
 
 import { useState, useEffect, Suspense } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
@@ -206,7 +207,7 @@ function AuthPageContent() {
         {/* Logo y título */}
         <div className="text-center">
           <div className="h-16 flex items-center justify-center mx-auto mb-4">
-            <img src="/images/logo-web-dark.png" alt="PSP logo" className="h-12 rounded-lg object-cover" />
+            <Image src="/images/logo-web-dark.png" alt="PSP logo" width={120} height={48} className="h-12 w-auto rounded-lg object-cover" priority />
           </div>
         </div>
 

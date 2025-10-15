@@ -19,6 +19,20 @@ async function getUserFromToken(token: string | null) {
   }
 }
 
+const RESERVED_ROLE_NAMES = ['superadmin', 'admin', 'partner', 'candidate']
+
+function normalizeRoleName(name: string): string {
+  return String(name || '').trim().toLowerCase()
+}
+
+function validateRoleName(name: string): string | null {
+  const n = normalizeRoleName(name)
+  if (!n) return 'El nombre del rol es requerido'
+  if (n.length < 3 || n.length > 30) return 'El nombre debe tener entre 3 y 30 caracteres'
+  if (!/^[a-z0-9_-]+$/.test(n)) return 'El nombre solo puede contener a-z, 0-9, guion y guion bajo'
+  return null
+}
+
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get('authorization') || ''
@@ -60,7 +74,68 @@ export async function POST(req: Request) {
     if (action === 'create-role') {
       if (roleName !== 'superadmin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       const { name, permissions } = body
-      const { data, error } = await adminClient.from('roles').insert({ name, permissions })
+      const nameError = validateRoleName(name)
+      if (nameError) return NextResponse.json({ error: nameError }, { status: 400 })
+      const normalizedName = normalizeRoleName(name)
+      const { data: existingByName } = await adminClient
+        .from('roles')
+        .select('id, name')
+        .eq('name', normalizedName)
+        .maybeSingle()
+      if (existingByName) return NextResponse.json({ error: 'Ya existe un rol con ese nombre' }, { status: 409 })
+      const { data, error } = await adminClient.from('roles').insert({ name: normalizedName, permissions })
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // UPDATE ROLE (only superadmin)
+    if (action === 'update-role') {
+      if (roleName !== 'superadmin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      const { id, name, permissions } = body
+      if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+      const { data: targetRole, error: fetchErr } = await adminClient.from('roles').select('id, name').eq('id', id).maybeSingle()
+      if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 })
+      if (!targetRole) return NextResponse.json({ error: 'role not found' }, { status: 404 })
+
+      const payload: any = {}
+      if (typeof name === 'string') {
+        const nameError = validateRoleName(name)
+        if (nameError) return NextResponse.json({ error: nameError }, { status: 400 })
+        const normalizedName = normalizeRoleName(name)
+        const isTargetReserved = RESERVED_ROLE_NAMES.includes(String((targetRole as any).name).toLowerCase())
+        if (isTargetReserved && normalizedName !== String((targetRole as any).name).toLowerCase()) {
+          return NextResponse.json({ error: 'No se puede renombrar un rol reservado' }, { status: 400 })
+        }
+        const { data: exists } = await adminClient
+          .from('roles')
+          .select('id, name')
+          .eq('name', normalizedName)
+          .neq('id', id)
+          .maybeSingle()
+        if (exists) return NextResponse.json({ error: 'Ya existe un rol con ese nombre' }, { status: 409 })
+        payload.name = normalizedName
+      }
+      if (typeof permissions !== 'undefined') payload.permissions = permissions
+      if (Object.keys(payload).length === 0) return NextResponse.json({ error: 'nothing to update' }, { status: 400 })
+      const { data, error } = await adminClient.from('roles').update(payload).eq('id', id)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // DELETE ROLE (only superadmin)
+    if (action === 'delete-role') {
+      if (roleName !== 'superadmin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      const { id } = body
+      if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+      const { data: roleRec, error: roleErr } = await adminClient.from('roles').select('id, name').eq('id', id).maybeSingle()
+      if (roleErr) return NextResponse.json({ error: roleErr.message }, { status: 500 })
+      if (!roleRec) return NextResponse.json({ error: 'role not found' }, { status: 404 })
+      if (RESERVED_ROLE_NAMES.includes(String((roleRec as any).name).toLowerCase())) {
+        return NextResponse.json({ error: 'No se puede eliminar un rol reservado' }, { status: 400 })
+      }
+      const { count } = await adminClient.from('profiles').select('id', { count: 'exact', head: true }).eq('role_id', id)
+      if ((count ?? 0) > 0) return NextResponse.json({ error: 'role in use by some profiles' }, { status: 400 })
+      const { data, error } = await adminClient.from('roles').delete().eq('id', id)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true, data })
     }

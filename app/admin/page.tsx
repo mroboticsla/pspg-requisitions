@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
@@ -17,10 +17,10 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [loadingData, setLoadingData] = useState(false)
 
-  const isAllowed = () => {
+  const allowed = useMemo(() => {
     const roleName = (profile as any)?.roles?.name
     return ['admin', 'superadmin'].includes(roleName)
-  }
+  }, [profile])
 
   // Timeout de seguridad: Si loading se queda en true por más de 25 segundos, redirigir al login
   useEffect(() => {
@@ -44,23 +44,12 @@ export default function AdminPage() {
     }
   }, [loading, user, profile, router])
 
-  useEffect(() => {
-    if (loading) return // Esperar a que termine de cargar
-    if (!user || !profile) return
-    if (!isAllowed()) return
-    fetchData()
-  }, [user, profile, loading]) // Agregar loading a las dependencias
-
-  const getToken = async () => {
-    const s = await supabase.auth.getSession()
-    return (s as any).data?.session?.access_token ?? null
-  }
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoadingData(true)
     setError(null)
     try {
-      const token = await getToken()
+      const s = await supabase.auth.getSession()
+      const token = (s as any).data?.session?.access_token ?? null
       const resUsers = await fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'list-users' }) })
       const bodyUsers = await resUsers.json()
       if (!resUsers.ok) throw new Error(bodyUsers.error || 'Failed fetching users')
@@ -75,7 +64,16 @@ export default function AdminPage() {
     } finally {
       setLoadingData(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (loading) return // Esperar a que termine de cargar
+    if (!user || !profile) return
+    if (!allowed) return
+    fetchData()
+  }, [user, profile, loading, allowed, fetchData])
+
+  // getToken inline en fetchData
 
   // Mostrar loading mientras se verifica la sesión
   if (loading) return (
@@ -97,7 +95,7 @@ export default function AdminPage() {
     </div>
   )
   
-  if (!isAllowed()) return (
+  if (!allowed) return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
         <p className="text-red-600">Acceso restringido. No tiene permisos suficientes.</p>

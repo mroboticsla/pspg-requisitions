@@ -30,6 +30,23 @@ export default function ProfilePage() {
   const [sessionMetadata, setSessionMetadata] = useState<SessionMetadata | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
+  // Función para cargar el avatar desde user_metadata
+  const loadAvatarUrl = React.useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_metadata')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!error && data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    } catch (error) {
+      console.error('Error al cargar avatar:', error);
+    }
+  }, [user?.id]);
+
   // Cargar datos del perfil cuando estén disponibles
   useEffect(() => {
     if (profile && user) {
@@ -68,26 +85,7 @@ export default function ProfilePage() {
       // Cargar avatar URL desde user_metadata
       loadAvatarUrl();
     }
-  }, [profile, user]);
-
-  // Función para cargar el avatar desde user_metadata
-  const loadAvatarUrl = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const { data, error } = await supabase
-        .from('user_metadata')
-        .select('avatar_url')
-        .eq('user_id', user.id)
-        .maybeSingle(); // maybeSingle() no falla si no encuentra registro
-      
-      if (!error && data?.avatar_url) {
-        setAvatarUrl(data.avatar_url);
-      }
-    } catch (error) {
-      console.error('Error al cargar avatar:', error);
-    }
-  };
+  }, [profile, user, loadAvatarUrl]);
 
   // Callback para cuando se actualiza el avatar
   const handleAvatarUpdate = (newAvatarUrl: string) => {
@@ -395,7 +393,7 @@ export default function ProfilePage() {
               )}
               {!isEmailUnlocked && (
                 <p className="mt-1 text-xs text-gray-500">
-                  El correo está bloqueado para prevenir cambios accidentales. Haz clic en "Desbloquear" para editarlo.
+                  El correo está bloqueado para prevenir cambios accidentales. Haz clic en &quot;Desbloquear&quot; para editarlo.
                 </p>
               )}
             </div>

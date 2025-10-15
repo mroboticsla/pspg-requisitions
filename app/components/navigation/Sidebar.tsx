@@ -111,7 +111,6 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         style={{ position: 'sticky', top: 'var(--header-h, 64px)', height: 'calc(100dvh - var(--header-h, 64px))' }}
         onMouseEnter={() => setHoverExpand(true)}
         onMouseLeave={() => setHoverExpand(false)}
-        aria-expanded={expanded}
       >
         <div className="flex items-center justify-between h-12 px-3 border-b border-gray-100">
           <span className={`text-sm font-semibold text-gray-700 ${expanded ? 'block' : 'hidden'}`}>Navegación</span>
