@@ -17,6 +17,17 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
     - `AdminLayout`: Layout con subcomponentes (Header, Card, Search, List, etc.)
     - `AdminButton`: Familia de botones (Primary, Secondary, Danger, Outline, Ghost, Icon)
   - Documentación en `docs/README-FRONTEND.md` sección "Sistema de estilos para administración"
+- **Validaciones de seguridad para roles**:
+  - Protección de roles del sistema (admin, superadmin, partner, candidate):
+    - No pueden ser eliminados
+    - No pueden ser renombrados
+    - Indicador visual "🔒 Protegido" en la UI
+    - Botón de eliminar deshabilitado con tooltip explicativo
+  - Validación de roles en uso:
+    - Los roles no pueden ser eliminados si hay usuarios asignados
+    - Mensajes de error descriptivos con cantidad de usuarios afectados
+    - Verificación en frontend y backend
+  - Mensajes de error mejorados en español en el API
 - Sistema de notificaciones toast para mejorar la experiencia del usuario:
   - Componente `Toast` con 4 variantes (success, error, warning, info)
   - Componente `ToastContainer` para gestión centralizada de notificaciones

@@ -48,6 +48,33 @@ export default function RolesAdminPage() {
 
   const isSuper = (profile as any)?.roles?.name === 'superadmin'
 
+  // Roles que no se pueden eliminar
+  const PROTECTED_ROLES = ['admin', 'superadmin', 'partner', 'candidate']
+
+  // Verificar si un rol está protegido
+  const isRoleProtected = (roleName: string): boolean => {
+    return PROTECTED_ROLES.includes(roleName.toLowerCase())
+  }
+
+  // Verificar si un rol está en uso
+  const isRoleInUse = async (roleId: string): Promise<boolean> => {
+    try {
+      const token = await getToken()
+      const res = await fetch('/api/admin/secure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'list-users' })
+      })
+      const body = await res.json()
+      if (!res.ok) return false
+      
+      const users = body.data || []
+      return users.some((u: any) => u.role_id === roleId)
+    } catch {
+      return false
+    }
+  }
+
   // Seguridad adicional: redirigir si no autenticado tras cargar
   useEffect(() => {
     if (!loading && (!user || !profile)) {
@@ -121,18 +148,19 @@ export default function RolesAdminPage() {
   const save = async () => {
     try {
       setBusy(true)
-      // construir objeto de permisos desde la UI
-      const permissions: any = {
-        description: form.description?.trim() || undefined,
-        can_do: form.canDo,
-        modules: Object.fromEntries(Object.entries(form.modules).filter(([, v]) => Boolean(v))),
-        ...form.extras,
-      }
+      
       const normalizedName = form.name.trim().toLowerCase()
       if (!normalizedName) {
         setFormErrors(errs => ({ ...errs, name: 'El nombre es requerido' }))
         return
       }
+      
+      // Validar roles protegidos
+      if (form.id && isRoleProtected(normalizedName)) {
+        showError('Los roles del sistema no pueden ser modificados')
+        return
+      }
+      
       if (normalizedName.length < 3 || normalizedName.length > 30) {
         setFormErrors(errs => ({ ...errs, name: 'El nombre debe tener entre 3 y 30 caracteres' }))
         return
@@ -141,6 +169,15 @@ export default function RolesAdminPage() {
         setFormErrors(errs => ({ ...errs, name: 'Solo a-z, 0-9, guion y guion bajo' }))
         return
       }
+      
+      // construir objeto de permisos desde la UI
+      const permissions: any = {
+        description: form.description?.trim() || undefined,
+        can_do: form.canDo,
+        modules: Object.fromEntries(Object.entries(form.modules).filter(([, v]) => Boolean(v))),
+        ...form.extras,
+      }
+      
       const token = await getToken()
       if (form.id) {
         const res = await fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'update-role', id: form.id, name: normalizedName, permissions }) })
@@ -191,7 +228,22 @@ export default function RolesAdminPage() {
   }
   const removeCustomPerm = (k: string) => setForm(f => ({ ...f, canDo: f.canDo.filter(x => x !== k) }))
 
-  const requestDelete = (r: RoleRow) => setShowDelete({ open: true, id: r.id, name: r.name })
+  const requestDelete = async (r: RoleRow) => {
+    // Validar si el rol está protegido
+    if (isRoleProtected(r.name)) {
+      showError(`El rol "${r.name}" es un rol del sistema y no puede ser eliminado`)
+      return
+    }
+
+    // Verificar si el rol está en uso
+    const inUse = await isRoleInUse(r.id)
+    if (inUse) {
+      showError(`El rol "${r.name}" no puede ser eliminado porque hay usuarios asignados a este rol`)
+      return
+    }
+
+    setShowDelete({ open: true, id: r.id, name: r.name })
+  }
 
   const doDelete = async () => {
     if (!showDelete.id) return
@@ -249,6 +301,8 @@ export default function RolesAdminPage() {
             const desc = p?.description || ''
             const modules = Object.entries(p?.modules || {}).filter(([, v]) => Boolean(v)).map(([k]) => k)
             const canDo = Array.isArray(p?.can_do) ? (p.can_do as string[]) : []
+            const isProtected = isRoleProtected(r.name)
+            
             return (
               <div 
                 key={r.id} 
@@ -260,6 +314,11 @@ export default function RolesAdminPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-base text-gray-900">{r.name}</h3>
+                      {isProtected && (
+                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium border border-amber-200" title="Rol del sistema protegido">
+                          🔒 Protegido
+                        </span>
+                      )}
                       {modules.length > 0 && (
                         <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">
                           {modules.length} {modules.length === 1 ? 'módulo' : 'módulos'}
@@ -298,17 +357,17 @@ export default function RolesAdminPage() {
                     <button 
                       disabled={busy} 
                       onClick={(e) => { e.stopPropagation(); beginEdit(r); }} 
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium w-full sm:w-auto"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
                       title="Ver detalles"
                     >
                       <Eye className="w-4 h-4" />
                       <span>Ver detalles</span>
                     </button>
                     <button 
-                      disabled={busy} 
+                      disabled={busy || isProtected} 
                       onClick={(e) => { e.stopPropagation(); requestDelete(r); }} 
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors text-sm font-medium w-full sm:w-auto"
-                      title="Eliminar"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={isProtected ? "Este rol está protegido y no puede ser eliminado" : "Eliminar rol"}
                     >
                       <Trash2 className="w-4 h-4" />
                       <span>Eliminar</span>
@@ -324,7 +383,10 @@ export default function RolesAdminPage() {
   )
 
   // Renderizado de la vista de creación/edición
-  const renderFormView = () => (
+  const renderFormView = () => {
+    const isEditingProtectedRole = form.id && isRoleProtected(form.name)
+    
+    return (
     <div className="space-y-4 p-4 sm:p-6">
       {/* Header compacto con navegación */}
       <div className="flex items-center gap-3">
@@ -338,9 +400,17 @@ export default function RolesAdminPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-          {viewMode === 'create' ? 'Crear nuevo rol' : `Editar: ${form.name}`}
-        </h1>
+        <div className="flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            {viewMode === 'create' ? 'Crear nuevo rol' : `Editar: ${form.name}`}
+          </h1>
+          {isEditingProtectedRole && (
+            <p className="text-sm text-amber-700 mt-1 flex items-center gap-1">
+              <span>🔒</span>
+              <span>Este es un rol del sistema. Solo puedes modificar permisos y módulos.</span>
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Layout más compacto: sidebar colapsable en móvil */}
@@ -522,7 +592,8 @@ export default function RolesAdminPage() {
         </div>
       </div>
     </div>
-  )
+    )
+  }
 
   const content = viewMode === 'list' ? renderListView() : renderFormView()
 

@@ -130,11 +130,23 @@ export async function POST(req: Request) {
       const { data: roleRec, error: roleErr } = await adminClient.from('roles').select('id, name').eq('id', id).maybeSingle()
       if (roleErr) return NextResponse.json({ error: roleErr.message }, { status: 500 })
       if (!roleRec) return NextResponse.json({ error: 'role not found' }, { status: 404 })
-      if (RESERVED_ROLE_NAMES.includes(String((roleRec as any).name).toLowerCase())) {
-        return NextResponse.json({ error: 'No se puede eliminar un rol reservado' }, { status: 400 })
+      
+      // Validar roles protegidos
+      const roleLower = String((roleRec as any).name).toLowerCase()
+      if (RESERVED_ROLE_NAMES.includes(roleLower)) {
+        return NextResponse.json({ 
+          error: `El rol "${(roleRec as any).name}" es un rol del sistema y no puede ser eliminado` 
+        }, { status: 400 })
       }
+      
+      // Verificar si el rol está en uso
       const { count } = await adminClient.from('profiles').select('id', { count: 'exact', head: true }).eq('role_id', id)
-      if ((count ?? 0) > 0) return NextResponse.json({ error: 'role in use by some profiles' }, { status: 400 })
+      if ((count ?? 0) > 0) {
+        return NextResponse.json({ 
+          error: `El rol "${(roleRec as any).name}" no puede ser eliminado porque ${count} ${count === 1 ? 'usuario está asignado' : 'usuarios están asignados'} a este rol` 
+        }, { status: 400 })
+      }
+      
       const { data, error } = await adminClient.from('roles').delete().eq('id', id)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       return NextResponse.json({ ok: true, data })
