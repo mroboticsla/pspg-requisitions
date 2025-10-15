@@ -212,34 +212,35 @@ export default function RolesAdminPage() {
 
   // Renderizado de la vista de lista de roles
   const renderListView = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Administración de roles</h1>
+    <div className="space-y-4 p-4 sm:p-6">
+      {/* Header compacto */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-admin-text-primary">Administración de roles</h1>
         <button 
           onClick={beginCreate} 
           disabled={busy}
-          className="flex items-center gap-2 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-admin-success text-white hover:bg-admin-successHover disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
-          Crear nuevo rol
+          <span>Crear nuevo rol</span>
         </button>
       </div>
 
-      {/* Búsqueda */}
-      <div className="bg-white rounded shadow p-4">
+      {/* Búsqueda compacta */}
+      <div className="bg-white rounded-lg shadow-sm p-3">
         <input 
           value={search} 
           onChange={e => setSearch(e.target.value)} 
           placeholder="Buscar roles..." 
-          className="w-full rounded border border-neutral-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent" 
+          className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-admin-accent focus:border-admin-accent text-sm" 
         />
       </div>
 
-      {/* Listado de roles */}
-      <div className="bg-white rounded shadow overflow-hidden">
-        <div className="divide-y">
+      {/* Listado de roles - diseño compacto */}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="divide-y divide-gray-200">
           {filteredRoles.length === 0 && (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-gray-500 text-sm">
               {search.trim() ? 'No se encontraron roles con ese criterio de búsqueda' : 'No hay roles creados aún'}
             </div>
           )}
@@ -251,43 +252,53 @@ export default function RolesAdminPage() {
             return (
               <div 
                 key={r.id} 
-                className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                onClick={() => beginEdit(r)}
+                className="p-4 hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-start justify-between gap-4">
+                {/* Layout compacto: info a la izquierda, badges y botones a la derecha en desktop */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                  {/* Información del rol */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-lg">{r.name}</h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-base text-gray-900">{r.name}</h3>
                       {modules.length > 0 && (
-                        <span className="text-xs bg-brand-dark/10 text-brand-dark px-2 py-1 rounded">
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">
                           {modules.length} {modules.length === 1 ? 'módulo' : 'módulos'}
                         </span>
                       )}
                       {canDo.length > 0 && (
-                        <span className="text-xs bg-neutral-100 text-neutral-700 px-2 py-1 rounded">
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">
                           {canDo.length} {canDo.length === 1 ? 'permiso' : 'permisos'}
                         </span>
                       )}
                     </div>
-                    {desc && <p className="text-sm text-gray-600 mt-1">{desc}</p>}
+                    {desc && <p className="text-sm text-gray-600 line-clamp-1">{desc}</p>}
+                    
+                    {/* Módulos inline en desktop para ahorrar espacio */}
                     {modules.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {modules.map(m => (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {modules.slice(0, 5).map(m => (
                           <span 
                             key={m} 
-                            className="inline-block text-xs bg-brand-dark/5 text-brand-dark border border-brand-dark/20 px-2 py-0.5 rounded"
+                            className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded"
                           >
                             {m}
                           </span>
                         ))}
+                        {modules.length > 5 && (
+                          <span className="text-xs text-gray-500 px-2 py-0.5">
+                            +{modules.length - 5} más
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+
+                  {/* Botones de acción - compactos en desktop, full width en móvil */}
+                  <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
                     <button 
                       disabled={busy} 
                       onClick={(e) => { e.stopPropagation(); beginEdit(r); }} 
-                      className="flex items-center gap-2 px-3 py-1.5 rounded border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium w-full sm:w-auto"
                       title="Ver detalles"
                     >
                       <Eye className="w-4 h-4" />
@@ -296,7 +307,7 @@ export default function RolesAdminPage() {
                     <button 
                       disabled={busy} 
                       onClick={(e) => { e.stopPropagation(); requestDelete(r); }} 
-                      className="flex items-center gap-2 px-3 py-1.5 rounded bg-brand-accent text-white hover:bg-brand-accentDark transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors text-sm font-medium w-full sm:w-auto"
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -314,35 +325,35 @@ export default function RolesAdminPage() {
 
   // Renderizado de la vista de creación/edición
   const renderFormView = () => (
-    <div className="space-y-6">
-      {/* Header con navegación */}
-      <div className="flex items-center gap-4">
+    <div className="space-y-4 p-4 sm:p-6">
+      {/* Header compacto con navegación */}
+      <div className="flex items-center gap-3">
         <button
           onClick={cancelEdit}
           disabled={busy}
-          className="p-2 rounded hover:bg-neutral-100 transition-colors"
+          className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0"
           title="Volver a la lista"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <h1 className="text-2xl font-bold">
-          {viewMode === 'create' ? 'Crear nuevo rol' : `Editar rol: ${form.name}`}
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+          {viewMode === 'create' ? 'Crear nuevo rol' : `Editar: ${form.name}`}
         </h1>
       </div>
 
-      {/* Layout de 2 columnas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna izquierda: Información básica (2/3) */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Layout más compacto: sidebar colapsable en móvil */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Columna principal - 3/4 en desktop */}
+        <div className="lg:col-span-3 space-y-4">
           {/* Información básica */}
-          <div className="bg-white rounded shadow p-6">
-            <h2 className="text-lg font-semibold mb-4 text-brand-dark">Información básica</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Nombre del rol <span className="text-brand-accent">*</span>
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <h2 className="text-base font-semibold mb-3 text-gray-900">Información básica</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1.5 text-gray-700">
+                  Nombre del rol <span className="text-red-600">*</span>
                 </label>
                 <input 
                   disabled={busy || viewMode === 'edit'} 
@@ -351,16 +362,16 @@ export default function RolesAdminPage() {
                     setForm(f => ({ ...f, name: e.target.value })); 
                     setFormErrors(errs => ({ ...errs, name: undefined })) 
                   }} 
-                  className="w-full rounded border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent disabled:bg-neutral-100 disabled:text-neutral-500" 
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 disabled:bg-gray-100 disabled:text-gray-500" 
                   placeholder="p. ej. partner" 
                 />
-                {formErrors.name && <p className="text-xs text-brand-accent mt-1">{formErrors.name}</p>}
+                {formErrors.name && <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>}
                 {viewMode === 'edit' && (
-                  <p className="text-xs text-neutral-500 mt-1">El nombre del rol no se puede modificar</p>
+                  <p className="text-xs text-gray-500 mt-1">El nombre del rol no se puede modificar</p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Descripción</label>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1.5 text-gray-700">Descripción</label>
                 <textarea 
                   disabled={busy} 
                   value={form.description} 
@@ -368,74 +379,74 @@ export default function RolesAdminPage() {
                     setForm(f => ({ ...f, description: e.target.value })); 
                     setFormErrors(errs => ({ ...errs, description: undefined })) 
                   }} 
-                  rows={4}
-                  className="w-full rounded border border-neutral-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent resize-none" 
-                  placeholder="Describe brevemente el alcance y responsabilidades de este rol" 
+                  rows={3}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 resize-none" 
+                  placeholder="Describe el alcance y responsabilidades de este rol" 
                 />
               </div>
             </div>
           </div>
 
-          {/* Permisos y acciones */}
-          <div className="bg-white rounded shadow p-6">
-            <h2 className="text-lg font-semibold mb-2 text-brand-dark">Permisos y acciones</h2>
-            <p className="text-sm text-neutral-600 mb-4">
+          {/* Permisos y acciones en grid */}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <h2 className="text-base font-semibold mb-1 text-gray-900">Permisos y acciones</h2>
+            <p className="text-xs text-gray-600 mb-3">
               Define las acciones específicas que pueden realizar los usuarios con este rol
             </p>
             
-            {/* Permisos sugeridos */}
+            {/* Permisos en grid compacto */}
             <div className="mb-4">
-              <h3 className="text-sm font-medium mb-3">Acciones comunes</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <h3 className="text-sm font-medium mb-2 text-gray-700">Acciones comunes</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {suggested.map(s => (
                   <label 
                     key={s.key} 
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded border hover:bg-neutral-50 cursor-pointer transition-colors"
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors text-sm"
                   >
                     <input 
                       type="checkbox" 
                       disabled={busy} 
                       checked={form.canDo.includes(s.key)} 
                       onChange={() => toggleCanDo(s.key)} 
-                      className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent"
+                      className="rounded text-pink-600 focus:ring-2 focus:ring-pink-500 flex-shrink-0"
                     />
-                    <span className="text-sm">{s.label}</span>
+                    <span>{s.label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            {/* Permisos personalizados */}
+            {/* Permisos personalizados compactos */}
             <div>
-              <h3 className="text-sm font-medium mb-3">Permisos personalizados</h3>
-              <div className="flex gap-2 mb-3">
+              <h3 className="text-sm font-medium mb-2 text-gray-700">Permisos personalizados</h3>
+              <div className="flex gap-2 mb-2">
                 <input 
                   value={customPerm} 
                   onChange={e => setCustomPerm(e.target.value)} 
                   onKeyPress={e => e.key === 'Enter' && addCustomPerm()}
-                  placeholder="Agregar permiso personalizado (ej. export_reports)" 
-                  className="flex-1 rounded border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent" 
+                  placeholder="ej. export_reports" 
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500" 
                 />
                 <button 
                   type="button" 
                   onClick={addCustomPerm} 
                   disabled={busy || !customPerm.trim()}
-                  className="px-4 py-2 text-sm rounded border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white disabled:opacity-50 transition-colors"
+                  className="px-3 py-1.5 text-sm rounded-md border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white disabled:opacity-50 transition-colors font-medium"
                 >
                   Agregar
                 </button>
               </div>
               {form.canDo.filter(k => !suggested.some(s => s.key === k)).length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {form.canDo.filter(k => !suggested.some(s => s.key === k)).map(k => (
                     <span 
                       key={k} 
-                      className="inline-flex items-center gap-2 text-sm bg-neutral-100 px-3 py-1 rounded"
+                      className="inline-flex items-center gap-1.5 text-xs bg-gray-100 px-2 py-1 rounded"
                     >
                       <code className="text-xs">{k}</code>
                       <button 
                         onClick={() => removeCustomPerm(k)} 
-                        className="text-neutral-500 hover:text-brand-accent transition-colors"
+                        className="text-gray-500 hover:text-red-600 transition-colors text-base leading-none"
                         title="Eliminar"
                       >
                         ×
@@ -447,63 +458,63 @@ export default function RolesAdminPage() {
             </div>
           </div>
 
-          {/* Acciones del formulario */}
-          <div className="flex gap-3">
+          {/* Botones de acción */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <button 
               disabled={busy || !form.name.trim()} 
               onClick={save} 
-              className="px-6 py-2 rounded bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm w-full sm:w-auto"
             >
               {busy ? 'Guardando...' : (viewMode === 'create' ? 'Crear rol' : 'Guardar cambios')}
             </button>
             <button 
               disabled={busy} 
               onClick={cancelEdit} 
-              className="px-6 py-2 rounded border border-neutral-300 hover:bg-neutral-50 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium text-sm w-full sm:w-auto"
             >
               Cancelar
             </button>
           </div>
         </div>
 
-        {/* Columna derecha: Módulos del menú (1/3) */}
+        {/* Sidebar compacto - 1/4 en desktop */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded shadow p-6 sticky top-6">
-            <h2 className="text-lg font-semibold mb-2 text-brand-dark">Módulos del menú</h2>
-            <p className="text-sm text-neutral-600 mb-4">
-              Selecciona los módulos disponibles para este rol
+          <div className="bg-white rounded-lg shadow-sm p-4 lg:sticky lg:top-4">
+            <h2 className="text-sm font-semibold mb-2 text-gray-900">Módulos del menú</h2>
+            <p className="text-xs text-gray-600 mb-3">
+              Selecciona módulos disponibles
             </p>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {availableModules.map(m => (
                 <label 
                   key={m.id} 
-                  className="flex items-center gap-3 p-3 rounded border hover:bg-neutral-50 cursor-pointer transition-colors"
+                  className="flex items-center gap-2 p-2 rounded-md border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
                 >
                   <input 
                     type="checkbox" 
                     disabled={busy} 
                     checked={Boolean(form.modules[m.id])} 
                     onChange={e => setModule(m.id, e.target.checked)} 
-                    className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent"
+                    className="rounded text-pink-600 focus:ring-2 focus:ring-pink-500 flex-shrink-0"
                   />
-                  <span className="text-sm font-medium">{m.label}</span>
+                  <span className="text-xs font-medium text-gray-700">{m.label}</span>
                 </label>
               ))}
             </div>
             
-            {/* Resumen de selección */}
-            <div className="mt-4 pt-4 border-t">
-              <div className="text-xs text-neutral-500 mb-2">Resumen de accesos</div>
+            {/* Resumen compacto */}
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="text-xs text-gray-500 mb-1.5">Resumen</div>
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">Módulos:</span>
-                  <span className="font-semibold text-brand-dark">
-                    {Object.values(form.modules).filter(Boolean).length} de {availableModules.length}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600">Módulos:</span>
+                  <span className="font-semibold text-gray-900">
+                    {Object.values(form.modules).filter(Boolean).length}/{availableModules.length}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-neutral-600">Permisos:</span>
-                  <span className="font-semibold text-brand-dark">{form.canDo.length}</span>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600">Permisos:</span>
+                  <span className="font-semibold text-gray-900">{form.canDo.length}</span>
                 </div>
               </div>
             </div>
@@ -517,22 +528,34 @@ export default function RolesAdminPage() {
 
   // Loading general del provider
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex items-center justify-center min-h-[60vh] p-6">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900 mx-auto mb-3"></div>
-        <p className="text-gray-600">Cargando...</p>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600 mx-auto mb-3"></div>
+        <p className="text-gray-600 text-sm">Cargando...</p>
       </div>
     </div>
   )
 
   // Fallback si no superadmin
   if (!isSuper) return (
-    <div className="p-6 text-red-600">Acceso restringido. No tiene permisos suficientes.</div>
+    <div className="p-6">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700 font-medium text-sm">Acceso restringido. No tiene permisos suficientes.</p>
+      </div>
+    </div>
   )
 
   return (
-    <RequireRoleClient allow={["superadmin"]} fallback={<div className="p-6 text-red-600">Acceso restringido. No tiene permisos suficientes.</div>}>
-      {content}
+    <RequireRoleClient allow={["superadmin"]} fallback={
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-700 font-medium text-sm">Acceso restringido. No tiene permisos suficientes.</p>
+        </div>
+      </div>
+    }>
+      <div className="min-h-screen bg-gray-50">
+        {content}
+      </div>
       <ConfirmModal
         isOpen={showDelete.open}
         title="Eliminar rol"
