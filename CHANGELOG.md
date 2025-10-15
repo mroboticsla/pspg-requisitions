@@ -8,6 +8,15 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 ## [No Publicado]
 
 ### Agregado
+- **Sistema de estilos para pantallas de administración**:
+  - Paleta de colores `admin-*` en `tailwind.config.js`:
+    - Colores de acción (success, danger, accent)
+    - Backgrounds (page, card, hover, disabled)
+    - Borders y texto con variantes
+  - Componentes reutilizables:
+    - `AdminLayout`: Layout con subcomponentes (Header, Card, Search, List, etc.)
+    - `AdminButton`: Familia de botones (Primary, Secondary, Danger, Outline, Ghost, Icon)
+  - Documentación en `docs/README-FRONTEND.md` sección "Sistema de estilos para administración"
 - Sistema de notificaciones toast para mejorar la experiencia del usuario:
   - Componente `Toast` con 4 variantes (success, error, warning, info)
   - Componente `ToastContainer` para gestión centralizada de notificaciones
@@ -28,7 +37,6 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
   - Utilidades en `imageUtils.ts` para procesar imágenes (validación, redimensionamiento, conversión a WebP)
   - Integración con Supabase Storage (bucket 'avatars')
   - Políticas RLS para seguridad de archivos
-  - Documentación completa en `docs/README-AVATARS.md`
   - Script SQL para configuración inicial (`scripts/setup-avatars.sql`)
   - Procesamiento inteligente:
     - Redimensionamiento automático a 512x512px
@@ -38,6 +46,22 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
   - Nuevas dependencias: `react-image-crop`, `browser-image-compression`
 
 ### Modificado
+- **Página de administración de roles (`app/admin/roles/page.tsx`)**:
+  - Diseño completamente responsive y optimizado:
+    - **Desktop:** Layout compacto con información densa pero legible
+    - **Tablet:** Grid adaptativo de 2 columnas
+    - **Móvil:** Stack vertical con botones full-width
+  - Lista de roles:
+    - Badges de módulos y permisos inline para ahorrar espacio
+    - Limitación a 5 módulos visibles con contador "+X más"
+    - Botones compactos alineados correctamente
+  - Formulario de creación/edición:
+    - Grid 4 columnas (3+1) en desktop, stack en móvil
+    - Sidebar sticky compacto con módulos
+    - Inputs y controles con tamaños optimizados
+    - Espaciado reducido para mayor densidad
+  - Uso de colores del sistema `admin-*`
+  - Mejor jerarquía visual y legibilidad
 - Reemplazados todos los `alert()` de JavaScript con notificaciones toast modernas:
   - `AvatarUpload`: Éxito en subida, errores de procesamiento, confirmación de eliminación
   - `ImageCropModal`: Errores de procesamiento
@@ -46,7 +70,8 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 - Componente `Header` ahora muestra avatar en lugar de solo iniciales
 - README principal actualizado con nueva característica
 - Tabla `user_metadata` ahora incluye campo `avatar_url`
-- Mejoras en UX general con feedback visual consistente
+- Configuración de Tailwind (`tailwind.config.js`) extendida con paleta completa de administración
+- `docs/README-FRONTEND.md` actualizado con sección de sistema de estilos
 
 ### Mejorado
 - Experiencia de usuario con notificaciones no intrusivas

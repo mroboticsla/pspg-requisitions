@@ -48,7 +48,7 @@ Plataforma interna para la gestión y aprobación de requisiciones de nuevo pers
 ## 📚 Documentación
 
 - [docs/README.md](docs/README.md) - Índice general de la documentación
-- [docs/README-FRONTEND.md](docs/README-FRONTEND.md) - Frontend: UI, navegación, toasts, avatares y auditoría de sesión
+- [docs/README-FRONTEND.md](docs/README-FRONTEND.md) - Frontend: UI, navegación, toasts, avatares, estilos de administración y auditoría de sesión
 - [docs/README-BACKEND.md](docs/README-BACKEND.md) - Backend: endpoints y seguridad
 - [docs/README-SUPABASE.md](docs/README-SUPABASE.md) - Supabase: DB, RLS y storage
 
