@@ -15,6 +15,31 @@ export default function Header({ showNavigation }: HeaderProps) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, profile, loading, signOut } = useAuth()
+  const headerRef = React.useRef<HTMLElement | null>(null)
+
+  // Expone la altura real del header como variable CSS --header-h para
+  // poder fijar el sidebar justo por debajo, incluso si la altura cambia.
+  React.useLayoutEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+
+    const setVar = () => {
+      const h = el.offsetHeight
+      // Guardamos en el elemento raíz para poder usarla desde cualquier componente
+      document.documentElement.style.setProperty('--header-h', `${h}px`)
+    }
+    setVar()
+
+    // Observa cambios de tamaño del header y el viewport
+    const ro = new ResizeObserver(setVar)
+    ro.observe(el)
+    window.addEventListener('resize', setVar)
+
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', setVar)
+    }
+  }, [])
   
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
   const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/auth");
@@ -31,8 +56,9 @@ export default function Header({ showNavigation }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+    <header ref={headerRef} className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
+      {/* Contenedor a ancho completo para aprovechar toda la pantalla en desktop */}
+      <div className="w-full px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-3 sm:py-4">
           {/* Logo y título */}
           <div className="flex items-center min-w-0 flex-1">

@@ -42,7 +42,7 @@ export default function RootLayout({
               <Header showNavigation={false} />
               <div className="flex">
                 <Sidebar className="shrink-0" />
-                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 md:ml-0">
+                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4">
                   <div className="max-w-7xl mx-auto">
                     {children}
                   </div>

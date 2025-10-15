@@ -87,7 +87,10 @@ export default function Sidebar({ className = '' }: SidebarProps) {
 
   if (loading) {
     return (
-      <aside className={`hidden md:block bg-white border-r border-gray-200 ${collapsed ? 'w-16' : 'w-64'} transition-all duration-200 ${className}`}>
+      <aside
+        className={`hidden md:block bg-white/95 backdrop-blur border-r border-gray-200 ${collapsed ? 'w-16' : 'w-64'} transition-all duration-200 ${className}`}
+        style={{ position: 'sticky', top: 'var(--header-h, 64px)', height: 'calc(100dvh - var(--header-h, 64px))' }}
+      >
         <div className="p-3 text-gray-500 text-sm">Cargando…</div>
       </aside>
     )
@@ -97,7 +100,8 @@ export default function Sidebar({ className = '' }: SidebarProps) {
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex flex-col bg-white border-r border-gray-200 ${expanded ? 'w-64' : 'w-16'} transition-all duration-200 ${className} overflow-hidden`}
+        className={`hidden md:flex flex-col bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-r border-gray-200 ${expanded ? 'w-64' : 'w-16'} transition-all duration-200 ${className} overflow-hidden`}
+        style={{ position: 'sticky', top: 'var(--header-h, 64px)', height: 'calc(100dvh - var(--header-h, 64px))' }}
         onMouseEnter={() => setHoverExpand(true)}
         onMouseLeave={() => setHoverExpand(false)}
         aria-expanded={expanded}
