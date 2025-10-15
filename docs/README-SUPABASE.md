@@ -1,3 +1,29 @@
+# Supabase: configuración de base de datos y storage
+
+Este documento centraliza la configuración necesaria en Supabase: tablas, RLS, funciones y storage para avatares. Los scripts de apoyo viven en `scripts/`.
+
+## Índice
+
+- [Tablas principales](#tablas-principales)
+- [Configuración SQL](#configuración-sql)
+- [Políticas RLS](#políticas-rls)
+- [Storage: Avatares](#storage-avatares)
+- [Funciones RPC utilizadas por el frontend](#funciones-rpc-utilizadas-por-el-frontend)
+- [Tips y checks útiles](#tips-y-checks-útiles)
+- [Seguridad](#seguridad)
+
+## Tablas principales
+
+- `public.roles` → catálogo de roles con `permissions jsonb` opcional
+- `public.profiles` → perfil público ligado a `auth.users` (FK `id`), incluye `role_id`, `metadata jsonb`, `updated_at`
+
+Inicialización recomendada (roles base): `superadmin`, `admin`, `partner`, `candidate`.
+
+Puedes crear estas tablas y datos con tu migración o ejecutando fragmentos en el SQL Editor. Mantén índices según necesidad.
+
+### Configuración SQL
+
+````sql
 # Configuración de base de datos con Supabase
 
 ## Roles y Usuarios
@@ -41,149 +67,60 @@ VALUES
   ('candidate',   '{"description": "Acceso para candidatos. Puede ver ofertas y gestionar su perfil."}');
 ```
 
-## Actualización de Políticas RLS
+## Políticas RLS
 
-```
-/******************************************************************
-* SCRIPT COMPLETO DE SEGURIDAD RLS PARA SUPABASE        *
-* *
-* Tablas involucradas: public.profiles, public.roles            *
-* Roles de la App: superadmin, admin, partner, candidate        *
-* *
-******************************************************************/
+Habilitar RLS y crear funciones/políticas:
 
--- 1. HABILITACIÓN DE RLS EN LAS TABLAS
--- Este es el primer paso, asegura que ninguna tabla sea accesible sin una política.
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+1) Habilitar RLS en tablas
+- `ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;`
+- `ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;`
 
+2) Función auxiliar para conocer el rol
+- `public.get_user_role(user_id uuid) RETURNS text SECURITY DEFINER` → lee `profiles`↔`roles`
+- `public.current_user_role()` → wrapper sobre `auth.uid()` que retorna el nombre del rol
 
--- 2. FUNCIÓN AUXILIAR PARA OBTENER EL ROL DEL USUARIO
--- Esta función es crucial para que las políticas puedan verificar el rol de un usuario.
--- La creamos con SECURITY DEFINER para que pueda leer la tabla de roles sin ser bloqueada por RLS.
-CREATE OR REPLACE FUNCTION public.get_user_role(user_id uuid)
-RETURNS TEXT AS $$
-DECLARE
-  role_name TEXT;
-BEGIN
-  SELECT r.name INTO role_name
-  FROM public.profiles p
-  JOIN public.roles r ON p.role_id = r.id
-  WHERE p.id = user_id;
-  RETURN role_name;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+3) Políticas sugeridas
+- profiles SELECT: admins ven todos; otros solo su propio registro
+- profiles UPDATE: el usuario actualiza su propio registro; admins pueden actualizar cualquiera
+- profiles DELETE: solo `superadmin`
+- roles SELECT: `TO authenticated USING (true)`
 
+Consulta ejemplos completos en este repositorio (historial previo) o reusa tus migraciones. Si necesitas copiar/pegar, crea un script SQL con estas piezas para tu entorno.
 
-/******************************************************************
-* POLÍTICAS PARA LA TABLA "profiles"                    *
-******************************************************************/
+## Storage: Avatares
 
--- Primero, eliminamos las políticas existentes en "profiles" para evitar duplicados.
-DROP POLICY IF EXISTS "Admins can view all profiles, users can view their own." ON public.profiles;
-DROP POLICY IF EXISTS "Users can update their own profile." ON public.profiles;
-DROP POLICY IF EXISTS "Admins can update any profile." ON public.profiles;
-DROP POLICY IF EXISTS "Superadmins can delete profiles." ON public.profiles;
--- (También borramos las políticas antiguas por si aún existen)
-DROP POLICY IF EXISTS "Users can view profiles based on role." ON public.profiles;
-DROP POLICY IF EXISTS "Users can view their own profile." ON public.profiles;
+Bucket requerido: `avatars` (público).
 
+Ruta por usuario: `avatars/user-{userId}/avatar.webp`.
 
--- POLÍTICA DE LECTURA (SELECT)
--- Permite a 'superadmin' y 'admin' ver todos los perfiles.
--- Permite a los demás usuarios (partner, candidate) ver únicamente su propio perfil.
-CREATE POLICY "Admins can view all profiles, users can view their own."
-ON public.profiles FOR SELECT
-USING (
-  (get_user_role(auth.uid()) IN ('superadmin', 'admin'))
-  OR
-  (auth.uid() = id)
-);
+Políticas en `storage.objects` sugeridas:
+- Lectura pública de `avatars/*`
+- Insert/Update/Delete: solo el usuario autenticado sobre su propio prefijo `user-{auth.uid()}/...`
 
--- POLÍTICA DE ACTUALIZACIÓN (UPDATE)
--- Permite a los usuarios actualizar su propio perfil.
-CREATE POLICY "Users can update their own profile."
-ON public.profiles FOR UPDATE
-USING (auth.uid() = id);
+Scripts de apoyo:
+- `scripts/setup-avatars.sql` → crea bucket/policies/campo `avatar_url` y políticas necesarias
+- `scripts/verify-avatars.sql` → queries de verificación
 
--- POLÍTICA DE ACTUALIZACIÓN ADICIONAL PARA ADMINS
--- Permite a 'superadmin' y 'admin' actualizar el perfil de CUALQUIER usuario.
-CREATE POLICY "Admins can update any profile."
-ON public.profiles FOR UPDATE
-USING (get_user_role(auth.uid()) IN ('superadmin', 'admin'));
+Troubleshooting rápido:
+- Error 400/403 al acceder a imagen pública → verifica que el bucket exista y sea público; vuelve a ejecutar `setup-avatars.sql`
+- Políticas faltantes → ver `pg_policies` para `storage.objects`
 
+## Funciones RPC utilizadas por el frontend
 
--- POLÍTICA DE BORRADO (DELETE)
--- EXTREMADAMENTE RESTRICTIVA: Solo un 'superadmin' puede borrar un perfil.
--- Nota: La eliminación de un usuario desde el panel de Supabase Auth también eliminará su perfil
--- gracias a la relación "ON DELETE CASCADE" que definimos en la tabla.
-CREATE POLICY "Superadmins can delete profiles."
-ON public.profiles FOR DELETE
-USING (get_user_role(auth.uid()) = 'superadmin');
+- `public.current_user_role()` → usada por `lib/getCurrentUserRole.ts`
 
--- NOTA SOBRE INSERTAR (INSERT):
--- No se necesita una política de INSERT para la tabla `profiles`. Supabase crea automáticamente
--- el perfil de un usuario cuando este se registra, a través de un "trigger" en la tabla `auth.users`.
--- Esto es más seguro y eficiente.
+Otorga `GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;` y revoca de `PUBLIC`.
 
+## Tips y checks útiles
 
-/******************************************************************
-* POLÍTICAS PARA LA TABLA "roles"                       *
-******************************************************************/
+- Ver roles existentes: `SELECT id, name FROM public.roles;`
+- Ver perfil con metadata: `SELECT id, role_id, metadata FROM public.profiles LIMIT 10;`
+- Ver políticas: `SELECT * FROM pg_policies WHERE tablename IN ('profiles','roles');`
+- Objetos en storage: `SELECT * FROM storage.objects WHERE bucket_id = 'avatars' ORDER BY created_at DESC;`
 
--- Primero, eliminamos las políticas existentes en "roles".
-DROP POLICY IF EXISTS "Authenticated users can view roles." ON public.roles;
+## Seguridad
 
-
--- POLÍTICA DE LECTURA (SELECT)
--- Permite a CUALQUIER usuario autenticado leer la lista de roles.
--- Esto es útil si necesitas mostrar los roles en algún formulario del frontend.
-CREATE POLICY "Authenticated users can view roles."
-ON public.roles FOR SELECT
-TO authenticated
-USING (true);
-
--- NOTA SOBRE INSERT, UPDATE, DELETE en "roles":
--- A propósito NO creamos políticas para estas acciones. Esto significa que la única
--- forma de crear, modificar o eliminar roles es desde el panel de Supabase o usando
--- la clave de administrador (service_role_key) en un entorno seguro (backend).
--- Esta es la práctica recomendada para proteger la estructura de roles.
-```
-
-## Actualización para usuarios de servicio en Supabase
-
-```
--- Ver políticas actuales
-SELECT * FROM pg_policies WHERE tablename = 'profiles';
-
--- Crear política para que usuarios vean su perfil
-CREATE POLICY "Users can view own profile"
-ON profiles FOR SELECT
-TO authenticated
-USING (auth.uid() = id);
-
--- Crear política para que service role pueda insertar
-CREATE POLICY "Service role can insert profiles"
-ON profiles FOR INSERT
-TO service_role
-WITH CHECK (true);
-```
-
-## Crea la función para consultar el Rol del usuario activo
-
-```
--- Crea un wrapper que usa auth.uid() y reutiliza get_user_role(user_id)
-CREATE OR REPLACE FUNCTION public.current_user_role()
-RETURNS text
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-  RETURN public.get_user_role(auth.uid());
-END;
-$$;
-
--- Permitir a usuarios autenticados ejecutar la función vía PostgREST
-REVOKE ALL ON FUNCTION public.current_user_role() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;
-```
+- Nunca expongas `SUPABASE_SERVICE_ROLE_KEY` al cliente
+- Endpoints server-side validan rol y/o `ADMIN_SECRET`
+- RLS debe ser tu última línea de defensa; valida también en backend
+````

@@ -4,6 +4,17 @@ Plataforma interna para la gestión y aprobación de requisiciones de nuevo pers
 
 ---
 
+## Índice
+
+- [Características Principales](#-características-principales)
+- [Roles de Usuario](#-roles-de-usuario)
+- [Stack Tecnológico](#-stack-tecnológico)
+- [Documentación](#-documentación)
+- [Cómo Empezar](#-cómo-empezar)
+- [Variables de Entorno](#variables-de-entorno)
+
+---
+
 ## 📋 Características Principales
 
 * **Flujo de Aprobación:** Proceso claro para que RRHH revise, apruebe o rechace las solicitudes de personal.
@@ -36,13 +47,10 @@ Plataforma interna para la gestión y aprobación de requisiciones de nuevo pers
 
 ## 📚 Documentación
 
-- [README-SUPABASE.md](docs/README-SUPABASE.md) - Configuración de Supabase y base de datos
-- [README-FRONTEND.md](docs/README-FRONTEND.md) - Arquitectura del frontend
-- [README-ADMIN.md](docs/README-ADMIN.md) - Panel de administración
-- [README-SESSION-AUDIT.md](docs/README-SESSION-AUDIT.md) - Sistema de auditoría de sesiones
-- [README-AVATARS.md](docs/README-AVATARS.md) - **Sistema de avatares de usuario** ⭐ NUEVO
-- [TROUBLESHOOTING-SESSION.md](docs/TROUBLESHOOTING-SESSION.md) - Solución de problemas
-- [VISUAL-GUIDE-SESSION.md](docs/VISUAL-GUIDE-SESSION.md) - Guía visual de sesiones
+- [docs/README.md](docs/README.md) - Índice general de la documentación
+- [docs/README-FRONTEND.md](docs/README-FRONTEND.md) - Frontend: UI, navegación, toasts, avatares y auditoría de sesión
+- [docs/README-BACKEND.md](docs/README-BACKEND.md) - Backend: endpoints y seguridad
+- [docs/README-SUPABASE.md](docs/README-SUPABASE.md) - Supabase: DB, RLS y storage
 
 ---
 
