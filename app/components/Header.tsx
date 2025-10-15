@@ -2,7 +2,6 @@
 
 import React from "react";
 import Link from "next/link";
-import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from '../providers/AuthProvider';
 import UserMenu from './UserMenu';
@@ -13,7 +12,6 @@ interface HeaderProps {
 
 export default function Header({ showNavigation }: HeaderProps) {
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, profile, loading, signOut } = useAuth()
   const headerRef = React.useRef<HTMLElement | null>(null)
 
@@ -56,7 +54,7 @@ export default function Header({ showNavigation }: HeaderProps) {
   }
 
   return (
-    <header ref={headerRef} className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-200">
+    <header ref={headerRef} className="fixed top-0 inset-x-0 z-50 bg-white shadow-sm border-b border-gray-200">
       {/* Contenedor a ancho completo para aprovechar toda la pantalla en desktop */}
       <div className="w-full px-3 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-3 sm:py-4">
@@ -124,75 +122,21 @@ export default function Header({ showNavigation }: HeaderProps) {
                 </Link>
               </>
             )}
-            {/* Botón de menú móvil */}
+            {/* Botón de hamburguesa (abre el sidebar en móvil) */}
             {resolvedShowNavigation && (
               <div className="md:hidden">
                 <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  onClick={() => window.dispatchEvent(new Event('sidebar:toggle'))}
                   className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-brand-dark hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-accent"
-                  aria-expanded="false">
-                  <span className="sr-only">Abrir menú principal</span>
-                  <svg
-                    className={`${isMobileMenuOpen ? "hidden" : "block"} h-5 w-5 sm:h-6 sm:w-6`}
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor">
+                  aria-label="Abrir menú de navegación">
+                  <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                  <svg
-                    className={`${isMobileMenuOpen ? "block" : "hidden"} h-5 w-5 sm:h-6 sm:w-6`}
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
             )}
           </div>
         </div>
-
-        {/* Menú móvil */}
-        {resolvedShowNavigation && isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-3 bg-surface-secondary">
-            <div className="space-y-1 px-2">
-              {canAccess('dashboard') && (
-                <Link
-                  href="/dashboard"
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}>
-                  Dashboard
-                </Link>
-              )}
-              {canAccess('requisitions') && (
-                <Link
-                  href="/requisitions"
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}>
-                  Requisiciones
-                </Link>
-              )}
-              {canAccess('reports') && (
-                <Link
-                  href="/reports"
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}>
-                  Reportes
-                </Link>
-              )}
-              {canAccess('profile') && (
-                <Link
-                  href="/profile"
-                  className="block px-3 py-2.5 rounded-md text-sm font-medium text-gray-700 hover:text-brand-dark hover:bg-white transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}>
-                  Perfil
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </header>
   );

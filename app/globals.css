@@ -28,6 +28,8 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  /* Evitar scroll horizontal inesperado en móvil por elementos anchos */
+  overflow-x: hidden;
 }
 
 /* Custom styles for the form */

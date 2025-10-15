@@ -38,11 +38,11 @@ export default function RootLayout({
       <body className={`${inter.className} text-brand-dark`}>
         <AuthProvider>
           <ToastProvider>
-            <div className="min-h-screen bg-surface-secondary">
-              <Header showNavigation={false} />
+            <div className="min-h-screen bg-surface-secondary overflow-x-hidden" style={{paddingTop: 'var(--header-h, 64px)'}}>
+              <Header showNavigation={true} />
               <div className="flex">
                 <Sidebar className="shrink-0" />
-                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4">
+                <main className="flex-1 px-4 sm:px-6 lg:px-8 py-4 min-w-0">
                   <div className="max-w-7xl mx-auto">
                     {children}
                   </div>

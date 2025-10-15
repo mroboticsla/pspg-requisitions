@@ -29,6 +29,13 @@ export default function Sidebar({ className = '' }: SidebarProps) {
     if (saved) setCollapsed(saved === '1')
   }, [])
 
+  // Escucha el evento emitido por el Header para abrir/cerrar el menú móvil
+  useEffect(() => {
+    const handler = () => setMobileOpen(prev => !prev)
+    window.addEventListener('sidebar:toggle', handler)
+    return () => window.removeEventListener('sidebar:toggle', handler)
+  }, [])
+
   useEffect(() => {
     let mounted = true
     setLoading(true)
@@ -122,14 +129,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         </div>
       </aside>
 
-      {/* Mobile drawer */}
-      <button
-        className="md:hidden fixed bottom-4 right-4 z-40 rounded-full bg-brand-dark text-white w-12 h-12 shadow-lg"
-        aria-label="Abrir menú"
-        onClick={() => setMobileOpen(true)}
-      >
-        ☰
-      </button>
+      {/* El disparador móvil vive en el Header; aquí sólo renderizamos el drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
