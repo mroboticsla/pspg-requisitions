@@ -92,6 +92,67 @@ Troubleshooting rápido
 Testing (resumen)
 - Verifica: success/error/warning/info, cierre manual, auto-dismiss, stacking y responsive
 
+## Sistema de estilos para administración
+
+### Paleta de colores
+Configurada en `tailwind.config.js` con prefijo `admin-*`:
+
+**Colores de acción:**
+- `admin-success` (#059669) / `admin-successHover` (#047857) - Acciones positivas (crear, guardar)
+- `admin-danger` (#dc2626) / `admin-dangerHover` (#b91c1c) - Acciones destructivas (eliminar)
+- `admin-accent` (#FF1556) / `admin-accentHover` (#E8134E) - Acciones importantes
+- `admin-primary` (#00253F) - Azul oscuro principal
+- `admin-secondary` (#0369a1) - Azul secundario
+
+**Backgrounds:**
+- `bg-admin-bg-page` (#f8fafc) - Fondo de página
+- `bg-admin-bg-card` (#ffffff) - Tarjetas
+- `bg-admin-bg-hover` (#f1f5f9) - Hover
+- `bg-admin-bg-disabled` (#f1f5f9) - Deshabilitado
+
+**Texto:**
+- `text-admin-text-primary` (#0f172a) - Texto principal
+- `text-admin-text-secondary` (#475569) - Texto secundario
+- `text-admin-text-muted` (#94a3b8) - Texto apagado
+
+### Componentes reutilizables
+
+**AdminLayout** (`app/components/AdminLayout.tsx`)
+Layout consistente con subcomponentes para páginas de administración:
+
+```tsx
+import AdminLayout from '@/app/components/AdminLayout'
+
+<AdminLayout>
+  <AdminLayout.Header title="Mi Página" action={<button>Acción</button>} />
+  <AdminLayout.Card>Contenido</AdminLayout.Card>
+</AdminLayout>
+```
+
+Subcomponentes: Header, Card, Search, List, ListItem, FormActions, Grid, EmptyState
+
+**AdminButton** (`app/components/AdminButton.tsx`)
+Botones con estilos consistentes:
+
+```tsx
+import AdminButton from '@/app/components/AdminButton'
+import { Plus, Save, Trash2 } from 'lucide-react'
+
+<AdminButton.Primary icon={Plus}>Crear</AdminButton.Primary>
+<AdminButton.Secondary icon={Save}>Guardar</AdminButton.Secondary>
+<AdminButton.Danger icon={Trash2}>Eliminar</AdminButton.Danger>
+<AdminButton.Outline>Ver</AdminButton.Outline>
+<AdminButton.Ghost>Cancelar</AdminButton.Ghost>
+```
+
+### Diseño responsive
+Las páginas de administración usan un diseño compacto y eficiente:
+- **Desktop:** Layout optimizado con información densa pero legible
+- **Tablet:** Grid adaptativo que colapsa apropiadamente
+- **Móvil:** Stack vertical con botones full-width
+
+Ejemplo de referencia: `app/admin/roles/page.tsx`
+
 ## Avatares de usuario
 
 Componentes
