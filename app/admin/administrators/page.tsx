@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { RequireRoleClient } from '@/app/components/RequireRole'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
-import { Eye, Trash2, Plus, UserCheck, UserX, Shield, Users, TrendingUp, Activity, Clock } from 'lucide-react'
+import { Eye, Trash2, Plus, UserCheck, UserX, Shield, Users, TrendingUp, Activity, Clock, Edit } from 'lucide-react'
 
 // Types
 interface UserRow {
@@ -249,6 +249,8 @@ export default function AdministratorsPage() {
     }
   }
 
+
+
   // Estadísticas rápidas
   const stats = useMemo(() => {
     const total = users.length
@@ -276,7 +278,7 @@ export default function AdministratorsPage() {
           <p className="text-gray-600 mt-1">Gestiona los usuarios administradores con acceso privilegiado</p>
         </div>
         <button 
-          onClick={() => router.push('/register?type=admin')}
+          onClick={() => router.push('/admin/administrators/new')}
           disabled={busy}
           className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
         >
@@ -446,6 +448,16 @@ export default function AdministratorsPage() {
                     >
                       <Eye className="w-4 h-4" />
                       <span>Ver detalles</span>
+                    </button>
+
+                    <button
+                      disabled={busy}
+                      onClick={(e) => { e.stopPropagation(); router.push(`/admin/administrators/${u.id}`); }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
+                      title="Editar administrador"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>Editar</span>
                     </button>
                     
                     <button
@@ -726,6 +738,7 @@ export default function AdministratorsPage() {
       <div className="min-h-screen bg-gray-50">
         {content}
       </div>
+      
       <ConfirmModal
         isOpen={showDelete.open}
         title="Eliminar Administrador"

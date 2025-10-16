@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { RequireRoleClient } from '@/app/components/RequireRole'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
-import { Eye, Trash2, Plus, UserCheck, UserX, Shield, Users, TrendingUp, Activity, Clock, Briefcase } from 'lucide-react'
+import { Eye, Trash2, Plus, UserCheck, UserX, Shield, Users, TrendingUp, Activity, Clock, Edit, Briefcase } from 'lucide-react'
 
 // Types
 interface UserRow {
@@ -25,12 +25,18 @@ interface UserRow {
 
 type ViewMode = 'list' | 'view'
 
+interface RoleOption {
+  id: string
+  name: string
+}
+
 export default function PartnersPage() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
   const { success, error: showError } = useToast()
 
   const [users, setUsers] = useState<UserRow[]>([])
+  const [roles, setRoles] = useState<RoleOption[]>([])
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -70,6 +76,19 @@ export default function PartnersPage() {
         return roleName === 'partner'
       })
       setUsers(partnerUsers)
+
+      // Obtener rol de partner para el formulario
+      const r2 = await fetch('/api/admin/secure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'list-roles' })
+      })
+      const b2 = await r2.json()
+      if (!r2.ok) throw new Error(b2.error || 'No se pudo obtener roles')
+      
+      const allRoles = b2.data || []
+      const partnerRole = allRoles.filter((r: RoleOption) => r.name === 'partner')
+      setRoles(partnerRole)
     } catch (err: any) {
       showError(err.message || String(err))
     } finally {
@@ -190,7 +209,7 @@ export default function PartnersPage() {
           <p className="text-gray-600 mt-1">Gestiona los usuarios asociados del sistema</p>
         </div>
         <button 
-          onClick={() => router.push('/register?type=partner')}
+          onClick={() => router.push('/admin/partners/new')}
           disabled={busy}
           className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
         >
@@ -324,6 +343,16 @@ export default function PartnersPage() {
                     >
                       <Eye className="w-4 h-4" />
                       <span>Ver detalles</span>
+                    </button>
+
+                    <button
+                      disabled={busy}
+                      onClick={(e) => { e.stopPropagation(); router.push(`/admin/partners/${u.id}`); }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
+                      title="Editar asociado"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>Editar</span>
                     </button>
 
                     <button
@@ -488,6 +517,7 @@ export default function PartnersPage() {
       <div className="min-h-screen bg-gray-50">
         {content}
       </div>
+      
       <ConfirmModal
         isOpen={showDelete.open}
         title="Eliminar Asociado"

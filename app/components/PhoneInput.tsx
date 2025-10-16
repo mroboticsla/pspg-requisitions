@@ -250,7 +250,7 @@ export default function PhoneInput({
 
       {/* Dropdown menu - Fuera del contenedor con overflow-hidden */}
       {isDropdownOpen && (
-        <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999]">
+        <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-[99999]">
           {/* Campo de búsqueda */}
           <div className="p-3 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
             <div className="relative">

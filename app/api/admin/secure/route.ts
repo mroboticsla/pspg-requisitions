@@ -195,6 +195,84 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, data })
     }
 
+    // CREATE USER (admin or superadmin) - creates auth user + profile
+    if (action === 'create-user') {
+      const { email, password, first_name, last_name, phone, roleName: targetRole } = body
+      if (!email || !password) return NextResponse.json({ error: 'email and password required' }, { status: 400 })
+      
+      // admins cannot create admin/superadmin users
+      if (roleName === 'admin' && ['admin', 'superadmin'].includes(targetRole)) {
+        return NextResponse.json({ error: 'Forbidden to create privileged users' }, { status: 403 })
+      }
+
+      // Find role id if roleName provided
+      let roleId = null
+      if (targetRole) {
+        const { data: roleRec } = await adminClient.from('roles').select('id, name').eq('name', targetRole).limit(1).single()
+        roleId = (roleRec as any)?.id
+        if (!roleId) return NextResponse.json({ error: `Role '${targetRole}' not found` }, { status: 404 })
+      }
+
+      // Create auth user
+      const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true, // Auto-confirm email
+        user_metadata: { first_name, last_name, phone }
+      })
+      
+      if (authError) return NextResponse.json({ error: authError.message }, { status: 500 })
+      const userId = authData?.user?.id
+      if (!userId) return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+
+      // Create profile
+      const profilePayload: any = { id: userId, is_active: true }
+      if (first_name) profilePayload.first_name = first_name
+      if (last_name) profilePayload.last_name = last_name
+      if (phone) profilePayload.phone = phone
+      if (roleId) profilePayload.role_id = roleId
+
+      const { data: profileData, error: profileError } = await adminClient.from('profiles').insert(profilePayload).select().single()
+      if (profileError) {
+        // Cleanup: delete auth user if profile creation fails
+        await adminClient.auth.admin.deleteUser(userId)
+        return NextResponse.json({ error: profileError.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ ok: true, data: profileData })
+    }
+
+    // UPDATE USER (admin or superadmin) - updates profile info
+    if (action === 'update-user') {
+      const { userId, first_name, last_name, phone, roleName: targetRole } = body
+      if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+
+      // admins cannot update to admin/superadmin roles
+      if (roleName === 'admin' && targetRole && ['admin', 'superadmin'].includes(targetRole)) {
+        return NextResponse.json({ error: 'Forbidden to assign privileged roles' }, { status: 403 })
+      }
+
+      const updatePayload: any = {}
+      if (first_name !== undefined) updatePayload.first_name = first_name
+      if (last_name !== undefined) updatePayload.last_name = last_name
+      if (phone !== undefined) updatePayload.phone = phone
+      
+      if (targetRole !== undefined) {
+        const { data: roleRec } = await adminClient.from('roles').select('id, name').eq('name', targetRole).limit(1).single()
+        const roleId = (roleRec as any)?.id
+        if (!roleId) return NextResponse.json({ error: `Role '${targetRole}' not found` }, { status: 404 })
+        updatePayload.role_id = roleId
+      }
+
+      if (Object.keys(updatePayload).length === 0) {
+        return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+      }
+
+      const { data, error } = await adminClient.from('profiles').update(updatePayload).eq('id', userId).select().single()
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
     return NextResponse.json({ error: 'unknown action' }, { status: 400 })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 })

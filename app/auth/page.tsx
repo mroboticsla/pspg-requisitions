@@ -155,7 +155,12 @@ function AuthPageContent() {
           const res = await fetch("/api/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, first_name: firstName, last_name: lastName, phone }),
+            body: JSON.stringify({ 
+              userId, 
+              first_name: firstName, 
+              last_name: lastName, 
+              phone
+            }),
             signal: controller.signal,
           });
           clearTimeout(timeout);
