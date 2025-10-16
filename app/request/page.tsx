@@ -5,12 +5,14 @@ import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
 import { supabase } from '@/lib/supabaseClient'
 import { UserCompany } from '@/lib/types/company'
+import getCurrentUserRole from '@/lib/getCurrentUserRole'
 
 export default function RequisitionForm() {
   const { user, loading } = useAuth()
   const router = useSafeRouter()
   const [userCompanies, setUserCompanies] = useState<UserCompany[]>([])
   const [loadingCompanies, setLoadingCompanies] = useState(false)
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   // Redirigir al login si no hay usuario autenticado
   useEffect(() => {
@@ -33,21 +35,58 @@ export default function RequisitionForm() {
     return () => clearTimeout(timeoutId)
   }, [loading, router])
 
-  // Cargar empresas asignadas al usuario
+  // Cargar rol del usuario
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (!user) return
+      const role = await getCurrentUserRole()
+      setUserRole(role)
+    }
+    
+    fetchUserRole()
+  }, [user])
+
+  // Cargar empresas según el rol del usuario
   useEffect(() => {
     const fetchUserCompanies = async () => {
-      if (!user) return
+      if (!user || !userRole) return
       
       try {
         setLoadingCompanies(true)
-        const { data, error } = await supabase.rpc('get_user_companies')
         
-        if (error) {
-          console.error('Error al cargar empresas:', error)
-          return
+        // Si es admin o superadmin, cargar todas las empresas activas
+        if (userRole === 'admin' || userRole === 'superadmin') {
+          const { data, error } = await supabase
+            .from('companies')
+            .select('id, name')
+            .eq('is_active', true)
+            .order('name', { ascending: true })
+          
+          if (error) {
+            console.error('Error al cargar empresas:', error)
+            return
+          }
+          
+          // Transformar al formato UserCompany
+          const companies: UserCompany[] = (data || []).map(company => ({
+            company_id: company.id,
+            company_name: company.name,
+            role_in_company: 'admin',
+            is_active: true
+          }))
+          
+          setUserCompanies(companies)
+        } else {
+          // Para otros roles, usar la función RPC que filtra por asignación
+          const { data, error } = await supabase.rpc('get_user_companies')
+          
+          if (error) {
+            console.error('Error al cargar empresas:', error)
+            return
+          }
+          
+          setUserCompanies(data || [])
         }
-        
-        setUserCompanies(data || [])
       } catch (err) {
         console.error('Error al cargar empresas:', err)
       } finally {
@@ -56,7 +95,7 @@ export default function RequisitionForm() {
     }
 
     fetchUserCompanies()
-  }, [user])
+  }, [user, userRole])
 
   const [formData, setFormData] = useState({
     // Datos Generales
@@ -200,20 +239,27 @@ export default function RequisitionForm() {
                       No tiene empresas asignadas. Contacte al administrador.
                     </div>
                   ) : (
-                    <select
-                      name="companyId"
-                      value={formData.companyId}
-                      onChange={handleInputChange}
-                      className="form-input"
-                      required
-                    >
-                      <option value="">Seleccione una empresa</option>
-                      {userCompanies.map((company) => (
-                        <option key={company.company_id} value={company.company_id}>
-                          {company.company_name}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        name="companyId"
+                        value={formData.companyId}
+                        onChange={handleInputChange}
+                        className="form-input"
+                        required
+                      >
+                        <option value="">Seleccione una empresa</option>
+                        {userCompanies.map((company) => (
+                          <option key={company.company_id} value={company.company_id}>
+                            {company.company_name}
+                          </option>
+                        ))}
+                      </select>
+                      {(userRole === 'admin' || userRole === 'superadmin') && (
+                        <p className="mt-1 text-xs text-brand-accent">
+                          <span className="font-semibold">Admin:</span> Puede ver todas las empresas activas
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
                 <div>
