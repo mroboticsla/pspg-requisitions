@@ -23,7 +23,9 @@ export const MENU: MenuItem[] = [
   },
   { id: 'reports', label: 'Reportes', path: '/reports', roles: ['superadmin','admin'], icon: BarChart3 },
   { id: 'admin', label: 'Administración', path: '/admin', roles: ['superadmin','admin'], children: [
-    { id: 'users', label: 'Usuarios', path: '/admin/users', icon: Users },
+    { id: 'administrators', label: 'Administradores', path: '/admin/administrators', roles: ['superadmin'], icon: Shield },
+    { id: 'partners', label: 'Asociados', path: '/admin/partners', roles: ['superadmin', 'admin'], icon: Users },
+    { id: 'users', label: 'Usuarios', path: '/admin/users', roles: ['superadmin', 'admin'], icon: Users },
     { id: 'roles', label: 'Roles', path: '/admin/roles', roles: ['superadmin'], icon: Shield },
   ]},
   { id: 'profile', label: 'Mi perfil', path: '/profile', icon: UserIcon },
