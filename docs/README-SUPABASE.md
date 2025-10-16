@@ -860,3 +860,474 @@ WHERE NOT EXISTS (
 )
 LIMIT 1; -- Solo como ejemplo
 ```
+
+## Permisos y Funciones para el manejo de Requesiciones
+
+```
+-- =====================================================
+-- SCRIPT COMPLETO: POLÍTICAS RLS Y FUNCIONES PARA REQUISITIONS
+-- Basado en README-SUPABASE.md
+-- =====================================================
+
+-- =====================================================
+-- 1. FUNCIÓN HELPER: Verificar acceso a empresa
+-- =====================================================
+
+DROP FUNCTION IF EXISTS public.user_has_company_access(uuid, uuid);
+
+CREATE FUNCTION public.user_has_company_access(
+  p_company_id uuid,
+  p_user_id uuid DEFAULT auth.uid()
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 
+    FROM public.company_users cu
+    WHERE cu.company_id = p_company_id
+      AND cu.user_id = p_user_id
+      AND cu.is_active = true
+  )
+  OR EXISTS (
+    SELECT 1 
+    FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = p_user_id
+      AND r.name IN ('superadmin', 'admin')
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.user_has_company_access(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.user_has_company_access(uuid, uuid) TO authenticated;
+
+COMMENT ON FUNCTION public.user_has_company_access(uuid, uuid) IS 
+'Verifica si un usuario tiene acceso a una empresa específica (por asignación directa o por rol admin/superadmin).';
+
+-- =====================================================
+-- 2. POLÍTICAS RLS - FORM_TEMPLATES
+-- =====================================================
+
+-- Eliminar políticas existentes
+DROP POLICY IF EXISTS "Admins can view all templates" ON public.form_templates;
+DROP POLICY IF EXISTS "Partners can view their company templates" ON public.form_templates;
+DROP POLICY IF EXISTS "Only admins can manage templates" ON public.form_templates;
+DROP POLICY IF EXISTS "Users can read templates for their companies" ON public.form_templates;
+
+-- Lectura: admins ven todas; partners solo las de sus empresas
+CREATE POLICY "Admins can view all templates"
+ON public.form_templates FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Partners can view their company templates"
+ON public.form_templates FOR SELECT
+TO authenticated
+USING (
+  public.user_has_company_access(company_id)
+);
+
+-- Gestión completa: solo admins
+CREATE POLICY "Only admins can manage templates"
+ON public.form_templates FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Only admins can update templates"
+ON public.form_templates FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Only admins can delete templates"
+ON public.form_templates FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- =====================================================
+-- 3. POLÍTICAS RLS - FORM_SECTIONS
+-- =====================================================
+
+DROP POLICY IF EXISTS "Users can view sections of accessible templates" ON public.form_sections;
+DROP POLICY IF EXISTS "Only admins can manage sections" ON public.form_sections;
+
+CREATE POLICY "Users can view sections of accessible templates"
+ON public.form_sections FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.form_templates ft
+    WHERE ft.id = form_sections.template_id
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.profiles p
+        JOIN public.roles r ON p.role_id = r.id
+        WHERE p.id = auth.uid()
+        AND r.name IN ('superadmin', 'admin')
+      )
+      OR public.user_has_company_access(ft.company_id)
+    )
+  )
+);
+
+CREATE POLICY "Only admins can insert sections"
+ON public.form_sections FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Only admins can update sections"
+ON public.form_sections FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Only admins can delete sections"
+ON public.form_sections FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- =====================================================
+-- 4. POLÍTICAS RLS - FORM_FIELDS
+-- =====================================================
+
+DROP POLICY IF EXISTS "Users can view fields of accessible sections" ON public.form_fields;
+DROP POLICY IF EXISTS "Only admins can manage fields" ON public.form_fields;
+
+CREATE POLICY "Users can view fields of accessible sections"
+ON public.form_fields FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.form_sections fs
+    JOIN public.form_templates ft ON ft.id = fs.template_id
+    WHERE fs.id = form_fields.section_id
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.profiles p
+        JOIN public.roles r ON p.role_id = r.id
+        WHERE p.id = auth.uid()
+        AND r.name IN ('superadmin', 'admin')
+      )
+      OR public.user_has_company_access(ft.company_id)
+    )
+  )
+);
+
+CREATE POLICY "Only admins can insert fields"
+ON public.form_fields FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Only admins can update fields"
+ON public.form_fields FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Only admins can delete fields"
+ON public.form_fields FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- =====================================================
+-- 5. POLÍTICAS RLS - REQUISITIONS
+-- =====================================================
+
+DROP POLICY IF EXISTS "Admins can view all requisitions" ON public.requisitions;
+DROP POLICY IF EXISTS "Partners can view their company requisitions" ON public.requisitions;
+DROP POLICY IF EXISTS "Partners can create requisitions for their companies" ON public.requisitions;
+DROP POLICY IF EXISTS "Users can create requisitions for assigned companies" ON public.requisitions;
+DROP POLICY IF EXISTS "Users can update their own draft requisitions" ON public.requisitions;
+DROP POLICY IF EXISTS "Admins can update any requisition" ON public.requisitions;
+DROP POLICY IF EXISTS "Users can delete their own draft requisitions" ON public.requisitions;
+
+-- Lectura
+CREATE POLICY "Admins can view all requisitions"
+ON public.requisitions FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Partners can view their company requisitions"
+ON public.requisitions FOR SELECT
+TO authenticated
+USING (
+  public.user_has_company_access(company_id)
+);
+
+-- Inserción
+CREATE POLICY "Users can create requisitions for assigned companies"
+ON public.requisitions FOR INSERT
+TO authenticated
+WITH CHECK (
+  created_by = auth.uid()
+  AND public.user_has_company_access(company_id)
+);
+
+-- Actualización
+CREATE POLICY "Users can update their own draft requisitions"
+ON public.requisitions FOR UPDATE
+TO authenticated
+USING (
+  created_by = auth.uid()
+  AND status = 'draft'
+)
+WITH CHECK (
+  created_by = auth.uid()
+  AND status = 'draft'
+);
+
+CREATE POLICY "Admins can update any requisition"
+ON public.requisitions FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- Eliminación
+CREATE POLICY "Users can delete their own draft requisitions"
+ON public.requisitions FOR DELETE
+TO authenticated
+USING (
+  created_by = auth.uid()
+  AND status = 'draft'
+);
+
+CREATE POLICY "Admins can delete any requisition"
+ON public.requisitions FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- =====================================================
+-- 6. POLÍTICAS RLS - REQUISITION_RESPONSES
+-- =====================================================
+
+DROP POLICY IF EXISTS "Users can view responses of accessible requisitions" ON public.requisition_responses;
+DROP POLICY IF EXISTS "Users can manage responses of their own requisitions" ON public.requisition_responses;
+DROP POLICY IF EXISTS "Users can insert responses for their requisitions" ON public.requisition_responses;
+DROP POLICY IF EXISTS "Users can update responses for their draft requisitions" ON public.requisition_responses;
+
+-- Lectura
+CREATE POLICY "Users can view responses of accessible requisitions"
+ON public.requisition_responses FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.requisitions r
+    WHERE r.id = requisition_responses.requisition_id
+    AND (
+      r.created_by = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM public.profiles p
+        JOIN public.roles ro ON p.role_id = ro.id
+        WHERE p.id = auth.uid()
+        AND ro.name IN ('superadmin', 'admin')
+      )
+      OR public.user_has_company_access(r.company_id)
+    )
+  )
+);
+
+-- Inserción
+CREATE POLICY "Users can insert responses for their requisitions"
+ON public.requisition_responses FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.requisitions r
+    WHERE r.id = requisition_responses.requisition_id
+    AND r.created_by = auth.uid()
+  )
+);
+
+-- Actualización
+CREATE POLICY "Users can update responses for their draft requisitions"
+ON public.requisition_responses FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.requisitions r
+    WHERE r.id = requisition_responses.requisition_id
+    AND r.created_by = auth.uid()
+    AND r.status = 'draft'
+  )
+);
+
+-- Eliminación
+CREATE POLICY "Users can delete responses for their draft requisitions"
+ON public.requisition_responses FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.requisitions r
+    WHERE r.id = requisition_responses.requisition_id
+    AND r.created_by = auth.uid()
+    AND r.status = 'draft'
+  )
+);
+
+-- =====================================================
+-- 7. ÍNDICES ADICIONALES PARA RENDIMIENTO
+-- =====================================================
+
+CREATE INDEX IF NOT EXISTS idx_requisitions_created_by_status 
+ON public.requisitions(created_by, status);
+
+CREATE INDEX IF NOT EXISTS idx_requisition_responses_requisition_section 
+ON public.requisition_responses(requisition_id, section_id);
+
+-- =====================================================
+-- 8. COMENTARIOS ADICIONALES
+-- =====================================================
+
+COMMENT ON POLICY "Users can create requisitions for assigned companies" ON public.requisitions IS 
+'Permite a usuarios autenticados crear requisiciones solo para empresas a las que tienen acceso.';
+
+COMMENT ON POLICY "Users can update their own draft requisitions" ON public.requisitions IS 
+'Los usuarios solo pueden actualizar sus propias requisiciones mientras estén en estado draft.';
+
+-- =====================================================
+-- FIN DEL SCRIPT
+-- =====================================================
+```
+
+## Script de Validación
+
+```
+-- =====================================================
+-- VERIFICACIÓN DE POLÍTICAS RLS
+-- =====================================================
+
+-- Verificar políticas en requisitions
+SELECT 
+  schemaname,
+  tablename,
+  policyname,
+  permissive,
+  roles,
+  cmd,
+  qual,
+  with_check
+FROM pg_policies
+WHERE tablename IN ('requisitions', 'requisition_responses', 'form_templates')
+ORDER BY tablename, policyname;
+
+-- Verificar que la función helper existe
+SELECT 
+  routine_name,
+  routine_type,
+  data_type
+FROM information_schema.routines
+WHERE routine_schema = 'public'
+AND routine_name = 'user_has_company_access';
+
+-- Verificar índices
+SELECT 
+  schemaname,
+  tablename,
+  indexname,
+  indexdef
+FROM pg_indexes
+WHERE tablename IN ('requisitions', 'requisition_responses')
+AND schemaname = 'public'
+ORDER BY tablename, indexname;
+
+-- Verificar triggers
+SELECT 
+  trigger_name,
+  event_manipulation,
+  event_object_table,
+  action_statement
+FROM information_schema.triggers
+WHERE event_object_table IN ('requisitions', 'form_templates')
+AND trigger_schema = 'public';
+```
