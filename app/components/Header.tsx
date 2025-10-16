@@ -16,17 +16,29 @@ export default function Header({ showNavigation }: HeaderProps) {
   const { user, profile, loading, signOut } = useAuth()
   const headerRef = React.useRef<HTMLElement | null>(null)
 
+  // Determinar si estamos en una ruta de autenticación
+  const isAuthRoute = pathname?.startsWith("/auth")
+
   // Establecer altura inicial inmediatamente
   React.useEffect(() => {
     // Establecer valor por defecto inmediatamente para evitar saltos visuales
     if (!document.documentElement.style.getPropertyValue('--header-h')) {
-      document.documentElement.style.setProperty('--header-h', '64px')
+      document.documentElement.style.setProperty('--header-h', isAuthRoute ? '0px' : '64px')
     }
   }, [])
+
+  // Cuando estamos en ruta de auth, establecer altura a 0
+  React.useEffect(() => {
+    if (isAuthRoute) {
+      document.documentElement.style.setProperty('--header-h', '0px')
+    }
+  }, [isAuthRoute])
 
   // Expone la altura real del header como variable CSS --header-h para
   // poder fijar el sidebar justo por debajo, incluso si la altura cambia.
   React.useLayoutEffect(() => {
+    if (isAuthRoute) return
+
     const el = headerRef.current
     if (!el) return
 
@@ -46,12 +58,12 @@ export default function Header({ showNavigation }: HeaderProps) {
       ro.disconnect()
       window.removeEventListener('resize', setVar)
     }
-  }, [user, loading]) // Re-ejecutar cuando cambie el usuario o el estado de carga
+  }, [user, loading, isAuthRoute]) // Re-ejecutar cuando cambie el usuario, el estado de carga o la ruta
   
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
   const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/auth");
 
-  if (pathname?.startsWith("/auth")) return null;
+  if (isAuthRoute) return null;
 
   const canAccess = (moduleName: string) => {
     const role = (profile as any)?.roles

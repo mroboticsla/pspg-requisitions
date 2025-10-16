@@ -10,6 +10,10 @@
   --background-end-rgb: 255, 255, 255;
   /* Altura del header usada por el sidebar sticky; será actualizada en runtime */
   --header-h: 64px;
+  /* Ancho del sidebar, actualizado dinámicamente cuando se colapsa/expande */
+  --sidebar-w: 0px;
+  /* Margen izquierdo para el main content (solo en desktop) */
+  --sidebar-w-ml: 0px;
 }
 
 @media (prefers-color-scheme: dark) {

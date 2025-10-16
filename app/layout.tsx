@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import Header from './components/Header'
 import Sidebar from './components/navigation/Sidebar'
+import MainContent from './components/MainContent'
 import { AuthProvider } from './providers/AuthProvider'
 import { ToastProvider } from '@/lib/useToast'
 import ToastContainer from './components/ToastContainer'
@@ -40,14 +41,10 @@ export default function RootLayout({
           <ToastProvider>
             <div className="min-h-screen bg-surface-secondary overflow-x-hidden">
               <Header showNavigation={true} />
-              <div className="flex" style={{ marginTop: 'var(--header-h, 64px)', height: 'calc(100dvh - var(--header-h, 64px))', overflow: 'hidden' }}>
-                <Sidebar className="shrink-0" />
-                <main className="flex-1 h-full overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 min-w-0">
-                  <div className="max-w-7xl mx-auto">
-                    {children}
-                  </div>
-                </main>
-              </div>
+              <Sidebar />
+              <MainContent>
+                {children}
+              </MainContent>
             </div>
             <ToastContainer />
           </ToastProvider>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useLayoutEffect } from 'react'
 import { Pin, PinOff } from 'lucide-react'
 import { MENU, filterMenu, Role, MenuItem } from './menuConfig'
 import getCurrentUserRole from '@/lib/getCurrentUserRole'
@@ -57,6 +57,46 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0')
   }, [collapsed])
+
+  // Establecer el ancho del sidebar basado en el estado de collapsed y la presencia del usuario
+  // Usamos useLayoutEffect para que se ejecute sincrónicamente antes del paint
+  useLayoutEffect(() => {
+    let sidebarWidth = '0px'
+    let sidebarMargin = '0px'
+    
+    if (isAuthRoute || authLoading || !user?.id) {
+      // No mostrar sidebar: ancho 0
+      sidebarWidth = '0px'
+      sidebarMargin = '0px'
+    } else {
+      // Mostrar sidebar: establecer ancho según estado collapsed
+      sidebarWidth = collapsed ? '64px' : '256px'
+      // El margen solo aplica en desktop (≥768px)
+      const isDesktop = window.matchMedia('(min-width: 768px)').matches
+      sidebarMargin = isDesktop ? sidebarWidth : '0px'
+    }
+    
+    document.documentElement.style.setProperty('--sidebar-w', sidebarWidth)
+    document.documentElement.style.setProperty('--sidebar-w-ml', sidebarMargin)
+    
+    // Emitir evento para notificar el cambio
+    window.dispatchEvent(new Event('sidebar:changed'))
+    
+    // Escuchar cambios de media query para actualizar el margen
+    const mediaQuery = window.matchMedia('(min-width: 768px)')
+    const handleMediaChange = () => {
+      if (!isAuthRoute && !authLoading && user?.id) {
+        const width = collapsed ? '64px' : '256px'
+        const margin = mediaQuery.matches ? width : '0px'
+        document.documentElement.style.setProperty('--sidebar-w-ml', margin)
+      }
+    }
+    mediaQuery.addEventListener('change', handleMediaChange)
+    
+    return () => {
+      mediaQuery.removeEventListener('change', handleMediaChange)
+    }
+  }, [user?.id, collapsed, authLoading, isAuthRoute])
 
   // No renderizar en pantallas de autenticación o cuando no hay usuario
   if (isAuthRoute || authLoading || !user) return null
@@ -120,7 +160,11 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   if (loading) {
     return (
       <aside
-        className={`hidden md:block bg-white/95 backdrop-blur border-r border-gray-200 ${collapsed ? 'w-16' : 'w-64'} transition-all duration-200 ${className}`}
+        className={`hidden md:block fixed left-0 bg-white/95 backdrop-blur border-r border-gray-200 ${collapsed ? 'w-16' : 'w-64'} transition-all duration-200`}
+        style={{ 
+          top: 'var(--header-h, 64px)',
+          height: 'calc(100dvh - var(--header-h, 64px))'
+        }}
       >
         <div className="p-3 text-gray-500 text-sm">Cargando…</div>
       </aside>
@@ -131,7 +175,11 @@ export default function Sidebar({ className = '' }: SidebarProps) {
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex flex-col bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-r border-gray-200 ${expanded ? 'w-64' : 'w-16'} transition-all duration-200 ${className} overflow-hidden h-full`}
+        className={`hidden md:flex flex-col fixed left-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-r border-gray-200 ${expanded ? 'w-64' : 'w-16'} transition-all duration-200 overflow-hidden`}
+        style={{ 
+          top: 'var(--header-h, 64px)',
+          height: 'calc(100dvh - var(--header-h, 64px))'
+        }}
         onMouseEnter={() => setHoverExpand(true)}
         onMouseLeave={() => setHoverExpand(false)}
       >
