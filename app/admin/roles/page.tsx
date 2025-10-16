@@ -432,7 +432,7 @@ export default function RolesAdminPage() {
                     setForm(f => ({ ...f, name: e.target.value })); 
                     setFormErrors(errs => ({ ...errs, name: undefined })) 
                   }} 
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 disabled:bg-gray-100 disabled:text-gray-500" 
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent disabled:bg-gray-100 disabled:text-gray-500" 
                   placeholder="p. ej. partner" 
                 />
                 {formErrors.name && <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>}
@@ -450,7 +450,7 @@ export default function RolesAdminPage() {
                     setFormErrors(errs => ({ ...errs, description: undefined })) 
                   }} 
                   rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500 resize-none" 
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent resize-none" 
                   placeholder="Describe el alcance y responsabilidades de este rol" 
                 />
               </div>
@@ -478,7 +478,7 @@ export default function RolesAdminPage() {
                       disabled={busy} 
                       checked={form.canDo.includes(s.key)} 
                       onChange={() => toggleCanDo(s.key)} 
-                      className="rounded text-pink-600 focus:ring-2 focus:ring-pink-500 flex-shrink-0"
+                      className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent flex-shrink-0"
                     />
                     <span>{s.label}</span>
                   </label>
@@ -495,7 +495,7 @@ export default function RolesAdminPage() {
                   onChange={e => setCustomPerm(e.target.value)} 
                   onKeyPress={e => e.key === 'Enter' && addCustomPerm()}
                   placeholder="ej. export_reports" 
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500" 
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent" 
                 />
                 <button 
                   type="button" 
@@ -533,7 +533,7 @@ export default function RolesAdminPage() {
             <button 
               disabled={busy || !form.name.trim()} 
               onClick={save} 
-              className="px-4 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm w-full sm:w-auto"
+              className="px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm w-full sm:w-auto"
             >
               {busy ? 'Guardando...' : (viewMode === 'create' ? 'Crear rol' : 'Guardar cambios')}
             </button>
@@ -565,7 +565,7 @@ export default function RolesAdminPage() {
                     disabled={busy} 
                     checked={Boolean(form.modules[m.id])} 
                     onChange={e => setModule(m.id, e.target.checked)} 
-                    className="rounded text-pink-600 focus:ring-2 focus:ring-pink-500 flex-shrink-0"
+                    className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent flex-shrink-0"
                   />
                   <span className="text-xs font-medium text-gray-700">{m.label}</span>
                 </label>
@@ -601,7 +601,7 @@ export default function RolesAdminPage() {
   if (loading) return (
     <div className="flex items-center justify-center min-h-[60vh] p-6">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600 mx-auto mb-3"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-accent mx-auto mb-3"></div>
         <p className="text-gray-600 text-sm">Cargando...</p>
       </div>
     </div>
