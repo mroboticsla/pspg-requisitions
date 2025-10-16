@@ -16,6 +16,14 @@ export default function Header({ showNavigation }: HeaderProps) {
   const { user, profile, loading, signOut } = useAuth()
   const headerRef = React.useRef<HTMLElement | null>(null)
 
+  // Establecer altura inicial inmediatamente
+  React.useEffect(() => {
+    // Establecer valor por defecto inmediatamente para evitar saltos visuales
+    if (!document.documentElement.style.getPropertyValue('--header-h')) {
+      document.documentElement.style.setProperty('--header-h', '64px')
+    }
+  }, [])
+
   // Expone la altura real del header como variable CSS --header-h para
   // poder fijar el sidebar justo por debajo, incluso si la altura cambia.
   React.useLayoutEffect(() => {
@@ -38,7 +46,7 @@ export default function Header({ showNavigation }: HeaderProps) {
       ro.disconnect()
       window.removeEventListener('resize', setVar)
     }
-  }, [])
+  }, [user, loading]) // Re-ejecutar cuando cambie el usuario o el estado de carga
   
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
   const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/auth");
