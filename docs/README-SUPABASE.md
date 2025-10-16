@@ -377,3 +377,486 @@ INSERT INTO public.company_users (company_id, user_id, role_in_company)
 VALUES ('<company_uuid>', '<partner_profile_uuid>', 'admin');
 ```
 
+## Tabla de Requisiciones
+
+Estructura Propuesta:
+
+requisitions (requisición base con campos fijos)
+  ├── requisition_responses (respuestas a campos personalizados - JSONB)
+  └── form_template_snapshot (copia de la plantilla usada al crear)
+
+form_templates (plantilla de formulario por empresa)
+  ├── form_sections (secciones personalizadas)
+  └── form_fields (campos dentro de cada sección)
+
+```
+-- =====================================================
+-- SISTEMA DE REQUISICIONES CON FORMULARIOS PERSONALIZABLES
+-- =====================================================
+
+-- =====================================================
+-- 1. Tabla de Plantillas de Formulario (por empresa)
+-- =====================================================
+CREATE TABLE public.form_templates (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL REFERENCES public.companies ON DELETE CASCADE,
+  name text NOT NULL,
+  description text,
+  version integer NOT NULL DEFAULT 1,
+  is_active boolean NOT NULL DEFAULT true,
+  
+  -- Configuración de la sección dinámica "FUNCIONES PRINCIPALES"
+  num_main_functions integer NOT NULL DEFAULT 5,
+  
+  created_by uuid REFERENCES auth.users,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Crear índice único parcial para una sola plantilla activa por empresa
+CREATE UNIQUE INDEX idx_form_templates_company_active 
+ON public.form_templates(company_id) 
+WHERE is_active = true;
+
+COMMENT ON TABLE public.form_templates IS 'Plantillas de formularios personalizables por empresa.';
+COMMENT ON COLUMN public.form_templates.num_main_functions IS 'Número de campos de "Funciones principales del puesto" (dinámico entre 1-10).';
+
+CREATE INDEX idx_form_templates_company ON public.form_templates(company_id);
+CREATE INDEX idx_form_templates_active ON public.form_templates(is_active) WHERE is_active = true;
+
+-- =====================================================
+-- 2. Tabla de Secciones Personalizadas
+-- =====================================================
+CREATE TABLE public.form_sections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id uuid NOT NULL REFERENCES public.form_templates ON DELETE CASCADE,
+  name text NOT NULL, -- Título de la sección
+  description text,
+  position integer NOT NULL DEFAULT 0, -- Orden de aparición (0 = al final)
+  is_required boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.form_sections IS 'Secciones adicionales personalizadas que los admins pueden agregar al formulario.';
+COMMENT ON COLUMN public.form_sections.position IS 'Orden de la sección: 0 = al final, 1+ = después de sección N del formulario base.';
+
+CREATE INDEX idx_form_sections_template ON public.form_sections(template_id);
+
+-- =====================================================
+-- 3. Tabla de Campos Personalizados
+-- =====================================================
+CREATE TABLE public.form_fields (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  section_id uuid NOT NULL REFERENCES public.form_sections ON DELETE CASCADE,
+  name text NOT NULL, -- Nombre del campo (usado como key en JSONB)
+  label text NOT NULL, -- Etiqueta visible para el usuario
+  field_type text NOT NULL CHECK (field_type IN (
+    'text', 'textarea', 'number', 'date', 'email', 'phone',
+    'checkbox', 'radio', 'select', 'multi-select'
+  )),
+  options jsonb, -- Para select/radio/checkbox: ["Opción 1", "Opción 2"]
+  validation jsonb, -- {"required": true, "min": 0, "max": 100, "pattern": "regex"}
+  placeholder text,
+  help_text text,
+  position integer NOT NULL DEFAULT 0, -- Orden dentro de la sección
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.form_fields IS 'Campos individuales dentro de las secciones personalizadas.';
+COMMENT ON COLUMN public.form_fields.options IS 'Opciones para campos tipo select, radio o checkbox: ["Opción A", "Opción B"].';
+COMMENT ON COLUMN public.form_fields.validation IS 'Reglas de validación: {"required": true, "min": 5, "max": 100, "pattern": "^[0-9]+$"}.';
+
+CREATE INDEX idx_form_fields_section ON public.form_fields(section_id);
+
+-- =====================================================
+-- 4. Tabla de Requisiciones (campos fijos)
+-- =====================================================
+CREATE TABLE public.requisitions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL REFERENCES public.companies ON DELETE RESTRICT,
+  created_by uuid NOT NULL REFERENCES auth.users,
+  template_id uuid REFERENCES public.form_templates, -- Plantilla usada al crear
+  template_snapshot jsonb NOT NULL, -- Snapshot de la plantilla completa (para versionado)
+  
+  -- Estado y tracking
+  status text NOT NULL DEFAULT 'draft' CHECK (status IN (
+    'draft', 'submitted', 'in_review', 'approved', 'rejected', 'cancelled', 'filled'
+  )),
+  
+  -- DATOS GENERALES (campos fijos)
+  departamento text,
+  puesto_requerido text,
+  numero_vacantes integer,
+  
+  -- INFORMACIÓN SOBRE EL PUESTO (campos fijos)
+  tipo_puesto jsonb, -- {"nuevaCreacion": true, "reemplazoTemporal": false, ...}
+  motivo_puesto text,
+  nombre_empleado_reemplaza text,
+  
+  -- FUNCIONES PRINCIPALES (dinámico según template)
+  funciones_principales text[], -- Array con las funciones [funcion1, funcion2, ...]
+  
+  -- PERFIL DEL PUESTO (campos fijos)
+  formacion_academica jsonb, -- {"bachiller": true, "tecnico": false, ...}
+  otros_estudios text,
+  idioma_ingles boolean,
+  
+  -- HABILIDAD INFORMÁTICA (campos fijos)
+  habilidad_informatica jsonb, -- Estructura completa de habilidades
+  
+  -- HABILIDADES Y CONOCIMIENTOS TÉCNICOS (campos fijos)
+  habilidades_tecnicas jsonb, -- {"informacion": true, "maquinariaEquipos": false, ...}
+  
+  -- Metadatos y fechas
+  submitted_at timestamptz,
+  reviewed_at timestamptz,
+  reviewed_by uuid REFERENCES auth.users,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+COMMENT ON TABLE public.requisitions IS 'Requisiciones de personal con campos fijos y referencia a plantilla usada.';
+COMMENT ON COLUMN public.requisitions.template_snapshot IS 'Snapshot JSON completo de la plantilla (template + sections + fields) al momento de crear la requisición.';
+COMMENT ON COLUMN public.requisitions.funciones_principales IS 'Array dinámico de funciones principales según lo configurado en la plantilla.';
+
+CREATE INDEX idx_requisitions_company ON public.requisitions(company_id);
+CREATE INDEX idx_requisitions_created_by ON public.requisitions(created_by);
+CREATE INDEX idx_requisitions_status ON public.requisitions(status);
+CREATE INDEX idx_requisitions_created_at ON public.requisitions(created_at DESC);
+
+-- =====================================================
+-- 5. Tabla de Respuestas a Campos Personalizados
+-- =====================================================
+CREATE TABLE public.requisition_responses (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  requisition_id uuid NOT NULL REFERENCES public.requisitions ON DELETE CASCADE,
+  section_id uuid NOT NULL, -- ID de la sección (del snapshot)
+  responses jsonb NOT NULL, -- {"campo1": "valor", "campo2": 123, ...}
+  created_at timestamptz NOT NULL DEFAULT now(),
+  
+  UNIQUE(requisition_id, section_id)
+);
+
+COMMENT ON TABLE public.requisition_responses IS 'Respuestas del usuario a los campos personalizados definidos en las secciones adicionales.';
+COMMENT ON COLUMN public.requisition_responses.responses IS 'Objeto JSON con las respuestas: {"nombreCampo": "valor", "otroCampo": 42}.';
+
+CREATE INDEX idx_requisition_responses_requisition ON public.requisition_responses(requisition_id);
+
+-- =====================================================
+-- 6. Triggers para updated_at
+-- =====================================================
+CREATE TRIGGER set_form_templates_updated_at
+BEFORE UPDATE ON public.form_templates
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER set_requisitions_updated_at
+BEFORE UPDATE ON public.requisitions
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+-- =====================================================
+-- 7. Habilitar RLS
+-- =====================================================
+ALTER TABLE public.form_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.form_sections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.form_fields ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.requisitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.requisition_responses ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- 8. Políticas RLS - Form Templates
+-- =====================================================
+
+-- Lectura: admins ven todas; partners solo las de sus empresas
+CREATE POLICY "Admins can view all templates"
+ON public.form_templates FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Partners can view their company templates"
+ON public.form_templates FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.company_users cu
+    WHERE cu.company_id = form_templates.company_id
+    AND cu.user_id = auth.uid()
+    AND cu.is_active = true
+  )
+);
+
+-- Inserción/Actualización/Eliminación: solo admins
+CREATE POLICY "Only admins can manage templates"
+ON public.form_templates FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- =====================================================
+-- 9. Políticas RLS - Form Sections y Fields
+-- =====================================================
+
+CREATE POLICY "Users can view sections of accessible templates"
+ON public.form_sections FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.form_templates ft
+    WHERE ft.id = form_sections.template_id
+    AND (
+      -- Es admin
+      EXISTS (
+        SELECT 1 FROM public.profiles p
+        JOIN public.roles r ON p.role_id = r.id
+        WHERE p.id = auth.uid()
+        AND r.name IN ('superadmin', 'admin')
+      )
+      OR
+      -- Es partner de la empresa
+      EXISTS (
+        SELECT 1 FROM public.company_users cu
+        WHERE cu.company_id = ft.company_id
+        AND cu.user_id = auth.uid()
+        AND cu.is_active = true
+      )
+    )
+  )
+);
+
+CREATE POLICY "Only admins can manage sections"
+ON public.form_sections FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- Mismas políticas para form_fields
+CREATE POLICY "Users can view fields of accessible sections"
+ON public.form_fields FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.form_sections fs
+    JOIN public.form_templates ft ON ft.id = fs.template_id
+    WHERE fs.id = form_fields.section_id
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.profiles p
+        JOIN public.roles r ON p.role_id = r.id
+        WHERE p.id = auth.uid()
+        AND r.name IN ('superadmin', 'admin')
+      )
+      OR
+      EXISTS (
+        SELECT 1 FROM public.company_users cu
+        WHERE cu.company_id = ft.company_id
+        AND cu.user_id = auth.uid()
+        AND cu.is_active = true
+      )
+    )
+  )
+);
+
+CREATE POLICY "Only admins can manage fields"
+ON public.form_fields FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- =====================================================
+-- 10. Políticas RLS - Requisitions
+-- =====================================================
+
+-- Lectura: admins ven todas; partners solo las de sus empresas
+CREATE POLICY "Admins can view all requisitions"
+ON public.requisitions FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Partners can view their company requisitions"
+ON public.requisitions FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.company_users cu
+    WHERE cu.company_id = requisitions.company_id
+    AND cu.user_id = auth.uid()
+    AND cu.is_active = true
+  )
+);
+
+-- Inserción: partners de la empresa pueden crear
+CREATE POLICY "Partners can create requisitions for their companies"
+ON public.requisitions FOR INSERT
+TO authenticated
+WITH CHECK (
+  created_by = auth.uid()
+  AND EXISTS (
+    SELECT 1 FROM public.company_users cu
+    WHERE cu.company_id = requisitions.company_id
+    AND cu.user_id = auth.uid()
+    AND cu.is_active = true
+  )
+);
+
+-- Actualización: el creador puede actualizar sus propias requisiciones en draft
+CREATE POLICY "Users can update their own draft requisitions"
+ON public.requisitions FOR UPDATE
+TO authenticated
+USING (
+  created_by = auth.uid()
+  AND status = 'draft'
+);
+
+-- Admins pueden actualizar cualquier requisición
+CREATE POLICY "Admins can update any requisition"
+ON public.requisitions FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- Eliminación: solo el creador puede eliminar borradores
+CREATE POLICY "Users can delete their own draft requisitions"
+ON public.requisitions FOR DELETE
+TO authenticated
+USING (
+  created_by = auth.uid()
+  AND status = 'draft'
+);
+
+-- =====================================================
+-- 11. Políticas RLS - Requisition Responses
+-- =====================================================
+
+CREATE POLICY "Users can view responses of accessible requisitions"
+ON public.requisition_responses FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.requisitions r
+    WHERE r.id = requisition_responses.requisition_id
+    AND (
+      r.created_by = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM public.profiles p
+        JOIN public.roles ro ON p.role_id = ro.id
+        WHERE p.id = auth.uid()
+        AND ro.name IN ('superadmin', 'admin')
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.company_users cu
+        WHERE cu.company_id = r.company_id
+        AND cu.user_id = auth.uid()
+        AND cu.is_active = true
+      )
+    )
+  )
+);
+
+CREATE POLICY "Users can manage responses of their own requisitions"
+ON public.requisition_responses FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.requisitions r
+    WHERE r.id = requisition_responses.requisition_id
+    AND r.created_by = auth.uid()
+  )
+);
+
+-- =====================================================
+-- 12. Función RPC: Obtener plantilla activa de empresa
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.get_company_active_template(p_company_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_template jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'template', row_to_json(ft.*),
+    'sections', (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'section', row_to_json(fs.*),
+          'fields', (
+            SELECT jsonb_agg(row_to_json(ff.*) ORDER BY ff.position)
+            FROM public.form_fields ff
+            WHERE ff.section_id = fs.id
+          )
+        ) ORDER BY fs.position
+      )
+      FROM public.form_sections fs
+      WHERE fs.template_id = ft.id
+    )
+  )
+  INTO v_template
+  FROM public.form_templates ft
+  WHERE ft.company_id = p_company_id
+  AND ft.is_active = true;
+  
+  RETURN COALESCE(v_template, '{}'::jsonb);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_company_active_template(uuid) TO authenticated;
+
+COMMENT ON FUNCTION public.get_company_active_template IS 'Retorna la plantilla activa completa de una empresa con sus secciones y campos.';
+
+-- =====================================================
+-- 13. Datos de ejemplo: Plantilla base (opcional)
+-- =====================================================
+-- Crear plantilla base para empresas sin personalización
+INSERT INTO public.form_templates (company_id, name, description, num_main_functions, is_active)
+SELECT 
+  id,
+  'Plantilla Base',
+  'Formulario estándar de requisiciones',
+  5,
+  true
+FROM public.companies
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.form_templates WHERE company_id = companies.id
+)
+LIMIT 1; -- Solo como ejemplo
+```
