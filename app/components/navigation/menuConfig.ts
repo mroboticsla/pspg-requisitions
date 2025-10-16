@@ -1,5 +1,5 @@
 import type React from 'react'
-import { LayoutDashboard, FilePlus2, CheckSquare, ListChecks, BarChart3, Users, Shield, User as UserIcon, Building2 } from 'lucide-react'
+import { LayoutDashboard, FilePlus2, CheckSquare, ListChecks, BarChart3, Users, Shield, User as UserIcon, Building2, FileText, Settings } from 'lucide-react'
 
 export type Role = 'superadmin' | 'admin' | 'partner' | 'candidate'
 
@@ -17,6 +17,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'requisitions', label: 'Requisiciones', roles: ['superadmin', 'admin', 'partner'], children: [
       { id: 'req-new', label: 'Crear Requisición', path: '/request', roles: ['superadmin', 'admin', 'partner'], icon: FilePlus2 },
+      { id: 'req-list', label: 'Gestión de Requisiciones', path: '/requisitions', roles: ['superadmin', 'admin', 'partner'], icon: ListChecks },
       { id: 'req-approve', label: 'Aprobar', path: '/requisitions/approve', roles: ['superadmin', 'admin'], icon: CheckSquare },
       { id: 'req-mine', label: 'Mis requisiciones', path: '/requisitions/mine', roles: ['partner', 'candidate'], icon: ListChecks },
     ]
@@ -28,6 +29,7 @@ export const MENU: MenuItem[] = [
     { id: 'partners', label: 'Asociados', path: '/admin/partners', roles: ['superadmin', 'admin'], icon: Users },
     { id: 'users', label: 'Usuarios', path: '/admin/users', roles: ['superadmin', 'admin'], icon: Users },
     { id: 'roles', label: 'Roles', path: '/admin/roles', roles: ['superadmin'], icon: Shield },
+    { id: 'templates', label: 'Plantillas de Requisiciones', path: '/admin/templates', roles: ['superadmin', 'admin'], icon: FileText },
   ]},
   { id: 'profile', label: 'Mi perfil', path: '/profile', icon: UserIcon },
 ]

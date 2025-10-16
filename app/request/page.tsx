@@ -6,6 +6,10 @@ import { useSafeRouter } from '../../lib/useSafeRouter'
 import { supabase } from '@/lib/supabaseClient'
 import { UserCompany } from '@/lib/types/company'
 import getCurrentUserRole from '@/lib/getCurrentUserRole'
+import { createRequisition, updateRequisition } from '@/lib/requisitions'
+import { getCompanyActiveTemplate } from '@/lib/templates'
+import { DynamicSection } from '../components/DynamicField'
+import type { FormTemplateComplete } from '@/lib/types/requisitions'
 
 export default function RequisitionForm() {
   const { user, loading } = useAuth()
@@ -13,6 +17,10 @@ export default function RequisitionForm() {
   const [userCompanies, setUserCompanies] = useState<UserCompany[]>([])
   const [loadingCompanies, setLoadingCompanies] = useState(false)
   const [userRole, setUserRole] = useState<string | null>(null)
+  const [template, setTemplate] = useState<FormTemplateComplete | null>(null)
+  const [loadingTemplate, setLoadingTemplate] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [customResponses, setCustomResponses] = useState<Record<string, Record<string, any>>>({})
 
   // Redirigir al login si no hay usuario autenticado
   useEffect(() => {
@@ -180,10 +188,193 @@ export default function RequisitionForm() {
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Cargar plantilla cuando se selecciona una empresa
+  useEffect(() => {
+    const loadTemplate = async () => {
+      if (!formData.companyId) {
+        setTemplate(null)
+        return
+      }
+
+      try {
+        setLoadingTemplate(true)
+        const activeTemplate = await getCompanyActiveTemplate(formData.companyId)
+        setTemplate(activeTemplate)
+      } catch (error) {
+        console.error('Error loading template:', error)
+      } finally {
+        setLoadingTemplate(false)
+      }
+    }
+
+    loadTemplate()
+  }, [formData.companyId])
+
+  const handleCustomResponse = (sectionId: string, fieldName: string, value: any) => {
+    setCustomResponses(prev => ({
+      ...prev,
+      [sectionId]: {
+        ...(prev[sectionId] || {}),
+        [fieldName]: value
+      }
+    }))
+  }
+
+  const handleSaveDraft = async () => {
+    try {
+      setSaving(true)
+      
+      const requisitionData = {
+        company_id: formData.companyId,
+        departamento: formData.departamento,
+        puesto_requerido: formData.puestoRequerido,
+        numero_vacantes: parseInt(formData.numeroVacantes) || 1,
+        tipo_puesto: {
+          nuevaCreacion: formData.nuevaCreacion,
+          reemplazoTemporal: formData.reemplazoTemporal,
+          reestructuracionPuesto: formData.reestructuracionPuesto,
+          reemplazoDefinitivo: formData.reemplazoDefinitivo,
+          renunciaVoluntaria: formData.renunciaVoluntaria,
+          promocion: formData.promocion,
+          incapacidad: formData.incapacidad,
+          cancelacionContrato: formData.cancelacionContrato,
+          licencia: formData.licencia,
+          vacaciones: formData.vacaciones,
+          incrementoLabores: formData.incrementoLabores,
+          licenciaMaternidad: formData.licenciaMaternidad,
+        },
+        motivo_puesto: formData.motivoPuesto,
+        nombre_empleado_reemplaza: formData.nombreEmpleadoReemplaza,
+        funciones_principales: [
+          formData.funcion1,
+          formData.funcion2,
+          formData.funcion3,
+          formData.funcion4,
+          formData.funcion5,
+        ].filter(f => f?.trim()),
+        formacion_academica: {
+          bachiller: formData.bachiller,
+          tecnico: formData.tecnico,
+          profesional: formData.profesional,
+          especializacion: formData.especializacion,
+          estudianteUniversitario: formData.estudianteUniversitario,
+        },
+        otros_estudios: formData.otrosEstudios,
+        idioma_ingles: formData.idiomaIngles,
+        habilidad_informatica: {
+          word: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          excel: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          powerpoint: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          outlook: (formData.correoElectronico.basico ? 'basico' : formData.correoElectronico.intermedio ? 'intermedio' : formData.correoElectronico.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          internet: (formData.internet.basico ? 'basico' : formData.internet.intermedio ? 'intermedio' : formData.internet.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          software_especifico: formData.otroEspecifique ? [{ nombre: formData.otroEspecifique, nivel: 'basico' as const }] : undefined,
+        },
+        habilidades_tecnicas: {
+          informacion: formData.informacion,
+          maquinariaEquipos: formData.maquinariaEquipos,
+          decisiones: formData.decisiones,
+          supervisionPersonal: formData.supervisionPersonal,
+          responsabilidades: formData.responsabilidades,
+          supervision: formData.supervision,
+        },
+        custom_responses: customResponses,
+      }
+
+      const requisition = await createRequisition(requisitionData)
+      alert('Borrador guardado exitosamente')
+      router.push(`/requisitions/${requisition.id}`)
+    } catch (error) {
+      console.error('Error saving draft:', error)
+      alert('Error al guardar el borrador')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Form data:', formData)
-    alert('Formulario enviado correctamente (modo demo)')
+    
+    if (!formData.companyId) {
+      alert('Por favor seleccione una empresa')
+      return
+    }
+
+    if (!formData.puestoRequerido) {
+      alert('Por favor especifique el puesto requerido')
+      return
+    }
+
+    try {
+      setSaving(true)
+      
+      const requisitionData = {
+        company_id: formData.companyId,
+        departamento: formData.departamento,
+        puesto_requerido: formData.puestoRequerido,
+        numero_vacantes: parseInt(formData.numeroVacantes) || 1,
+        tipo_puesto: {
+          nuevaCreacion: formData.nuevaCreacion,
+          reemplazoTemporal: formData.reemplazoTemporal,
+          reestructuracionPuesto: formData.reestructuracionPuesto,
+          reemplazoDefinitivo: formData.reemplazoDefinitivo,
+          renunciaVoluntaria: formData.renunciaVoluntaria,
+          promocion: formData.promocion,
+          incapacidad: formData.incapacidad,
+          cancelacionContrato: formData.cancelacionContrato,
+          licencia: formData.licencia,
+          vacaciones: formData.vacaciones,
+          incrementoLabores: formData.incrementoLabores,
+          licenciaMaternidad: formData.licenciaMaternidad,
+        },
+        motivo_puesto: formData.motivoPuesto,
+        nombre_empleado_reemplaza: formData.nombreEmpleadoReemplaza,
+        funciones_principales: [
+          formData.funcion1,
+          formData.funcion2,
+          formData.funcion3,
+          formData.funcion4,
+          formData.funcion5,
+        ].filter(f => f?.trim()),
+        formacion_academica: {
+          bachiller: formData.bachiller,
+          tecnico: formData.tecnico,
+          profesional: formData.profesional,
+          especializacion: formData.especializacion,
+          estudianteUniversitario: formData.estudianteUniversitario,
+        },
+        otros_estudios: formData.otrosEstudios,
+        idioma_ingles: formData.idiomaIngles,
+        habilidad_informatica: {
+          word: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          excel: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          powerpoint: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          outlook: (formData.correoElectronico.basico ? 'basico' : formData.correoElectronico.intermedio ? 'intermedio' : formData.correoElectronico.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          internet: (formData.internet.basico ? 'basico' : formData.internet.intermedio ? 'intermedio' : formData.internet.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          software_especifico: formData.otroEspecifique ? [{ nombre: formData.otroEspecifique, nivel: 'basico' as const }] : undefined,
+        },
+        habilidades_tecnicas: {
+          informacion: formData.informacion,
+          maquinariaEquipos: formData.maquinariaEquipos,
+          decisiones: formData.decisiones,
+          supervisionPersonal: formData.supervisionPersonal,
+          responsabilidades: formData.responsabilidades,
+          supervision: formData.supervision,
+        },
+        custom_responses: customResponses,
+      }
+
+      // Crear y enviar la requisición
+      const requisition = await createRequisition(requisitionData)
+      await updateRequisition(requisition.id, { status: 'submitted' })
+      
+      alert('Requisición enviada exitosamente')
+      router.push(`/requisitions/${requisition.id}`)
+    } catch (error) {
+      console.error('Error submitting requisition:', error)
+      alert('Error al enviar la requisición')
+    } finally {
+      setSaving(false)
+    }
   }
 
   // Mostrar loading mientras se verifica la sesión
@@ -706,19 +897,44 @@ export default function RequisitionForm() {
             </div>
           </div>
 
+          {/* Secciones Personalizadas */}
+          {template && template.sections && template.sections.length > 0 && (
+            <div className="space-y-6">
+              <div className="border-t-2 border-brand-dark pt-6">
+                <h3 className="text-lg font-bold text-brand-dark mb-4">
+                  INFORMACIÓN ADICIONAL PERSONALIZADA
+                </h3>
+              </div>
+              {template.sections
+                .sort((a, b) => a.position - b.position)
+                .map((section) => (
+                  <DynamicSection
+                    key={section.id}
+                    section={section}
+                    values={customResponses[section.id] || {}}
+                    onChange={handleCustomResponse}
+                    disabled={saving}
+                  />
+                ))}
+            </div>
+          )}
+
           {/* Submit button */}
           <div className="flex justify-end space-x-4 pt-6">
             <button
               type="button"
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              onClick={handleSaveDraft}
+              disabled={saving}
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
-              Guardar como Borrador
+              {saving ? 'Guardando...' : 'Guardar como Borrador'}
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent"
+              disabled={saving}
+              className="px-6 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Enviar Requisición
+              {saving ? 'Enviando...' : 'Enviar Requisición'}
             </button>
           </div>
         </form>
