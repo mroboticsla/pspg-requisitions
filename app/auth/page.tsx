@@ -23,6 +23,7 @@ function AuthPageContent() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -69,6 +70,7 @@ function AuthPageContent() {
     e.preventDefault();
     setErrorMsg(null);
     setFormLoading(true);
+    setLoginSuccess(false);
     try {
       const result = await supabase.auth.signInWithPassword({ email, password });
       if (result.error) {
@@ -76,6 +78,9 @@ function AuthPageContent() {
         setFormLoading(false);
         return;
       }
+      
+      // Marcar login como exitoso para mostrar mensaje de éxito
+      setLoginSuccess(true);
       
       // Capturar y guardar información de sesión de forma NO BLOQUEANTE
       // Esto evita que el login se retrase esperando la geolocalización
@@ -89,11 +94,12 @@ function AuthPageContent() {
           });
       }
       
-      router.push("/request");
+      // El AuthProvider detectará el cambio y redirigirá automáticamente
+      // No hacemos router.push aquí para evitar conflictos
     } catch (err: any) {
       setErrorMsg(err?.message ?? "Error en autenticación");
-    } finally {
       setFormLoading(false);
+      setLoginSuccess(false);
     }
   };
 
@@ -192,11 +198,13 @@ function AuthPageContent() {
   };
 
   // Mostrar loading mientras se verifica la sesión
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
+  if (loading || loginSuccess) return (
+    <div className="flex items-center justify-center min-h-screen bg-surface-secondary">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-        <p className="text-gray-600">Verificando sesión...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-accent mx-auto mb-4"></div>
+        <p className="text-gray-600 font-medium">
+          {loginSuccess ? "Inicio de sesión exitoso, redirigiendo..." : "Verificando sesión..."}
+        </p>
       </div>
     </div>
   )
@@ -285,11 +293,23 @@ function AuthPageContent() {
 
               <button
                 type="submit"
-                disabled={formLoading}
+                disabled={formLoading || loginSuccess}
                 className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${
-                  formLoading ? "bg-gray-400 cursor-not-allowed" : "bg-brand-dark hover:bg-brand-accent hover:scale-[1.02]"
+                  formLoading || loginSuccess ? "bg-gray-400 cursor-not-allowed" : "bg-brand-dark hover:bg-brand-accent hover:scale-[1.02]"
                 } `}>
-                {formLoading ? "Iniciando..." : "Iniciar Sesión"}
+                {loginSuccess ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Redirigiendo...
+                  </span>
+                ) : formLoading ? (
+                  "Iniciando..."
+                ) : (
+                  "Iniciar Sesión"
+                )}
               </button>
             </form>
           )}
