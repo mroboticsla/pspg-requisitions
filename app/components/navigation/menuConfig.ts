@@ -1,5 +1,5 @@
 import type React from 'react'
-import { LayoutDashboard, FilePlus2, CheckSquare, ListChecks, BarChart3, Users, Shield, User as UserIcon } from 'lucide-react'
+import { LayoutDashboard, FilePlus2, CheckSquare, ListChecks, BarChart3, Users, Shield, User as UserIcon, Building2 } from 'lucide-react'
 
 export type Role = 'superadmin' | 'admin' | 'partner' | 'candidate'
 
@@ -24,6 +24,7 @@ export const MENU: MenuItem[] = [
   { id: 'reports', label: 'Reportes', path: '/reports', roles: ['superadmin','admin'], icon: BarChart3 },
   { id: 'admin', label: 'Administración', path: '/admin', roles: ['superadmin','admin'], children: [
     { id: 'administrators', label: 'Administradores', path: '/admin/administrators', roles: ['superadmin'], icon: Shield },
+    { id: 'companies', label: 'Empresas', path: '/admin/companies', roles: ['superadmin', 'admin'], icon: Building2 },
     { id: 'partners', label: 'Asociados', path: '/admin/partners', roles: ['superadmin', 'admin'], icon: Users },
     { id: 'users', label: 'Usuarios', path: '/admin/users', roles: ['superadmin', 'admin'], icon: Users },
     { id: 'roles', label: 'Roles', path: '/admin/roles', roles: ['superadmin'], icon: Shield },

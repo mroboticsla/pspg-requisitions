@@ -273,6 +273,231 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, data })
     }
 
+    // =====================================================
+    // COMPANIES MANAGEMENT
+    // =====================================================
+
+    // LIST COMPANIES
+    if (action === 'list-companies') {
+      const { data } = await adminClient
+        .from('companies')
+        .select('id, name, legal_name, tax_id, industry, website, logo_url, address, contact_info, is_active, metadata, created_at, updated_at')
+        .order('name', { ascending: true })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // GET COMPANY WITH USERS
+    if (action === 'get-company') {
+      const { companyId } = body
+      if (!companyId) return NextResponse.json({ error: 'companyId required' }, { status: 400 })
+      
+      const { data: company, error: companyError } = await adminClient
+        .from('companies')
+        .select('id, name, legal_name, tax_id, industry, website, logo_url, address, contact_info, is_active, metadata, created_at, updated_at')
+        .eq('id', companyId)
+        .single()
+      
+      if (companyError) return NextResponse.json({ error: companyError.message }, { status: 500 })
+      if (!company) return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+
+      // Get assigned users
+      const { data: users } = await adminClient
+        .from('company_users')
+        .select('id, company_id, user_id, role_in_company, permissions, assigned_at, assigned_by, is_active, profiles(id, first_name, last_name, phone)')
+        .eq('company_id', companyId)
+        .order('assigned_at', { ascending: false })
+
+      return NextResponse.json({ ok: true, data: { ...company, company_users: users || [] } })
+    }
+
+    // CREATE COMPANY (only admins)
+    if (action === 'create-company') {
+      const { name, legal_name, tax_id, industry, website, logo_url, address, contact_info, metadata } = body
+      if (!name) return NextResponse.json({ error: 'Company name is required' }, { status: 400 })
+
+      // Check for duplicate tax_id if provided
+      if (tax_id) {
+        const { data: existing } = await adminClient
+          .from('companies')
+          .select('id')
+          .eq('tax_id', tax_id)
+          .maybeSingle()
+        if (existing) return NextResponse.json({ error: 'Ya existe una empresa con ese RFC/Tax ID' }, { status: 409 })
+      }
+
+      const companyData: any = { 
+        name, 
+        is_active: true 
+      }
+      if (legal_name) companyData.legal_name = legal_name
+      if (tax_id) companyData.tax_id = tax_id
+      if (industry) companyData.industry = industry
+      if (website) companyData.website = website
+      if (logo_url) companyData.logo_url = logo_url
+      if (address) companyData.address = address
+      if (contact_info) companyData.contact_info = contact_info
+      if (metadata) companyData.metadata = metadata
+
+      const { data, error } = await adminClient
+        .from('companies')
+        .insert(companyData)
+        .select()
+        .single()
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // UPDATE COMPANY (only admins)
+    if (action === 'update-company') {
+      const { companyId, name, legal_name, tax_id, industry, website, logo_url, address, contact_info, is_active, metadata } = body
+      if (!companyId) return NextResponse.json({ error: 'companyId required' }, { status: 400 })
+
+      // Check for duplicate tax_id if being updated
+      if (tax_id) {
+        const { data: existing } = await adminClient
+          .from('companies')
+          .select('id')
+          .eq('tax_id', tax_id)
+          .neq('id', companyId)
+          .maybeSingle()
+        if (existing) return NextResponse.json({ error: 'Ya existe otra empresa con ese RFC/Tax ID' }, { status: 409 })
+      }
+
+      const updatePayload: any = {}
+      if (name !== undefined) updatePayload.name = name
+      if (legal_name !== undefined) updatePayload.legal_name = legal_name
+      if (tax_id !== undefined) updatePayload.tax_id = tax_id
+      if (industry !== undefined) updatePayload.industry = industry
+      if (website !== undefined) updatePayload.website = website
+      if (logo_url !== undefined) updatePayload.logo_url = logo_url
+      if (address !== undefined) updatePayload.address = address
+      if (contact_info !== undefined) updatePayload.contact_info = contact_info
+      if (is_active !== undefined) updatePayload.is_active = is_active
+      if (metadata !== undefined) updatePayload.metadata = metadata
+
+      if (Object.keys(updatePayload).length === 0) {
+        return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+      }
+
+      const { data, error } = await adminClient
+        .from('companies')
+        .update(updatePayload)
+        .eq('id', companyId)
+        .select()
+        .single()
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // DELETE COMPANY (only superadmin)
+    if (action === 'delete-company') {
+      if (roleName !== 'superadmin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      const { companyId } = body
+      if (!companyId) return NextResponse.json({ error: 'companyId required' }, { status: 400 })
+
+      const { data, error } = await adminClient
+        .from('companies')
+        .delete()
+        .eq('id', companyId)
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // ASSIGN USER TO COMPANY
+    if (action === 'assign-user-to-company') {
+      const { companyId, userId, roleInCompany = 'member', permissions } = body
+      if (!companyId || !userId) return NextResponse.json({ error: 'companyId and userId required' }, { status: 400 })
+
+      // Verify company exists and is active
+      const { data: company } = await adminClient
+        .from('companies')
+        .select('id, name, is_active')
+        .eq('id', companyId)
+        .single()
+      
+      if (!company) return NextResponse.json({ error: 'Company not found' }, { status: 404 })
+      if (!company.is_active) return NextResponse.json({ error: 'Cannot assign users to inactive company' }, { status: 400 })
+
+      // Verify user exists
+      const { data: userProfile } = await adminClient
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('id', userId)
+        .single()
+      
+      if (!userProfile) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+      // Check if assignment already exists
+      const { data: existing } = await adminClient
+        .from('company_users')
+        .select('id')
+        .eq('company_id', companyId)
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (existing) return NextResponse.json({ error: 'User is already assigned to this company' }, { status: 409 })
+
+      const assignmentData: any = {
+        company_id: companyId,
+        user_id: userId,
+        role_in_company: roleInCompany,
+        assigned_by: user.id,
+        is_active: true
+      }
+      if (permissions) assignmentData.permissions = permissions
+
+      const { data, error } = await adminClient
+        .from('company_users')
+        .insert(assignmentData)
+        .select()
+        .single()
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // UPDATE USER COMPANY ASSIGNMENT
+    if (action === 'update-company-assignment') {
+      const { assignmentId, roleInCompany, permissions, is_active } = body
+      if (!assignmentId) return NextResponse.json({ error: 'assignmentId required' }, { status: 400 })
+
+      const updatePayload: any = {}
+      if (roleInCompany !== undefined) updatePayload.role_in_company = roleInCompany
+      if (permissions !== undefined) updatePayload.permissions = permissions
+      if (is_active !== undefined) updatePayload.is_active = is_active
+
+      if (Object.keys(updatePayload).length === 0) {
+        return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+      }
+
+      const { data, error } = await adminClient
+        .from('company_users')
+        .update(updatePayload)
+        .eq('id', assignmentId)
+        .select()
+        .single()
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // REMOVE USER FROM COMPANY
+    if (action === 'remove-user-from-company') {
+      const { assignmentId } = body
+      if (!assignmentId) return NextResponse.json({ error: 'assignmentId required' }, { status: 400 })
+
+      const { data, error } = await adminClient
+        .from('company_users')
+        .delete()
+        .eq('id', assignmentId)
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
     return NextResponse.json({ error: 'unknown action' }, { status: 400 })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 })
