@@ -78,7 +78,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   const expanded = !collapsed || hoverExpand
 
   const Nav = (
-    <nav className="mt-4 space-y-1 overflow-hidden">
+    <nav className="space-y-1 overflow-hidden">
       {items.map(item => (
         <div key={item.id}>
           {item.path ? (
@@ -110,7 +110,6 @@ export default function Sidebar({ className = '' }: SidebarProps) {
     return (
       <aside
         className={`hidden md:block bg-white/95 backdrop-blur border-r border-gray-200 ${collapsed ? 'w-16' : 'w-64'} transition-all duration-200 ${className}`}
-        style={{ position: 'sticky', top: 'var(--header-h, 64px)', height: 'calc(100dvh - var(--header-h, 64px))' }}
       >
         <div className="p-3 text-gray-500 text-sm">Cargando…</div>
       </aside>
@@ -121,8 +120,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
     <>
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex flex-col bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-r border-gray-200 ${expanded ? 'w-64' : 'w-16'} transition-all duration-200 ${className} overflow-hidden`}
-        style={{ position: 'sticky', top: 'var(--header-h, 64px)', height: 'calc(100dvh - var(--header-h, 64px))' }}
+        className={`hidden md:flex flex-col bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-r border-gray-200 ${expanded ? 'w-64' : 'w-16'} transition-all duration-200 ${className} overflow-hidden h-full`}
         onMouseEnter={() => setHoverExpand(true)}
         onMouseLeave={() => setHoverExpand(false)}
       >
@@ -130,14 +128,14 @@ export default function Sidebar({ className = '' }: SidebarProps) {
           <span className={`text-sm font-semibold text-gray-700 ${expanded ? 'block' : 'hidden'}`}>Navegación</span>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-2 rounded hover:bg-gray-100 text-gray-600"
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-600 text-xs"
             aria-label="Alternar sidebar"
             title={expanded ? 'Colapsar sidebar' : 'Expandir sidebar'}
           >
             {expanded ? '«' : '»'}
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-2">
+        <div className="flex-1 overflow-y-auto px-2 py-2">
           {Nav}
         </div>
       </aside>
