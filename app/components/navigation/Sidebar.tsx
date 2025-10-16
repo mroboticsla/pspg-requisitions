@@ -93,14 +93,24 @@ export default function Sidebar({ className = '' }: SidebarProps) {
               </div>
             ) : null
           )}
-          {item.children && item.children.length > 0 && expanded && (
-            <div className={`ml-2 space-y-1`}>
-              {item.children.map(ch => (
-                <SideLink key={ch.id} href={ch.path!} active={pathname === ch.path} collapsed={false} title={ch.label} icon={ch.icon}>
-                  {ch.label}
-                </SideLink>
-              ))}
-            </div>
+          {item.children && item.children.length > 0 && (
+            expanded ? (
+              <div className={`ml-2 space-y-1`}>
+                {item.children.map(ch => (
+                  <SideLink key={ch.id} href={ch.path!} active={pathname === ch.path} collapsed={false} title={ch.label} icon={ch.icon}>
+                    {ch.label}
+                  </SideLink>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {item.children.map(ch => (
+                  <SideLink key={ch.id} href={ch.path!} active={pathname === ch.path} collapsed={true} title={ch.label} icon={ch.icon}>
+                    {ch.label}
+                  </SideLink>
+                ))}
+              </div>
+            )
           )}
         </div>
       ))}
