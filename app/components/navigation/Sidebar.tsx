@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { Pin, PinOff } from 'lucide-react'
 import { MENU, filterMenu, Role, MenuItem } from './menuConfig'
 import getCurrentUserRole from '@/lib/getCurrentUserRole'
 import { useAuth } from '../../providers/AuthProvider'
@@ -128,11 +129,11 @@ export default function Sidebar({ className = '' }: SidebarProps) {
           <span className={`text-sm font-semibold text-gray-700 ${expanded ? 'block' : 'hidden'}`}>Navegación</span>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-600 text-xs"
-            aria-label="Alternar sidebar"
-            title={expanded ? 'Colapsar sidebar' : 'Expandir sidebar'}
+            className="p-1.5 rounded hover:bg-gray-100 text-gray-600 transition-colors"
+            aria-label={collapsed ? 'Fijar sidebar' : 'Desfijar sidebar'}
+            title={collapsed ? 'Fijar sidebar' : 'Desfijar sidebar'}
           >
-            {expanded ? '«' : '»'}
+            {collapsed ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-2 py-2">
