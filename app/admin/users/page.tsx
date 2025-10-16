@@ -30,6 +30,9 @@ interface RoleOption {
 
 type ViewMode = 'list' | 'view' | 'assign-role'
 
+// Roles del sistema que NO se muestran en esta pantalla
+const SYSTEM_ROLES = ['superadmin', 'admin', 'partner']
+
 export default function UsersAdminPage() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
@@ -70,9 +73,16 @@ export default function UsersAdminPage() {
       })
       const b1 = await r1.json()
       if (!r1.ok) throw new Error(b1.error || 'No se pudo obtener usuarios')
-      setUsers(b1.data || [])
+      
+      // Filtrar solo usuarios que NO sean administradores ni partners
+      const allUsers = b1.data || []
+      const regularUsers = allUsers.filter((u: UserRow) => {
+        const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : ''
+        return !SYSTEM_ROLES.includes(roleName)
+      })
+      setUsers(regularUsers)
 
-      // Obtener roles
+      // Obtener solo roles de usuario (no de sistema)
       const r2 = await fetch('/api/admin/secure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -80,7 +90,10 @@ export default function UsersAdminPage() {
       })
       const b2 = await r2.json()
       if (!r2.ok) throw new Error(b2.error || 'No se pudo obtener roles')
-      setRoles(b2.data || [])
+      
+      const allRoles = b2.data || []
+      const userRoles = allRoles.filter((r: RoleOption) => !SYSTEM_ROLES.includes(r.name))
+      setRoles(userRoles)
     } catch (err: any) {
       showError(err.message || String(err))
     } finally {
@@ -254,9 +267,17 @@ export default function UsersAdminPage() {
       {/* Header compacto */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Administración de usuarios</h1>
-          <p className="text-gray-600 mt-1">Gestiona los usuarios y sus roles en el sistema</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <p className="text-gray-600 mt-1">Gestiona los usuarios generales y candidatos del sistema</p>
         </div>
+        <button 
+          onClick={() => router.push('/register?type=user')}
+          disabled={busy}
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Crear Usuario</span>
+        </button>
       </div>
 
       {/* Estadísticas compactas */}
@@ -445,7 +466,7 @@ export default function UsersAdminPage() {
                       <span>{u.is_active ? 'Desactivar' : 'Activar'}</span>
                     </button>
 
-                    {isSuper && (
+                    {(isSuper || isAdmin) && (
                       <button
                         disabled={busy || isCurrentUser}
                         onClick={(e) => { e.stopPropagation(); requestDelete(u); }}
