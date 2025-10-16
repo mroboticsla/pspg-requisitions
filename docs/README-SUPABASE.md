@@ -124,3 +124,256 @@ Otorga `GRANT EXECUTE ON FUNCTION public.current_user_role() TO authenticated;` 
 - Endpoints server-side validan rol y/o `ADMIN_SECRET`
 - RLS debe ser tu última línea de defensa; valida también en backend
 ````
+
+## Creación de tablas para manejo de empresas
+
+```
+-- =====================================================
+-- 1. Tabla de Empresas (Companies)
+-- =====================================================
+CREATE TABLE public.companies (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  legal_name text,
+  tax_id text UNIQUE, -- RFC o NIT
+  industry text,
+  website text,
+  logo_url text,
+  address jsonb, -- {"street": "", "city": "", "state": "", "zip": "", "country": ""}
+  contact_info jsonb, -- {"email": "", "phone": "", "mobile": ""}
+  is_active boolean NOT NULL DEFAULT true,
+  metadata jsonb, -- Información adicional flexible
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+COMMENT ON TABLE public.companies IS 'Catálogo de empresas/clientes que pueden crear requisiciones.';
+COMMENT ON COLUMN public.companies.tax_id IS 'RFC (México) o NIT/Tax ID único de la empresa.';
+COMMENT ON COLUMN public.companies.address IS 'Dirección en formato JSON para flexibilidad.';
+COMMENT ON COLUMN public.companies.metadata IS 'Datos adicionales: tamaño empresa, sector específico, etc.';
+
+-- Índices recomendados
+CREATE INDEX idx_companies_name ON public.companies(name);
+CREATE INDEX idx_companies_is_active ON public.companies(is_active);
+
+-- =====================================================
+-- 2. Tabla de Usuarios por Empresa (Company Users)
+-- =====================================================
+CREATE TABLE public.company_users (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL REFERENCES public.companies ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES public.profiles ON DELETE CASCADE,
+  role_in_company text DEFAULT 'member', -- 'admin', 'member', 'viewer', etc.
+  permissions jsonb, -- Permisos específicos dentro de la empresa
+  assigned_at timestamptz NOT NULL DEFAULT now(),
+  assigned_by uuid REFERENCES auth.users, -- Quién lo asignó
+  is_active boolean NOT NULL DEFAULT true,
+  
+  UNIQUE(company_id, user_id)
+);
+
+COMMENT ON TABLE public.company_users IS 'Relación muchos-a-muchos: qué usuarios (partners) tienen acceso a qué empresas.';
+COMMENT ON COLUMN public.company_users.role_in_company IS 'Rol del usuario dentro de esta empresa: admin (gestiona usuarios), member (crea requisiciones), viewer (solo lectura).';
+COMMENT ON COLUMN public.company_users.permissions IS 'Permisos adicionales granulares si es necesario.';
+
+-- Índices recomendados
+CREATE INDEX idx_company_users_company_id ON public.company_users(company_id);
+CREATE INDEX idx_company_users_user_id ON public.company_users(user_id);
+CREATE INDEX idx_company_users_active ON public.company_users(is_active) WHERE is_active = true;
+
+-- =====================================================
+-- 3. Trigger para updated_at en companies
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_companies_updated_at
+BEFORE UPDATE ON public.companies
+FOR EACH ROW
+EXECUTE FUNCTION public.update_updated_at_column();
+
+-- =====================================================
+-- 4. Habilitar RLS
+-- =====================================================
+ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.company_users ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- 5. Políticas RLS para companies
+-- =====================================================
+
+-- Lectura: admins ven todas; partners solo las asignadas
+CREATE POLICY "Admins can view all companies"
+ON public.companies FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Partners can view their assigned companies"
+ON public.companies FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.company_users cu
+    WHERE cu.company_id = companies.id
+    AND cu.user_id = auth.uid()
+    AND cu.is_active = true
+  )
+);
+
+-- Inserción: solo admins
+CREATE POLICY "Only admins can create companies"
+ON public.companies FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- Actualización: solo admins
+CREATE POLICY "Only admins can update companies"
+ON public.companies FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- Eliminación: solo superadmin
+CREATE POLICY "Only superadmins can delete companies"
+ON public.companies FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name = 'superadmin'
+  )
+);
+
+-- =====================================================
+-- 6. Políticas RLS para company_users
+-- =====================================================
+
+-- Lectura: admins ven todo; partners solo sus asignaciones
+CREATE POLICY "Admins can view all company assignments"
+ON public.company_users FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Users can view their own company assignments"
+ON public.company_users FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
+
+-- Inserción y actualización: solo admins
+CREATE POLICY "Only admins can assign users to companies"
+ON public.company_users FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+CREATE POLICY "Only admins can update company assignments"
+ON public.company_users FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- Eliminación: solo admins
+CREATE POLICY "Only admins can remove company assignments"
+ON public.company_users FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = auth.uid()
+    AND r.name IN ('superadmin', 'admin')
+  )
+);
+
+-- =====================================================
+-- 7. Función RPC útil: obtener empresas del usuario actual
+-- =====================================================
+CREATE OR REPLACE FUNCTION public.get_user_companies()
+RETURNS TABLE (
+  company_id uuid,
+  company_name text,
+  role_in_company text,
+  is_active boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    c.id,
+    c.name,
+    cu.role_in_company,
+    cu.is_active
+  FROM public.company_users cu
+  JOIN public.companies c ON cu.company_id = c.id
+  WHERE cu.user_id = auth.uid()
+  AND cu.is_active = true
+  AND c.is_active = true
+  ORDER BY c.name;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_user_companies() TO authenticated;
+
+COMMENT ON FUNCTION public.get_user_companies IS 'Retorna las empresas asignadas al usuario actual (autenticado).';
+```
+
+Script de Inserción de Datos de Ejemplo
+
+```
+INSERT INTO public.companies (name, legal_name, tax_id)
+VALUES ('Acme Corp', 'Acme Corporation S.A. de C.V.', 'ACM123456ABC');
+```
+
+```
+INSERT INTO public.company_users (company_id, user_id, role_in_company)
+VALUES ('<company_uuid>', '<partner_profile_uuid>', 'admin');
+```
+
