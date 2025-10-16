@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../providers/AuthProvider";
 import AuthTabSwitch from "../components/AuthTabSwitch";
-import PhoneInput, { COUNTRY_CODES, getUnformattedPhone } from "../components/PhoneInput";
+import PhoneInput, { getUnformattedPhone, composePhoneCountryValue, parsePhoneCountryValue, getCountryByValue } from "../components/PhoneInput";
 import { captureSessionInfo, saveSessionToProfile } from "../../lib/sessionTracking";
 
 function AuthPageContent() {
@@ -19,10 +19,16 @@ function AuthPageContent() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phoneCountry, setPhoneCountry] = useState("+52");
+  const [phoneCountry, setPhoneCountry] = useState(() => composePhoneCountryValue("MX", "+52"));
   const [phoneNumber, setPhoneNumber] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+
+  // DEBUG: Log cuando cambia phoneCountry
+  useEffect(() => {
+    console.log('🏠 AuthPage phoneCountry cambió a:', phoneCountry);
+  }, [phoneCountry]);
+
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -113,14 +119,16 @@ function AuthPageContent() {
       const digits = getUnformattedPhone(phoneNumber);
       
       // Validar longitud según el país seleccionado
-      const countryConfig = COUNTRY_CODES.find(c => c.code === phoneCountry);
+      const countryConfig = getCountryByValue(phoneCountry);
       if (countryConfig && digits.length !== countryConfig.length) {
         setErrorMsg(`El número de teléfono debe tener ${countryConfig.length} dígitos para ${countryConfig.name}.`);
         setFormLoading(false);
         return;
       }
 
-      const phone = `${phoneCountry}${digits}`.trim();
+      const { dialCode } = parsePhoneCountryValue(phoneCountry);
+      const phonePrefix = dialCode || phoneCountry;
+      const phone = `${phonePrefix}${digits}`.trim();
 
       const { data: existingPhone, error: phoneError } = await supabase.from("profiles").select("id").eq("phone", phone).limit(1);
 

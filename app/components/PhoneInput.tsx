@@ -5,6 +5,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Phone, ChevronDown, Search, X } from "lucide-react";
 
 interface PhoneInputProps {
+  // El valor combina ISO y código (ISO|+código). Los códigos simples siguen siendo aceptados para compatibilidad.
   phoneCountry: string;
   phoneNumber: string;
   onCountryChange: (value: string) => void;
@@ -54,10 +55,41 @@ export const COUNTRY_CODES = [
   { code: "+34", country: "ES", name: "España", format: "### ## ## ##", length: 9 },
 ];
 
+export const composePhoneCountryValue = (isoCode: string, dialCode: string): string => {
+  return `${isoCode.toUpperCase()}|${dialCode}`;
+};
+
+export const parsePhoneCountryValue = (value: string) => {
+  if (!value) {
+    return { iso: "", dialCode: "" };
+  }
+
+  if (value.includes("|")) {
+    const [iso, dialCode] = value.split("|");
+    return { iso: iso.toUpperCase(), dialCode };
+  }
+
+  const match = COUNTRY_CODES.find(c => c.code === value);
+  return { iso: match?.country ?? "", dialCode: value };
+};
+
+export const getCountryByValue = (value: string) => {
+  const { iso, dialCode } = parsePhoneCountryValue(value);
+
+  if (iso) {
+    const exact = COUNTRY_CODES.find(c => c.country === iso && c.code === dialCode);
+    if (exact) return exact;
+
+    const byIso = COUNTRY_CODES.find(c => c.country === iso);
+    if (byIso) return byIso;
+  }
+
+  return COUNTRY_CODES.find(c => c.code === dialCode);
+};
+
 // Función para formatear el número según la máscara del país
-export const formatPhoneNumber = (value: string, countryCode: string): string => {
-  // Encontrar la configuración del país
-  const country = COUNTRY_CODES.find(c => c.code === countryCode);
+export const formatPhoneNumber = (value: string, countryValue: string): string => {
+  const country = getCountryByValue(countryValue);
   if (!country) return value;
 
   // Eliminar todos los caracteres que no sean dígitos
@@ -102,6 +134,20 @@ export default function PhoneInput({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const parsedCountry = parsePhoneCountryValue(phoneCountry);
+  const currentCountry = getCountryByValue(phoneCountry);
+
+  // DEBUG: Log del estado actual
+  useEffect(() => {
+    console.log('🔍 PhoneInput Estado:', {
+      phoneCountry,
+      hasSeperator: phoneCountry.includes('|'),
+      parsedCountry,
+      currentCountryName: currentCountry?.name,
+      currentCountryISO: currentCountry?.country,
+      currentCountryCode: currentCountry?.code
+    });
+  }, [phoneCountry, parsedCountry, currentCountry]);
 
   // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
@@ -152,7 +198,7 @@ export default function PhoneInput({
       case 'Enter':
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredCountries.length) {
-          handleCountryChange(filteredCountries[highlightedIndex].code);
+          handleCountryChange(filteredCountries[highlightedIndex]);
         }
         break;
       case 'Escape':
@@ -182,13 +228,23 @@ export default function PhoneInput({
   };
 
   // Manejar el cambio de país y reformatear el número existente
-  const handleCountryChange = (newCountry: string) => {
-    onCountryChange(newCountry);
+  const handleCountryChange = (newCountry: typeof COUNTRY_CODES[number]) => {
+    console.log('🌍 handleCountryChange llamado:', {
+      newCountry: newCountry.name,
+      iso: newCountry.country,
+      code: newCountry.code
+    });
+    
+    const nextValue = composePhoneCountryValue(newCountry.country, newCountry.code);
+    console.log('📤 Llamando onCountryChange con:', nextValue);
+    
+    onCountryChange(nextValue);
     
     // Reformatear el número existente con el nuevo país
     if (phoneNumber) {
       const digits = phoneNumber.replace(/\D/g, "");
-      const reformatted = formatPhoneNumber(digits, newCountry);
+      const reformatted = formatPhoneNumber(digits, nextValue);
+      console.log('📱 Reformateando número:', { original: phoneNumber, reformatted });
       onNumberChange(reformatted);
     }
     
@@ -200,13 +256,14 @@ export default function PhoneInput({
 
   // Obtener el placeholder dinámico según el país
   const getPlaceholder = (): string => {
-    const country = COUNTRY_CODES.find(c => c.code === phoneCountry);
+    const country = getCountryByValue(phoneCountry);
     return country?.format.replace(/#/g, "0") || placeholder;
   };
 
-  // Obtener el país actual
-  const currentCountry = COUNTRY_CODES.find(c => c.code === phoneCountry);
-
+  const isCountrySelected = (country: typeof COUNTRY_CODES[number]) => {
+    if (!currentCountry) return false;
+    return currentCountry.country === country.country && currentCountry.code === country.code;
+  };
   return (
     <div className="relative">
       <div className={`flex items-stretch border rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand-accent focus-within:border-transparent transition-all ${className}`}>
@@ -228,7 +285,7 @@ export default function PhoneInput({
             ) : (
               <span className="text-lg">🌍</span>
             )}
-            <span className="font-semibold text-gray-700">{currentCountry?.code || phoneCountry}</span>
+            <span className="font-semibold text-gray-700">{currentCountry?.code || parsedCountry.dialCode || phoneCountry}</span>
             <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
         </div>
@@ -290,15 +347,18 @@ export default function PhoneInput({
                 <button
                   key={`${country.code}-${country.country}-${country.name}`}
                   type="button"
-                  onClick={() => handleCountryChange(country.code)}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // Prevenir que se pierda el foco
+                    handleCountryChange(country);
+                  }}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   className={`w-full text-left px-4 py-2.5 transition-colors flex items-center justify-between ${
                     index === highlightedIndex
                       ? 'bg-gray-100'
                       : 'hover:bg-gray-50'
                   } ${
-                    country.code === phoneCountry && country.country === currentCountry?.country 
-                      ? 'bg-brand-accent bg-opacity-10 border-l-2 border-brand-accent' 
+                    isCountrySelected(country)
+                      ? 'bg-brand-accent bg-opacity-10 border-l-2 border-brand-accent'
                       : ''
                   }`}
                 >

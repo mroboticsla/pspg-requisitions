@@ -5,7 +5,7 @@ import { useAuth } from "../providers/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Unlock } from "lucide-react";
-import PhoneInput, { COUNTRY_CODES, getUnformattedPhone, formatPhoneNumber } from "../components/PhoneInput";
+import PhoneInput, { COUNTRY_CODES, getUnformattedPhone, formatPhoneNumber, composePhoneCountryValue, parsePhoneCountryValue, getCountryByValue } from "../components/PhoneInput";
 import SessionHistory from "../components/SessionHistory";
 import { SessionMetadata } from "../../lib/sessionTracking";
 import AvatarUpload from "../components/AvatarUpload";
@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
-    phoneCountry: "+52",
+    phoneCountry: composePhoneCountryValue("MX", "+52"),
     phoneNumber: "",
     email: "",
     currentPassword: "",
@@ -57,7 +57,7 @@ export default function ProfilePage() {
       
       if (phone) {
         // Buscar el código de país en el teléfono
-        const codes = ["+1", "+52", "+54", "+56", "+57", "+506", "+593", "+503", "+502", "+504", "+505", "+507", "+595", "+51", "+598", "+58", "+34"];
+        const codes = Array.from(new Set(COUNTRY_CODES.map(c => c.code))).sort((a, b) => b.length - a.length);
         for (const code of codes) {
           if (phone.startsWith(code)) {
             countryCode = code;
@@ -67,13 +67,18 @@ export default function ProfilePage() {
         }
       }
       
+      const selectedCountry = getCountryByValue(countryCode);
+      const phoneCountryValue = selectedCountry
+        ? composePhoneCountryValue(selectedCountry.country, selectedCountry.code)
+        : countryCode;
+
       // Aplicar formato al número cargado desde la BD
-      const formattedNumber = number ? formatPhoneNumber(number, countryCode) : "";
+      const formattedNumber = number ? formatPhoneNumber(number, phoneCountryValue) : "";
       
       setFormData({
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
-        phoneCountry: countryCode,
+        phoneCountry: phoneCountryValue,
         phoneNumber: formattedNumber,
         email: user?.email || "",
         currentPassword: "",
@@ -139,12 +144,14 @@ export default function ProfilePage() {
         throw new Error("La contraseña actual es incorrecta");
       }
 
-      // Construir el teléfono completo (solo dígitos)
-      const phoneDigits = getUnformattedPhone(formData.phoneNumber);
-      const fullPhone = `${formData.phoneCountry}${phoneDigits}`.trim();
+    // Construir el teléfono completo (solo dígitos)
+    const phoneDigits = getUnformattedPhone(formData.phoneNumber);
+    const { dialCode } = parsePhoneCountryValue(formData.phoneCountry);
+    const phonePrefix = dialCode || formData.phoneCountry;
+    const fullPhone = `${phonePrefix}${phoneDigits}`.trim();
 
       // Validar longitud del teléfono según el código de país
-      const countryConfig = COUNTRY_CODES.find(c => c.code === formData.phoneCountry);
+    const countryConfig = getCountryByValue(formData.phoneCountry);
       if (countryConfig && phoneDigits.length !== countryConfig.length) {
         throw new Error(`El número de teléfono debe tener ${countryConfig.length} dígitos para ${countryConfig.name}`);
       }

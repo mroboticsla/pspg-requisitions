@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { RequireRoleClient } from '@/app/components/RequireRole'
 import { useToast } from '@/lib/useToast'
 import { ArrowLeft, Save, User, Mail, Phone, Briefcase, Eye, EyeOff } from 'lucide-react'
-import PhoneInput, { getUnformattedPhone, COUNTRY_CODES } from '@/app/components/PhoneInput'
+import PhoneInput, { getUnformattedPhone, COUNTRY_CODES, composePhoneCountryValue, parsePhoneCountryValue, getCountryByValue, formatPhoneNumber } from '@/app/components/PhoneInput'
 
 interface RoleOption {
   id: string
@@ -44,7 +44,7 @@ export default function PartnerFormPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
-  const [phoneCountry, setPhoneCountry] = useState('+52')
+  const [phoneCountry, setPhoneCountry] = useState(() => composePhoneCountryValue('MX', '+52'))
   const [phoneNumber, setPhoneNumber] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -131,8 +131,10 @@ export default function PartnerFormPage() {
         if (foundUser.phone) {
           const matchedCountry = COUNTRY_CODES.find(c => foundUser.phone?.startsWith(c.code))
           if (matchedCountry) {
-            setPhoneCountry(matchedCountry.code)
-            setPhoneNumber(foundUser.phone.slice(matchedCountry.code.length))
+            const countryValue = composePhoneCountryValue(matchedCountry.country, matchedCountry.code)
+            setPhoneCountry(countryValue)
+            const numberDigits = foundUser.phone.slice(matchedCountry.code.length)
+            setPhoneNumber(formatPhoneNumber(numberDigits, countryValue))
           } else {
             setPhoneNumber(foundUser.phone)
           }
@@ -161,13 +163,15 @@ export default function PartnerFormPage() {
 
       // Validate phone
       const digits = getUnformattedPhone(phoneNumber)
-      const countryConfig = COUNTRY_CODES.find(c => c.code === phoneCountry)
+      const countryConfig = getCountryByValue(phoneCountry)
       if (countryConfig && digits.length !== countryConfig.length) {
         showError(`El número de teléfono debe tener ${countryConfig.length} dígitos para ${countryConfig.name}.`)
         return
       }
 
-      const phone = `${phoneCountry}${digits}`.trim()
+      const { dialCode } = parsePhoneCountryValue(phoneCountry)
+      const phonePrefix = dialCode || phoneCountry
+      const phone = `${phonePrefix}${digits}`.trim()
 
       const s = await supabase.auth.getSession()
       const token = (s as any).data?.session?.access_token ?? null
