@@ -27,21 +27,43 @@ export async function createRequisition(
       throw new Error('Usuario no autenticado');
     }
 
-    // Obtener snapshot de la plantilla activa de la empresa
+    // 1. Verificar que el usuario tenga acceso a la empresa
+    const { data: hasAccess, error: accessError } = await supabase.rpc(
+      'user_has_company_access',
+      { p_company_id: data.company_id }
+    );
+
+    if (accessError) {
+      console.error('Error verificando acceso a empresa:', accessError);
+      throw new Error('No se pudo verificar el acceso a la empresa. Por favor, contacte al administrador.');
+    }
+
+    if (!hasAccess) {
+      throw new Error('No tiene permisos para crear requisiciones en esta empresa. Contacte al administrador para obtener acceso.');
+    }
+
+    // 2. Obtener snapshot de la plantilla activa de la empresa
     const { data: templateSnapshot, error: snapshotError } = await supabase.rpc(
       'get_company_active_template',
       { p_company_id: data.company_id }
     );
 
-    if (snapshotError) throw snapshotError;
+    if (snapshotError) {
+      console.error('Error obteniendo plantilla de empresa:', snapshotError);
+      throw new Error(`No se pudo obtener la plantilla de la empresa: ${snapshotError.message}`);
+    }
 
-    // Crear la requisición base
+    if (!templateSnapshot) {
+      console.warn('No se encontró plantilla activa para la empresa:', data.company_id);
+    }
+
+    // 3. Crear la requisición base
     const { data: requisition, error: reqError } = await supabase
       .from('requisitions')
       .insert({
         company_id: data.company_id,
         created_by: userData.user.id,
-        template_id: templateSnapshot?.id,
+        template_id: templateSnapshot?.id || null,
         template_snapshot: templateSnapshot || {},
         status: 'draft',
         departamento: data.departamento,
@@ -60,9 +82,22 @@ export async function createRequisition(
       .select()
       .single();
 
-    if (reqError) throw reqError;
+    if (reqError) {
+      console.error('Error creando requisición:', reqError);
+      
+      // Mensajes de error más específicos
+      if (reqError.code === '42501') {
+        throw new Error('No tiene permisos suficientes para crear requisiciones. Verifique que está asignado a esta empresa.');
+      } else if (reqError.code === '23503') {
+        throw new Error('Error de referencia: La empresa especificada no existe o fue eliminada.');
+      } else if (reqError.code === '23505') {
+        throw new Error('Ya existe una requisición con estos datos.');
+      }
+      
+      throw new Error(`Error al crear la requisición: ${reqError.message}`);
+    }
 
-    // Guardar respuestas personalizadas si existen
+    // 4. Guardar respuestas personalizadas si existen
     if (data.custom_responses && Object.keys(data.custom_responses).length > 0) {
       const responses = Object.entries(data.custom_responses).map(
         ([sectionId, responses]) => ({
@@ -76,13 +111,24 @@ export async function createRequisition(
         .from('requisition_responses')
         .insert(responses);
 
-      if (responsesError) throw responsesError;
+      if (responsesError) {
+        console.error('Error guardando respuestas personalizadas:', responsesError);
+        // No lanzar error aquí, la requisición principal ya se creó exitosamente
+        console.warn('La requisición se creó pero hubo un problema guardando las respuestas personalizadas.');
+      }
     }
 
     return requisition;
-  } catch (error) {
-    console.error('Error creating requisition:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Error en createRequisition:', error);
+    
+    // Re-lanzar con mensaje claro si ya es un Error
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    // Error genérico
+    throw new Error('Error inesperado al crear la requisición. Por favor, intente nuevamente.');
   }
 }
 
@@ -94,6 +140,33 @@ export async function updateRequisition(
   updates: UpdateRequisitionData
 ): Promise<Requisition> {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+
+    if (!userData?.user?.id) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Verificar que la requisición existe y el usuario tiene permisos
+    const { data: existingReq, error: fetchError } = await supabase
+      .from('requisitions')
+      .select('id, created_by, status, company_id')
+      .eq('id', requisitionId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error verificando requisición:', fetchError);
+      throw new Error('No se pudo encontrar la requisición especificada.');
+    }
+
+    if (!existingReq) {
+      throw new Error('La requisición no existe o fue eliminada.');
+    }
+
+    // Verificar permisos: solo el creador puede actualizar requisiciones en draft
+    if (existingReq.created_by !== userData.user.id && existingReq.status === 'draft') {
+      throw new Error('Solo puede actualizar sus propias requisiciones.');
+    }
+
     // Extraer custom_responses si existe
     const { custom_responses, ...requisitionUpdates } = updates;
 
@@ -105,15 +178,27 @@ export async function updateRequisition(
       .select()
       .single();
 
-    if (reqError) throw reqError;
+    if (reqError) {
+      console.error('Error actualizando requisición:', reqError);
+      
+      if (reqError.code === '42501') {
+        throw new Error('No tiene permisos para actualizar esta requisición.');
+      }
+      
+      throw new Error(`Error al actualizar la requisición: ${reqError.message}`);
+    }
 
     // Actualizar respuestas personalizadas si existen
     if (custom_responses) {
       // Eliminar respuestas anteriores
-      await supabase
+      const { error: deleteError } = await supabase
         .from('requisition_responses')
         .delete()
         .eq('requisition_id', requisitionId);
+
+      if (deleteError) {
+        console.error('Error eliminando respuestas anteriores:', deleteError);
+      }
 
       // Insertar nuevas respuestas
       if (Object.keys(custom_responses).length > 0) {
@@ -129,14 +214,22 @@ export async function updateRequisition(
           .from('requisition_responses')
           .insert(responses);
 
-        if (responsesError) throw responsesError;
+        if (responsesError) {
+          console.error('Error insertando nuevas respuestas:', responsesError);
+          console.warn('La requisición se actualizó pero hubo un problema con las respuestas personalizadas.');
+        }
       }
     }
 
     return requisition;
-  } catch (error) {
-    console.error('Error updating requisition:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Error en updateRequisition:', error);
+    
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error('Error inesperado al actualizar la requisición.');
   }
 }
 
@@ -151,7 +244,10 @@ export async function getRequisitionById(
       p_requisition_id: requisitionId,
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error obteniendo requisición completa:', error);
+      throw new Error(`No se pudo obtener la requisición: ${error.message}`);
+    }
 
     if (!data || Object.keys(data).length === 0) {
       return null;
@@ -161,9 +257,14 @@ export async function getRequisitionById(
       ...data.requisition,
       custom_responses: data.custom_responses || [],
     } as RequisitionComplete;
-  } catch (error) {
-    console.error('Error fetching requisition:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Error en getRequisitionById:', error);
+    
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error('Error inesperado al obtener la requisición.');
   }
 }
 
@@ -212,12 +313,20 @@ export async function listRequisitions(
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error listando requisiciones:', error);
+      throw new Error(`Error al obtener la lista de requisiciones: ${error.message}`);
+    }
 
     return data || [];
-  } catch (error) {
-    console.error('Error listing requisitions:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Error en listRequisitions:', error);
+    
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error('Error inesperado al listar requisiciones.');
   }
 }
 
@@ -228,6 +337,31 @@ export async function submitRequisition(
   requisitionId: string
 ): Promise<Requisition> {
   try {
+    const { data: userData } = await supabase.auth.getUser();
+
+    if (!userData?.user?.id) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Verificar que la requisición existe y está en draft
+    const { data: existingReq, error: fetchError } = await supabase
+      .from('requisitions')
+      .select('id, created_by, status')
+      .eq('id', requisitionId)
+      .single();
+
+    if (fetchError || !existingReq) {
+      throw new Error('La requisición no existe o fue eliminada.');
+    }
+
+    if (existingReq.created_by !== userData.user.id) {
+      throw new Error('Solo puede enviar sus propias requisiciones.');
+    }
+
+    if (existingReq.status !== 'draft') {
+      throw new Error('Solo se pueden enviar requisiciones en estado borrador.');
+    }
+
     const { data, error } = await supabase
       .from('requisitions')
       .update({
@@ -238,12 +372,20 @@ export async function submitRequisition(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error enviando requisición:', error);
+      throw new Error(`Error al enviar la requisición: ${error.message}`);
+    }
 
     return data;
-  } catch (error) {
-    console.error('Error submitting requisition:', error);
-    throw error;
+  } catch (error: any) {
+    console.error('Error en submitRequisition:', error);
+    
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error('Error inesperado al enviar la requisición.');
   }
 }
 
@@ -289,15 +431,29 @@ export async function updateRequisitionStatus(
  */
 export async function deleteRequisition(requisitionId: string): Promise<void> {
   try {
-    // Verificar que esté en draft
-    const { data: requisition } = await supabase
+    const { data: userData } = await supabase.auth.getUser();
+
+    if (!userData?.user?.id) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Verificar que esté en draft y pertenezca al usuario
+    const { data: requisition, error: fetchError } = await supabase
       .from('requisitions')
-      .select('status')
+      .select('status, created_by')
       .eq('id', requisitionId)
       .single();
 
-    if (requisition?.status !== 'draft') {
-      throw new Error('Solo se pueden eliminar requisiciones en borrador');
+    if (fetchError || !requisition) {
+      throw new Error('La requisición no existe o fue eliminada.');
+    }
+
+    if (requisition.created_by !== userData.user.id) {
+      throw new Error('Solo puede eliminar sus propias requisiciones.');
+    }
+
+    if (requisition.status !== 'draft') {
+      throw new Error('Solo se pueden eliminar requisiciones en estado borrador.');
     }
 
     const { error } = await supabase
@@ -305,10 +461,18 @@ export async function deleteRequisition(requisitionId: string): Promise<void> {
       .delete()
       .eq('id', requisitionId);
 
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error deleting requisition:', error);
-    throw error;
+    if (error) {
+      console.error('Error eliminando requisición:', error);
+      throw new Error(`Error al eliminar la requisición: ${error.message}`);
+    }
+  } catch (error: any) {
+    console.error('Error en deleteRequisition:', error);
+    
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error('Error inesperado al eliminar la requisición.');
   }
 }
 
