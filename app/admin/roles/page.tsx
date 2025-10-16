@@ -155,11 +155,8 @@ export default function RolesAdminPage() {
         return
       }
       
-      // Validar roles protegidos
-      if (form.id && isRoleProtected(normalizedName)) {
-        showError('Los roles del sistema no pueden ser modificados')
-        return
-      }
+      // Nota: El superadmin puede modificar roles del sistema (solo permisos y módulos, no el nombre)
+      // La validación del backend se encargará de prevenir renombrar roles del sistema
       
       if (normalizedName.length < 3 || normalizedName.length > 30) {
         setFormErrors(errs => ({ ...errs, name: 'El nombre debe tener entre 3 y 30 caracteres' }))
@@ -201,10 +198,14 @@ export default function RolesAdminPage() {
 
   // Acciones sugeridas
   const suggested = [
+    { key: 'manage_administrators', label: 'Gestionar administradores' },
+    { key: 'manage_partners', label: 'Gestionar asociados' },
     { key: 'manage_users', label: 'Gestionar usuarios' },
     { key: 'manage_roles', label: 'Gestionar roles' },
     { key: 'approve_requisitions', label: 'Aprobar requisiciones' },
     { key: 'create_requisitions', label: 'Crear requisiciones' },
+    { key: 'view_reports', label: 'Ver reportes' },
+    { key: 'export_data', label: 'Exportar datos' },
   ]
 
   const toggleCanDo = (key: string) => {
@@ -405,9 +406,9 @@ export default function RolesAdminPage() {
             {viewMode === 'create' ? 'Crear nuevo rol' : `Editar: ${form.name}`}
           </h1>
           {isEditingProtectedRole && (
-            <p className="text-sm text-amber-700 mt-1 flex items-center gap-1">
-              <span>🔒</span>
-              <span>Este es un rol del sistema. Solo puedes modificar permisos y módulos.</span>
+            <p className="text-sm text-blue-700 mt-1 flex items-center gap-1 bg-blue-50 border border-blue-200 rounded px-3 py-2">
+              <span>ℹ️</span>
+              <span>Rol del sistema: Puedes modificar permisos y módulos. El nombre no se puede cambiar para mantener la integridad del sistema.</span>
             </p>
           )}
         </div>
