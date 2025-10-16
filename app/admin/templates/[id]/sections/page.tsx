@@ -4,7 +4,7 @@
 // Editor de Secciones y Campos de Plantillas
 // =====================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   getTemplateById,
@@ -50,11 +50,7 @@ export default function TemplateSectionsPage() {
   const [fieldHelp, setFieldHelp] = useState('');
   const [fieldRequired, setFieldRequired] = useState(false);
 
-  useEffect(() => {
-    loadTemplate();
-  }, [templateId]);
-
-  async function loadTemplate() {
+  const loadTemplate = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getTemplateById(templateId);
@@ -64,7 +60,11 @@ export default function TemplateSectionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [templateId]);
+
+  useEffect(() => {
+    loadTemplate();
+  }, [loadTemplate]);
 
   function openSectionModal(section?: FormSection) {
     if (section) {
@@ -299,7 +299,7 @@ export default function TemplateSectionsPage() {
                     </div>
                   ) : (
                     <p className="text-sm text-gray-500 mt-4 italic">
-                      No hay campos. Haz clic en "+ Campo" para agregar.
+                      No hay campos. Haz clic en &quot;+ Campo&quot; para agregar.
                     </p>
                   )}
                 </div>

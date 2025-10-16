@@ -4,7 +4,7 @@
 // Panel de Administración de Plantillas
 // =====================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   listCompanyTemplates,
@@ -27,11 +27,7 @@ export default function TemplatesPage() {
   const [numFunctions, setNumFunctions] = useState(5);
 
   // Cargar empresas y plantillas
-  useEffect(() => {
-    loadData();
-  }, [selectedCompany]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -51,7 +47,11 @@ export default function TemplatesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedCompany]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   async function handleCreateTemplate() {
     if (!selectedCompany || !newTemplateName.trim()) return;

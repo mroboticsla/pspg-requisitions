@@ -25,7 +25,7 @@ export default function Header({ showNavigation }: HeaderProps) {
     if (!document.documentElement.style.getPropertyValue('--header-h')) {
       document.documentElement.style.setProperty('--header-h', isAuthRoute ? '0px' : '64px')
     }
-  }, [])
+  }, [isAuthRoute])
 
   // Cuando estamos en ruta de auth, establecer altura a 0
   React.useEffect(() => {

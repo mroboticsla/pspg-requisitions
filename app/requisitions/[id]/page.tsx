@@ -4,7 +4,7 @@
 // Página de Detalle de Requisición
 // =====================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   getRequisitionById,
@@ -31,11 +31,7 @@ export default function RequisitionDetailPage() {
   const [requisition, setRequisition] = useState<RequisitionComplete | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadRequisition();
-  }, [requisitionId]);
-
-  async function loadRequisition() {
+  const loadRequisition = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getRequisitionById(requisitionId);
@@ -45,7 +41,11 @@ export default function RequisitionDetailPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [requisitionId]);
+
+  useEffect(() => {
+    loadRequisition();
+  }, [loadRequisition]);
 
   async function handleStatusChange(newStatus: RequisitionStatus) {
     if (!requisition) return;

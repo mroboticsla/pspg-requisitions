@@ -4,7 +4,7 @@
 // Página de Lista de Requisiciones
 // =====================================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { listRequisitions, getRequisitionStats } from '@/lib/requisitions';
 import type { Requisition, RequisitionStatus, RequisitionStats } from '@/lib/types/requisitions';
@@ -37,11 +37,7 @@ export default function RequisitionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequisitionStatus | ''>('');
 
-  useEffect(() => {
-    loadData();
-  }, [statusFilter]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -60,7 +56,11 @@ export default function RequisitionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [statusFilter, searchTerm]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
