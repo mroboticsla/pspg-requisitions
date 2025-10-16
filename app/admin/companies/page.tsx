@@ -365,19 +365,19 @@ export default function CompaniesAdminPage() {
     <RequireRoleClient allow={['superadmin', 'admin']}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Empresas</h1>
-            <p className="text-gray-600 mt-1">Administre las empresas y sus usuarios asignados</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Gestión de Empresas</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Administre las empresas y sus usuarios asignados</p>
           </div>
           {viewMode === 'list' && (
             <button
               onClick={handleCreate}
               disabled={busy}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <Plus className="w-5 h-5" />
-              Nueva Empresa
+              <span className="sm:inline">Nueva Empresa</span>
             </button>
           )}
         </div>
@@ -409,94 +409,101 @@ export default function CompaniesAdminPage() {
             )}
 
             {!busy && filteredCompanies.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-brand-dark border-b border-gray-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                        Empresa
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                        RFC/Tax ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                        Industria
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                        Estado
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredCompanies.map((company) => (
-                      <tr key={company.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{company.name}</div>
-                              {company.legal_name && (
-                                <div className="text-sm text-gray-500">{company.legal_name}</div>
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-brand-dark">
+                      <tr>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                          Empresa
+                        </th>
+                        <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                          RFC/Tax ID
+                        </th>
+                        <th className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                          Industria
+                        </th>
+                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
+                          Estado
+                        </th>
+                        <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredCompanies.map((company) => (
+                        <tr key={company.id} className="hover:bg-gray-50">
+                          <td className="px-3 sm:px-6 py-4">
+                            <div className="flex items-start sm:items-center">
+                              <Building2 className="w-5 h-5 text-gray-400 mr-2 sm:mr-3 flex-shrink-0 mt-0.5 sm:mt-0" />
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">{company.name}</div>
+                                {company.legal_name && (
+                                  <div className="text-sm text-gray-500 truncate">{company.legal_name}</div>
+                                )}
+                                {/* Mostrar RFC e Industria en móviles */}
+                                <div className="md:hidden text-xs text-gray-500 mt-1 space-y-0.5">
+                                  {company.tax_id && <div>RFC: {company.tax_id}</div>}
+                                  {company.industry && <div>{company.industry}</div>}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {company.tax_id || '-'}
+                          </td>
+                          <td className="hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {company.industry || '-'}
+                          </td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              company.is_active
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {company.is_active ? 'Activa' : 'Inactiva'}
+                            </span>
+                          </td>
+                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex items-center justify-end gap-1 sm:gap-2">
+                              <button
+                                onClick={() => handleView(company)}
+                                className="text-brand-dark hover:text-brand-accent transition-colors p-1"
+                                title="Ver detalles"
+                              >
+                                <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleEdit(company)}
+                                className="text-brand-dark hover:text-brand-accent transition-colors p-1"
+                                title="Editar"
+                              >
+                                <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleAssignUsers(company)}
+                                className="text-brand-dark hover:text-brand-accent transition-colors p-1"
+                                title="Asignar usuarios"
+                              >
+                                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                              </button>
+                              {isSuper && (
+                                <button
+                                  onClick={() => setShowDelete({ open: true, company })}
+                                  className="text-red-600 hover:text-red-800 transition-colors p-1"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                                </button>
                               )}
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {company.tax_id || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {company.industry || '-'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            company.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {company.is_active ? 'Activa' : 'Inactiva'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleView(company)}
-                              className="text-brand-dark hover:text-brand-accent transition-colors"
-                              title="Ver detalles"
-                            >
-                              <Eye className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => handleEdit(company)}
-                              className="text-brand-dark hover:text-brand-accent transition-colors"
-                              title="Editar"
-                            >
-                              <Edit className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => handleAssignUsers(company)}
-                              className="text-brand-dark hover:text-brand-accent transition-colors"
-                              title="Asignar usuarios"
-                            >
-                              <Users className="w-5 h-5" />
-                            </button>
-                            {isSuper && (
-                              <button
-                                onClick={() => setShowDelete({ open: true, company })}
-                                className="text-red-600 hover:text-red-800 transition-colors"
-                                title="Eliminar"
-                              >
-                                <Trash2 className="w-5 h-5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
@@ -816,23 +823,23 @@ export default function CompaniesAdminPage() {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Usuarios Asignados</h3>
                 {selectedCompany.company_users && selectedCompany.company_users.length > 0 ? (
-                  <div className="border rounded-lg overflow-hidden">
-                    <table className="w-full">
+                  <div className="border rounded-lg overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-brand-dark">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Usuario</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Rol</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Estado</th>
+                          <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Usuario</th>
+                          <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Rol</th>
+                          <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Estado</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-gray-200 bg-white">
                         {selectedCompany.company_users.map((cu) => (
                           <tr key={cu.id}>
-                            <td className="px-4 py-2 text-sm text-gray-900">
+                            <td className="px-3 sm:px-4 py-2 text-sm text-gray-900">
                               {cu.profiles?.first_name} {cu.profiles?.last_name}
                             </td>
-                            <td className="px-4 py-2 text-sm text-gray-900 capitalize">{cu.role_in_company}</td>
-                            <td className="px-4 py-2 text-sm">
+                            <td className="px-3 sm:px-4 py-2 text-sm text-gray-900 capitalize">{cu.role_in_company}</td>
+                            <td className="px-3 sm:px-4 py-2 text-sm">
                               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                                 cu.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                               }`}>
@@ -904,9 +911,9 @@ export default function CompaniesAdminPage() {
                 <button
                   onClick={handleAssignUser}
                   disabled={!selectedUserId || busy}
-                  className="btn-primary"
+                  className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
                 >
-                  <UserPlus className="w-4 h-4 mr-2" />
+                  <UserPlus className="w-4 h-4" />
                   Asignar Usuario
                 </button>
               </div>
@@ -916,38 +923,44 @@ export default function CompaniesAdminPage() {
             <div>
               <h3 className="text-sm font-medium text-gray-900 mb-3">Usuarios Asignados</h3>
               {selectedCompany.company_users && selectedCompany.company_users.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full">
+                <div className="border rounded-lg overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-brand-dark">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Usuario</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Teléfono</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Rol</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Estado</th>
-                        <th className="px-4 py-2 text-right text-xs font-medium text-white uppercase">Acciones</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Usuario</th>
+                        <th className="hidden sm:table-cell px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Teléfono</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Rol</th>
+                        <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Estado</th>
+                        <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-white uppercase">Acciones</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-200 bg-white">
                       {selectedCompany.company_users.map((cu) => (
                         <tr key={cu.id}>
-                          <td className="px-4 py-2 text-sm text-gray-900">
-                            {cu.profiles?.first_name} {cu.profiles?.last_name}
+                          <td className="px-3 sm:px-4 py-2 text-sm text-gray-900">
+                            <div>
+                              <div>{cu.profiles?.first_name} {cu.profiles?.last_name}</div>
+                              {/* Mostrar teléfono en móviles */}
+                              <div className="sm:hidden text-xs text-gray-500 mt-0.5">
+                                {cu.profiles?.phone || '-'}
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-4 py-2 text-sm text-gray-900">
+                          <td className="hidden sm:table-cell px-3 sm:px-4 py-2 text-sm text-gray-900">
                             {cu.profiles?.phone || '-'}
                           </td>
-                          <td className="px-4 py-2 text-sm text-gray-900 capitalize">{cu.role_in_company}</td>
-                          <td className="px-4 py-2 text-sm">
+                          <td className="px-3 sm:px-4 py-2 text-sm text-gray-900 capitalize">{cu.role_in_company}</td>
+                          <td className="px-3 sm:px-4 py-2 text-sm">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                               cu.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
                               {cu.is_active ? 'Activo' : 'Inactivo'}
                             </span>
                           </td>
-                          <td className="px-4 py-2 text-right">
+                          <td className="px-3 sm:px-4 py-2 text-right">
                             <button
                               onClick={() => handleRemoveUser(cu.id)}
-                              className="text-red-600 hover:text-red-800 transition-colors"
+                              className="text-red-600 hover:text-red-800 transition-colors p-1"
                               title="Remover usuario"
                             >
                               <UserMinus className="w-4 h-4" />

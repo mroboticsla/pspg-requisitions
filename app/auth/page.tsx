@@ -227,8 +227,16 @@ function AuthPageContent() {
       <div className="w-full max-w-md sm:max-w-lg space-y-6">
         {/* Logo y título */}
         <div className="text-center">
-          <div className="h-16 flex items-center justify-center mx-auto mb-4">
-            <Image src="/images/logo-web-dark.png" alt="PSP logo" width={120} height={48} className="h-12 w-auto rounded-lg object-cover" priority />
+          <div className="h-20 flex items-center justify-center mx-auto mb-4">
+            <Image 
+              src="/images/logo-web-dark.png" 
+              alt="PSP logo" 
+              width={200} 
+              height={80} 
+              className="h-16 w-auto object-contain" 
+              priority 
+              quality={100}
+            />
           </div>
         </div>
 
