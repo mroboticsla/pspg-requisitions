@@ -15,8 +15,8 @@ export default function HomePage() {
         // Si hay usuario autenticado, redirigir al dashboard
         router.replace('/dashboard')
       } else {
-        // Si no hay usuario, redirigir a auth
-        router.replace('/auth')
+        // Si no hay usuario, redirigir al portal público
+        router.replace('/public-home')
       }
     }
   }, [loading, user, profile, router])
