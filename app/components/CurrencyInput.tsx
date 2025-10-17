@@ -1,23 +1,40 @@
 'use client';
+/* eslint-disable @next/next/no-img-element */
 
 // =====================================================
 // Componente CurrencyInput - Entrada de moneda con selector y formato
 // =====================================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-// Monedas soportadas
+// Componente para mostrar la bandera del país
+const CurrencyFlag = ({ countryCode }: { countryCode: string }) => {
+  const flagUrl = `https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`;
+  
+  return (
+    <img 
+      src={flagUrl} 
+      alt={`Bandera de ${countryCode}`}
+      className="w-5 h-3.5 object-cover rounded-sm shadow-sm flex-shrink-0"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+};
+
+// Monedas soportadas con sus códigos ISO de país para las banderas
 export const CURRENCIES = [
-  { code: 'USD', symbol: '$', name: 'Dólar estadounidense' },
-  { code: 'MXN', symbol: '$', name: 'Peso mexicano' },
-  { code: 'EUR', symbol: '€', name: 'Euro' },
-  { code: 'GBP', symbol: '£', name: 'Libra esterlina' },
-  { code: 'CAD', symbol: '$', name: 'Dólar canadiense' },
-  { code: 'COP', symbol: '$', name: 'Peso colombiano' },
-  { code: 'ARS', symbol: '$', name: 'Peso argentino' },
-  { code: 'CLP', symbol: '$', name: 'Peso chileno' },
-  { code: 'PEN', symbol: 'S/', name: 'Sol peruano' },
-  { code: 'BRL', symbol: 'R$', name: 'Real brasileño' },
+  { code: 'USD', symbol: '$', name: 'Dólar estadounidense', countryCode: 'us' },
+  { code: 'MXN', symbol: '$', name: 'Peso mexicano', countryCode: 'mx' },
+  { code: 'EUR', symbol: '€', name: 'Euro', countryCode: 'eu' },
+  { code: 'GBP', symbol: '£', name: 'Libra esterlina', countryCode: 'gb' },
+  { code: 'CAD', symbol: '$', name: 'Dólar canadiense', countryCode: 'ca' },
+  { code: 'COP', symbol: '$', name: 'Peso colombiano', countryCode: 'co' },
+  { code: 'ARS', symbol: '$', name: 'Peso argentino', countryCode: 'ar' },
+  { code: 'CLP', symbol: '$', name: 'Peso chileno', countryCode: 'cl' },
+  { code: 'PEN', symbol: 'S/', name: 'Sol peruano', countryCode: 'pe' },
+  { code: 'BRL', symbol: 'R$', name: 'Real brasileño', countryCode: 'br' },
 ];
 
 export interface CurrencyValue {
@@ -47,40 +64,84 @@ export function CurrencyInput({
   name,
 }: CurrencyInputProps) {
   const [displayValue, setDisplayValue] = useState<string>('');
+  const [isUserTyping, setIsUserTyping] = useState<boolean>(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Formatear número con separadores de miles y decimales
-  const formatNumber = (num: number): string => {
-    return new Intl.NumberFormat('es-MX', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(num);
+  // Formatear número con separadores de miles
+  const formatThousands = (num: string): string => {
+    // Separar parte entera y decimal
+    const parts = num.split('.');
+    const integerPart = parts[0];
+    const decimalPart = parts[1];
+
+    // Formatear parte entera con separadores de miles
+    const formatted = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    // Si hay parte decimal, agregarla
+    return decimalPart !== undefined ? `${formatted}.${decimalPart}` : formatted;
   };
 
   // Parsear string a número (eliminar formato)
   const parseNumber = (str: string): number | null => {
     if (!str || str.trim() === '') return null;
     
-    // Remover separadores de miles y reemplazar coma decimal por punto
-    const cleaned = str.replace(/,/g, '').replace(/\s/g, '');
+    // Remover separadores de miles
+    const cleaned = str.replace(/,/g, '');
     const num = parseFloat(cleaned);
     
     return isNaN(num) ? null : num;
   };
 
-  // Sincronizar displayValue cuando cambia value.amount externamente
+  // Sincronizar displayValue cuando cambia value.amount externamente (pero no cuando el usuario está escribiendo)
   useEffect(() => {
-    if (value.amount !== null && value.amount !== undefined) {
-      setDisplayValue(formatNumber(value.amount));
-    } else {
-      setDisplayValue('');
+    // Solo actualizar si el usuario NO está escribiendo
+    if (!isUserTyping) {
+      if (value.amount !== null && value.amount !== undefined) {
+        const formatted = formatThousands(value.amount.toFixed(2));
+        setDisplayValue(formatted);
+      } else {
+        setDisplayValue('');
+      }
     }
-  }, [value.amount]);
+  }, [value.amount, isUserTyping]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value;
+    setIsUserTyping(true); // Marcar que el usuario está escribiendo
     
-    // Permitir solo números, puntos y comas
-    const sanitized = input.replace(/[^\d.,]/g, '');
+    const input = e.target.value;
+    const cursorPosition = e.target.selectionStart || 0;
+    
+    // Permitir solo números, punto decimal y comas (las comas se usan como separadores)
+    let sanitized = input.replace(/[^\d.,]/g, '');
+    
+    // Asegurar solo un punto decimal
+    const parts = sanitized.split('.');
+    if (parts.length > 2) {
+      sanitized = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Limitar decimales a 2 dígitos
+    if (parts.length === 2 && parts[1].length > 2) {
+      sanitized = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    // Remover comas para procesar
+    const withoutCommas = sanitized.replace(/,/g, '');
+    
+    // Si tiene punto decimal, mantener la estructura
+    if (withoutCommas.includes('.')) {
+      const [intPart, decPart] = withoutCommas.split('.');
+      const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      sanitized = decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt + '.';
+    } else {
+      // Solo formatear parte entera
+      sanitized = withoutCommas.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+    
+    // Calcular nueva posición del cursor
+    const oldCommaCount = displayValue.substring(0, cursorPosition).split(',').length - 1;
+    const newCommaCount = sanitized.substring(0, cursorPosition).split(',').length - 1;
+    const commasDiff = newCommaCount - oldCommaCount;
     
     setDisplayValue(sanitized);
     
@@ -89,19 +150,38 @@ export function CurrencyInput({
       amount: parsedAmount,
       currency: value.currency || 'USD',
     });
-  };
-
-  const handleAmountBlur = () => {
-    // Formatear al perder el foco
-    if (value.amount !== null && value.amount !== undefined) {
-      setDisplayValue(formatNumber(value.amount));
-    }
+    
+    // Restaurar posición del cursor considerando las comas agregadas/removidas
+    setTimeout(() => {
+      if (inputRef.current) {
+        const newPosition = cursorPosition + commasDiff;
+        inputRef.current.setSelectionRange(newPosition, newPosition);
+      }
+    }, 0);
   };
 
   const handleAmountFocus = () => {
-    // Al hacer foco, mostrar sin formato para facilitar la edición
+    setIsUserTyping(true); // Marcar que el usuario está interactuando con el campo
+  };
+
+  const handleAmountBlur = () => {
+    setIsUserTyping(false); // El usuario ya no está escribiendo
+    
+    // Al perder el foco, asegurar formato con 2 decimales si hay un valor
     if (value.amount !== null && value.amount !== undefined) {
-      setDisplayValue(value.amount.toString());
+      const formatted = formatThousands(value.amount.toFixed(2));
+      setDisplayValue(formatted);
+    } else if (displayValue && !displayValue.includes('.')) {
+      // Si escribió solo números sin decimal, agregar .00
+      const num = parseNumber(displayValue);
+      if (num !== null) {
+        const formatted = formatThousands(num.toFixed(2));
+        setDisplayValue(formatted);
+        onChange({
+          amount: num,
+          currency: value.currency || 'USD',
+        });
+      }
     }
   };
 
@@ -117,20 +197,32 @@ export function CurrencyInput({
   return (
     <div className="space-y-2">
       <div className="flex gap-2">
-        {/* Selector de moneda */}
-        <div className="w-32 flex-shrink-0">
-          <select
-            value={value.currency || 'USD'}
-            onChange={handleCurrencyChange}
-            disabled={disabled}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm"
-          >
-            {CURRENCIES.map((currency) => (
-              <option key={currency.code} value={currency.code}>
-                {currency.code} ({currency.symbol})
-              </option>
-            ))}
-          </select>
+        {/* Selector de moneda con banderas */}
+        <div className="w-40 flex-shrink-0">
+          <div className="relative">
+            <select
+              value={value.currency || 'USD'}
+              onChange={handleCurrencyChange}
+              disabled={disabled}
+              className="w-full pl-10 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm appearance-none cursor-pointer"
+              style={{ 
+                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                backgroundPosition: 'right 0.5rem center',
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: '1.5em 1.5em'
+              }}
+            >
+              {CURRENCIES.map((currency) => (
+                <option key={currency.code} value={currency.code}>
+                  {currency.code} - {currency.name}
+                </option>
+              ))}
+            </select>
+            {/* Bandera superpuesta */}
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              {selectedCurrency && <CurrencyFlag countryCode={selectedCurrency.countryCode} />}
+            </div>
+          </div>
         </div>
 
         {/* Input de cantidad */}
@@ -140,12 +232,13 @@ export function CurrencyInput({
           </div>
           <input
             type="text"
+            ref={inputRef}
             id={id}
             name={name}
             value={displayValue}
             onChange={handleAmountChange}
-            onBlur={handleAmountBlur}
             onFocus={handleAmountFocus}
+            onBlur={handleAmountBlur}
             placeholder={placeholder}
             disabled={disabled}
             required={required}
