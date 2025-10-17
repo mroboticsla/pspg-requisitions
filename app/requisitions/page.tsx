@@ -4,10 +4,11 @@
 // Página de Lista de Requisiciones
 // =====================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { listRequisitions, getRequisitionStats } from '@/lib/requisitions';
 import type { Requisition, RequisitionStatus, RequisitionStats } from '@/lib/types/requisitions';
+import { FileText, Plus, Eye, Edit, Users, Calendar, Briefcase } from 'lucide-react';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -37,15 +38,22 @@ export default function RequisitionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequisitionStatus | ''>('');
 
+  const filteredRequisitions = useMemo(() => {
+    return requisitions.filter((req) => {
+      const matchesStatus = !statusFilter || req.status === statusFilter;
+      const matchesSearch = !searchTerm.trim() || 
+        req.puesto_requerido?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.departamento?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
+  }, [requisitions, statusFilter, searchTerm]);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
       const [requisitionsData, statsData] = await Promise.all([
-        listRequisitions({
-          status: statusFilter || undefined,
-          search: searchTerm || undefined,
-        }),
+        listRequisitions(),
         getRequisitionStats(),
       ]);
 
@@ -56,45 +64,122 @@ export default function RequisitionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, searchTerm]);
+  }, []);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    loadData();
+  // Mostrar loading mientras se cargan los datos
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando requisiciones...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Requisiciones</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Gestiona todas las requisiciones de personal
-          </p>
+    <div className="space-y-6">
+      <div className="space-y-4 p-4 sm:p-6">
+        {/* Header compacto */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Requisiciones</h1>
+            <p className="text-gray-600 mt-1">Gestiona todas las requisiciones de personal</p>
+          </div>
+          <button 
+            onClick={() => router.push('/request')}
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nueva Requisición</span>
+          </button>
         </div>
 
-        {/* Estadísticas */}
+        {/* Estadísticas - Carrusel en mobile, Grid en desktop */}
         {stats && stats.by_status && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
-            {Object.entries(statusLabels).map(([status, label]) => (
-              <div key={status} className="bg-white rounded-lg shadow p-4">
-                <p className="text-sm text-gray-600">{label}</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {stats.by_status?.[status as RequisitionStatus] ?? 0}
-                </p>
+          <>
+            {/* Mobile: Carrusel horizontal con scroll */}
+            <div className="sm:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <div className="flex gap-3 pb-2">
+                {Object.entries(statusLabels).map(([status, label]) => {
+                  const count = stats.by_status?.[status as RequisitionStatus] ?? 0;
+                  const colors = {
+                    draft: 'from-neutral-500 to-neutral-600',
+                    submitted: 'from-brand-dark to-[#003d66]',
+                    in_review: 'from-amber-600 to-amber-700',
+                    approved: 'from-emerald-600 to-emerald-700',
+                    rejected: 'from-neutral-600 to-neutral-700',
+                    cancelled: 'from-neutral-400 to-neutral-500',
+                    filled: 'from-brand-accent to-brand-accentDark',
+                  };
+                  
+                  return (
+                    <div 
+                      key={status}
+                      className={`bg-gradient-to-br ${colors[status as RequisitionStatus]} rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="text-white text-sm font-medium">{label}</p>
+                          <p className="text-4xl font-bold mt-2">{count}</p>
+                        </div>
+                        <FileText className="w-16 h-16 text-white opacity-40" />
+                      </div>
+                      <div className="flex items-center text-white text-xs border-t border-white/20 pt-3">
+                        <FileText className="w-4 h-4 mr-1.5" />
+                        <span>Requisiciones</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </div>
+
+            {/* Desktop: Grid tradicional */}
+            <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              {Object.entries(statusLabels).map(([status, label]) => {
+                const count = stats.by_status?.[status as RequisitionStatus] ?? 0;
+                const colors = {
+                  draft: 'from-neutral-500 to-neutral-600',
+                  submitted: 'from-brand-dark to-[#003d66]',
+                  in_review: 'from-amber-600 to-amber-700',
+                  approved: 'from-emerald-600 to-emerald-700',
+                  rejected: 'from-neutral-600 to-neutral-700',
+                  cancelled: 'from-neutral-400 to-neutral-500',
+                  filled: 'from-brand-accent to-brand-accentDark',
+                };
+                
+                return (
+                  <div 
+                    key={status}
+                    className={`bg-gradient-to-br ${colors[status as RequisitionStatus]} rounded-lg shadow-md p-6 text-white`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white text-sm font-medium">{label}</p>
+                        <p className="text-3xl font-bold mt-2">{count}</p>
+                      </div>
+                      <FileText className="w-12 h-12 text-white opacity-80" />
+                    </div>
+                    <div className="mt-4 flex items-center text-white text-sm">
+                      <FileText className="w-4 h-4 mr-1" />
+                      Requisiciones
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
-        {/* Filtros y Búsqueda */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Filtros de búsqueda */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Búsqueda
@@ -104,7 +189,7 @@ export default function RequisitionsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar por puesto o departamento..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
               />
             </div>
 
@@ -115,7 +200,7 @@ export default function RequisitionsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as RequisitionStatus | '')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
               >
                 <option value="">Todos los estados</option>
                 {Object.entries(statusLabels).map(([value, label]) => (
@@ -125,114 +210,188 @@ export default function RequisitionsPage() {
                 ))}
               </select>
             </div>
+          </div>
+        </div>
 
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                Buscar
-              </button>
+        {/* Listado de requisiciones - diseño compacto */}
+        <div className="rounded-lg shadow-sm overflow-hidden border border-gray-200">
+          {/* Header de tabla solo en desktop */}
+          <div className="hidden lg:block bg-gradient-to-r from-brand-dark to-[#003d66] text-white px-4 py-2.5 border-b border-gray-300">
+            <div className="flex items-center gap-4">
+              <div className="w-24 flex-shrink-0">
+                <span className="text-xs font-semibold uppercase tracking-wide">Estado</span>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <span className="text-xs font-semibold uppercase tracking-wide">Puesto</span>
+              </div>
+              <div className="w-32 flex-shrink-0">
+                <span className="text-xs font-semibold uppercase tracking-wide">Departamento</span>
+              </div>
+              <div className="w-24 flex-shrink-0 text-center">
+                <span className="text-xs font-semibold uppercase tracking-wide">Vacantes</span>
+              </div>
+              <div className="w-32 flex-shrink-0">
+                <span className="text-xs font-semibold uppercase tracking-wide">Fecha</span>
+              </div>
+              <div className="flex-shrink-0">
+                <span className="text-xs font-semibold uppercase tracking-wide">Acciones</span>
+              </div>
             </div>
-          </form>
-        </div>
-
-        {/* Botón Nueva Requisición */}
-        <div className="mb-6">
-          <button
-            onClick={() => router.push('/request')}
-            className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700"
-          >
-            + Nueva Requisición
-          </button>
-        </div>
-
-        {/* Lista de Requisiciones */}
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Cargando...</p>
           </div>
-        ) : requisitions.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-500 mb-4">No se encontraron requisiciones</p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Puesto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Departamento
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vacantes
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {requisitions.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {req.puesto_requerido || 'Sin especificar'}
+          
+          <div>
+            {filteredRequisitions.length === 0 && (
+              <div className="p-8 text-center text-gray-500 text-sm bg-white">
+                {searchTerm.trim() || statusFilter
+                  ? 'No se encontraron requisiciones con los criterios de búsqueda'
+                  : 'No hay requisiciones registradas aún'}
+              </div>
+            )}
+            {filteredRequisitions.map((req, index) => {
+              // Efecto striped: alternar entre blanco y gris claro
+              const isEven = index % 2 === 0;
+              const bgColor = isEven ? 'bg-white' : 'bg-gray-100';
+              const hoverColor = isEven ? 'hover:bg-gray-50' : 'hover:bg-gray-200';
+              
+              return (
+                <div
+                  key={req.id}
+                  className={`p-3 sm:p-4 ${bgColor} ${hoverColor} transition-colors border-b border-gray-200 last:border-b-0`}
+                >
+                  {/* Mobile: Layout compacto vertical */}
+                  <div className="flex flex-col gap-2 lg:hidden">
+                    {/* Header con puesto y estado */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        <Briefcase className="w-4 h-4 text-brand-dark flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-sm text-gray-900 leading-tight">
+                            {req.puesto_requerido || 'Sin especificar'}
+                          </h3>
+                          {req.departamento && (
+                            <p className="text-xs text-gray-600 leading-tight mt-0.5">{req.departamento}</p>
+                          )}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {req.departamento || '-'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm text-gray-900">
-                        {req.numero_vacantes || 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        className={`flex-shrink-0 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           statusColors[req.status]
                         }`}
                       >
                         {statusLabels[req.status]}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(req.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    </div>
+                    
+                    {/* Info condensada en una línea */}
+                    <div className="flex items-center gap-3 text-xs text-gray-600 ml-6">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {req.numero_vacantes || 0} vacantes
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(req.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    {/* Botones - grid flexible */}
+                    <div className={`grid gap-2 mt-1 ${req.status === 'draft' ? 'grid-cols-2' : 'grid-cols-1'}`}>
                       <button
                         onClick={() => router.push(`/requisitions/${req.id}`)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
+                        className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors text-xs font-medium"
                       >
-                        Ver
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Ver Detalles</span>
                       </button>
+
                       {req.status === 'draft' && (
                         <button
                           onClick={() => router.push(`/request?edit=${req.id}`)}
-                          className="text-green-600 hover:text-green-900"
+                          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-xs font-medium"
                         >
-                          Editar
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Editar</span>
                         </button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  {/* Desktop: Layout horizontal tipo tabla */}
+                  <div className="hidden lg:flex lg:items-center lg:gap-4">
+                    {/* Columna 1: Estado */}
+                    <div className="w-24 flex-shrink-0">
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                          statusColors[req.status]
+                        }`}
+                      >
+                        {statusLabels[req.status]}
+                      </span>
+                    </div>
+
+                    {/* Columna 2: Puesto */}
+                    <div className="flex-1 min-w-[200px]">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="w-4 h-4 text-brand-dark flex-shrink-0" />
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-sm text-gray-900 truncate">
+                            {req.puesto_requerido || 'Sin especificar'}
+                          </h3>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Columna 3: Departamento */}
+                    <div className="w-32 flex-shrink-0">
+                      <p className="text-xs text-gray-600 truncate">
+                        {req.departamento || <span className="text-gray-400">Sin departamento</span>}
+                      </p>
+                    </div>
+
+                    {/* Columna 4: Vacantes */}
+                    <div className="w-24 flex-shrink-0 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Users className="w-3 h-3 text-gray-500" />
+                        <span className="text-sm font-semibold text-gray-900">{req.numero_vacantes || 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Columna 5: Fecha */}
+                    <div className="w-32 flex-shrink-0">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-gray-500" />
+                        <p className="text-xs text-gray-600">
+                          {new Date(req.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Columna 6: Acciones */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => router.push(`/requisitions/${req.id}`)}
+                        className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                        title="Ver detalles"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+
+                      {req.status === 'draft' && (
+                        <button
+                          onClick={() => router.push(`/request?edit=${req.id}`)}
+                          className="p-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                          title="Editar"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
   deleteRequisition,
 } from '@/lib/requisitions';
 import type { RequisitionComplete, RequisitionStatus } from '@/lib/types/requisitions';
+import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle } from 'lucide-react';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -21,6 +22,16 @@ const statusLabels: Record<RequisitionStatus, string> = {
   rejected: 'Rechazada',
   cancelled: 'Cancelada',
   filled: 'Cubierta',
+};
+
+const statusColors: Record<RequisitionStatus, string> = {
+  draft: 'bg-neutral-100 text-neutral-800 border border-neutral-300',
+  submitted: 'bg-blue-50 text-brand-dark border border-blue-200',
+  in_review: 'bg-amber-50 text-amber-800 border border-amber-200',
+  approved: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+  rejected: 'bg-red-50 text-red-800 border border-red-200',
+  cancelled: 'bg-neutral-100 text-neutral-700 border border-neutral-300',
+  filled: 'bg-pink-50 text-brand-accent border border-pink-200',
 };
 
 export default function RequisitionDetailPage() {
@@ -73,70 +84,96 @@ export default function RequisitionDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Cargando...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-dark mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando detalles de la requisición...</p>
+        </div>
       </div>
     );
   }
 
   if (!requisition) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-red-500">Requisición no encontrada</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 text-lg font-semibold">Requisición no encontrada</p>
+          <button
+            onClick={() => router.push('/requisitions')}
+            className="mt-4 px-4 py-2 bg-brand-dark text-white rounded-lg hover:bg-[#003d66] transition-colors"
+          >
+            Volver a Requisiciones
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.back()}
-            className="text-blue-600 hover:text-blue-800 mb-4"
-          >
-            ← Volver a Requisiciones
-          </button>
+    <div className="space-y-6">
+      <div className="space-y-4 p-4 sm:p-6">
+        {/* Botón Volver */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-brand-dark hover:text-[#003d66] font-medium transition-colors mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Volver a Requisiciones</span>
+        </button>
 
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {requisition.puesto_requerido || 'Requisición'}
-              </h1>
-              <p className="mt-2 text-sm text-gray-600">
-                ID: {requisition.id.substring(0, 8)}...
-              </p>
+        {/* Header con título y estado */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-start gap-3">
+                <Briefcase className="w-8 h-8 text-brand-dark flex-shrink-0 mt-1" />
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                    {requisition.puesto_requerido || 'Requisición'}
+                  </h1>
+                  <p className="mt-2 text-sm text-gray-600 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    ID: {requisition.id.substring(0, 8)}...
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <span className="px-4 py-2 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
+            <span className={`px-4 py-2 text-sm font-semibold rounded-lg ${statusColors[requisition.status]} flex-shrink-0`}>
               {statusLabels[requisition.status]}
             </span>
           </div>
         </div>
 
         {/* Acciones */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Acciones</h2>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-brand-dark" />
+            Acciones Disponibles
+          </h2>
           <div className="flex flex-wrap gap-3">
             {requisition.status === 'submitted' && (
               <>
                 <button
                   onClick={() => handleStatusChange('in_review')}
-                  className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors shadow-sm"
                 >
+                  <Clock className="w-4 h-4" />
                   Marcar en Revisión
                 </button>
                 <button
                   onClick={() => handleStatusChange('approved')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                 >
+                  <CheckCircle className="w-4 h-4" />
                   Aprobar
                 </button>
                 <button
                   onClick={() => handleStatusChange('rejected')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
                 >
+                  <XCircle className="w-4 h-4" />
                   Rechazar
                 </button>
               </>
@@ -146,14 +183,16 @@ export default function RequisitionDetailPage() {
               <>
                 <button
                   onClick={() => handleStatusChange('approved')}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                 >
+                  <CheckCircle className="w-4 h-4" />
                   Aprobar
                 </button>
                 <button
                   onClick={() => handleStatusChange('rejected')}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
                 >
+                  <XCircle className="w-4 h-4" />
                   Rechazar
                 </button>
               </>
@@ -162,8 +201,9 @@ export default function RequisitionDetailPage() {
             {requisition.status === 'approved' && (
               <button
                 onClick={() => handleStatusChange('filled')}
-                className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+                className="flex items-center gap-2 px-4 py-2 bg-brand-accent text-white rounded-lg hover:bg-brand-accentDark transition-colors shadow-sm"
               >
+                <CheckCircle className="w-4 h-4" />
                 Marcar como Cubierta
               </button>
             )}
@@ -172,14 +212,16 @@ export default function RequisitionDetailPage() {
               <>
                 <button
                   onClick={() => router.push(`/request?edit=${requisition.id}`)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                 >
+                  <Edit className="w-4 h-4" />
                   Editar
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
                 >
+                  <Trash2 className="w-4 h-4" />
                   Eliminar
                 </button>
               </>
@@ -188,27 +230,39 @@ export default function RequisitionDetailPage() {
         </div>
 
         {/* Datos Generales */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Datos Generales</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Departamento</p>
-              <p className="mt-1 text-gray-900">{requisition.departamento || '-'}</p>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-brand-dark" />
+            Datos Generales
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Departamento</p>
+              <p className="text-sm text-gray-900 font-medium">{requisition.departamento || '-'}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Número de Vacantes</p>
-              <p className="mt-1 text-gray-900">{requisition.numero_vacantes || 0}</p>
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                Número de Vacantes
+              </p>
+              <p className="text-sm text-gray-900 font-medium">{requisition.numero_vacantes || 0}</p>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Fecha de Creación</p>
-              <p className="mt-1 text-gray-900">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Fecha de Creación
+              </p>
+              <p className="text-sm text-gray-900 font-medium">
                 {new Date(requisition.created_at).toLocaleString()}
               </p>
             </div>
             {requisition.submitted_at && (
-              <div>
-                <p className="text-sm font-medium text-gray-500">Fecha de Envío</p>
-                <p className="mt-1 text-gray-900">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  Fecha de Envío
+                </p>
+                <p className="text-sm text-gray-900 font-medium">
                   {new Date(requisition.submitted_at).toLocaleString()}
                 </p>
               </div>
@@ -217,29 +271,37 @@ export default function RequisitionDetailPage() {
         </div>
 
         {/* Información del Puesto */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Información del Puesto</h2>
-          {requisition.motivo_puesto && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500">Motivo</p>
-              <p className="mt-1 text-gray-900">{requisition.motivo_puesto}</p>
-            </div>
-          )}
-          {requisition.nombre_empleado_reemplaza && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500">Empleado a Reemplazar</p>
-              <p className="mt-1 text-gray-900">{requisition.nombre_empleado_reemplaza}</p>
-            </div>
-          )}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <Briefcase className="w-5 h-5 text-brand-dark" />
+            Información del Puesto
+          </h2>
+          <div className="space-y-4">
+            {requisition.motivo_puesto && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Motivo</p>
+                <p className="text-sm text-gray-900">{requisition.motivo_puesto}</p>
+              </div>
+            )}
+            {requisition.nombre_empleado_reemplaza && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Empleado a Reemplazar</p>
+                <p className="text-sm text-gray-900">{requisition.nombre_empleado_reemplaza}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Funciones Principales */}
         {requisition.funciones_principales && requisition.funciones_principales.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Funciones Principales del Puesto</h2>
-            <ol className="list-decimal list-inside space-y-2">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-brand-dark" />
+              Funciones Principales del Puesto
+            </h2>
+            <ol className="list-decimal list-inside space-y-3">
               {requisition.funciones_principales.map((funcion, index) => (
-                <li key={index} className="text-gray-900">
+                <li key={index} className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-200">
                   {funcion}
                 </li>
               ))}
@@ -248,16 +310,19 @@ export default function RequisitionDetailPage() {
         )}
 
         {/* Perfil del Puesto */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Perfil del Puesto</h2>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+            <Users className="w-5 h-5 text-brand-dark" />
+            Perfil del Puesto
+          </h2>
           
           {requisition.formacion_academica && Object.keys(requisition.formacion_academica).length > 0 && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500 mb-2">Formación Académica</p>
+            <div className="mb-6">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Formación Académica</p>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(requisition.formacion_academica).map(([key, value]) => (
                   value && (
-                    <span key={key} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                    <span key={key} className="px-3 py-1.5 bg-blue-50 text-brand-dark border border-blue-200 rounded-lg text-sm font-medium">
                       {key}
                     </span>
                   )
@@ -267,9 +332,12 @@ export default function RequisitionDetailPage() {
           )}
 
           {requisition.idioma_ingles && (
-            <div className="mb-4">
-              <p className="text-sm font-medium text-gray-500">Inglés Requerido</p>
-              <p className="mt-1 text-green-600 font-medium">Sí</p>
+            <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Inglés Requerido</p>
+              <p className="text-sm text-emerald-700 font-semibold flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Sí
+              </p>
             </div>
           )}
         </div>
@@ -277,7 +345,10 @@ export default function RequisitionDetailPage() {
         {/* Secciones Personalizadas */}
         {requisition.custom_responses && requisition.custom_responses.length > 0 && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Información Adicional</h2>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <FileText className="w-6 h-6 text-brand-dark" />
+              Información Adicional
+            </h2>
             {requisition.custom_responses.map((response) => {
               const section = requisition.template_snapshot?.sections?.find(
                 (s: any) => s.id === response.section_id
@@ -286,7 +357,7 @@ export default function RequisitionDetailPage() {
               if (!section) return null;
 
               return (
-                <div key={response.section_id} className="bg-white rounded-lg shadow p-6">
+                <div key={response.section_id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">
                     {section.name}
                   </h3>
@@ -297,9 +368,9 @@ export default function RequisitionDetailPage() {
                       if (!field) return null;
 
                       return (
-                        <div key={fieldName}>
-                          <p className="text-sm font-medium text-gray-500">{field.label}</p>
-                          <p className="mt-1 text-gray-900">
+                        <div key={fieldName} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">{field.label}</p>
+                          <p className="text-sm text-gray-900">
                             {Array.isArray(value) ? value.join(', ') : String(value || '-')}
                           </p>
                         </div>
