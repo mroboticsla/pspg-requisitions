@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabaseClient'
 import { RequireRoleClient } from '@/app/components/RequireRole'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
-import { Eye, Trash2, Plus, UserCheck, UserX, Shield, Users, TrendingUp, Activity, Clock, Edit } from 'lucide-react'
+import { Trash2, Plus, UserCheck, UserX, Shield, Users, Edit } from 'lucide-react'
 
 // Types
 interface UserRow {
@@ -28,8 +28,6 @@ interface RoleOption {
   name: string
 }
 
-type ViewMode = 'list' | 'view' | 'assign-role'
-
 // Roles de administradores del sistema
 const ADMIN_ROLES = ['superadmin', 'admin']
 
@@ -42,12 +40,7 @@ export default function AdministratorsPage() {
   const [roles, setRoles] = useState<RoleOption[]>([])
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
-  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null)
-  const [selectedRoleId, setSelectedRoleId] = useState<string>('')
   const [showDelete, setShowDelete] = useState<{ open: boolean; user?: UserRow }>({ open: false })
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
-  const [roleFilter, setRoleFilter] = useState<string>('all')
 
   const isSuper = (profile as any)?.roles?.name === 'superadmin'
 
@@ -113,79 +106,40 @@ export default function AdministratorsPage() {
   }
 
   const filteredUsers = useMemo(() => {
-    let filtered = users
+    if (!search.trim()) return users
+    const s = search.toLowerCase()
+    return users.filter(u => {
+      const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase()
+      const phone = u.phone || ''
+      const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : ''
+      return fullName.includes(s) || phone.includes(s) || roleName.toLowerCase().includes(s)
+    })
+  }, [users, search])
 
-    // Filtro de búsqueda
-    if (search.trim()) {
-      const s = search.toLowerCase()
-      filtered = filtered.filter(u => {
-        const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase()
-        const phone = u.phone || ''
-        const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : ''
-        return fullName.includes(s) || phone.includes(s) || roleName.toLowerCase().includes(s)
-      })
-    }
-
-    // Filtro de estado
-    if (statusFilter === 'active') {
-      filtered = filtered.filter(u => u.is_active)
-    } else if (statusFilter === 'inactive') {
-      filtered = filtered.filter(u => !u.is_active)
-    }
-
-    // Filtro de rol
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter(u => u.role_id === roleFilter)
-    }
-
-    return filtered
-  }, [users, search, statusFilter, roleFilter])
-
-  const beginView = (u: UserRow) => {
-    setSelectedUser(u)
-    setViewMode('view')
+  const handleCreate = () => {
+    router.push('/admin/administrators/new')
   }
 
-  const beginAssignRole = (u: UserRow) => {
-    setSelectedUser(u)
-    setSelectedRoleId(u.role_id || '')
-    setViewMode('assign-role')
+  const handleEdit = (u: UserRow) => {
+    router.push(`/admin/administrators/${u.id}`)
   }
 
-  const cancelView = () => {
-    setSelectedUser(null)
-    setSelectedRoleId('')
-    setViewMode('list')
-  }
-
-  const assignRole = async () => {
-    if (!selectedUser || !selectedRoleId) return
+  const handleDeleteConfirm = async () => {
+    if (!showDelete.user) return
     
     try {
       setBusy(true)
-      const selectedRole = roles.find(r => r.id === selectedRoleId)
-      if (!selectedRole) {
-        showError('Rol no encontrado')
-        return
-      }
-
       const token = await getToken()
       const res = await fetch('/api/admin/secure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          action: 'assign-role',
-          userId: selectedUser.id,
-          roleName: selectedRole.name
-        })
+        body: JSON.stringify({ action: 'delete-profile', userId: showDelete.user.id })
       })
       const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'Error asignando rol')
+      if (!res.ok) throw new Error(body.error || 'Error eliminando administrador')
       
-      success(`Rol "${selectedRole.name}" asignado correctamente`)
-      setSelectedUser(null)
-      setSelectedRoleId('')
-      setViewMode('list')
+      success('Administrador eliminado exitosamente')
+      setShowDelete({ open: false })
       await refresh()
     } catch (err: any) {
       showError(err.message || String(err))
@@ -206,41 +160,7 @@ export default function AdministratorsPage() {
       
       if (error) throw error
       
-      success(`Administrador ${newStatus ? 'activado' : 'desactivado'} correctamente`)
-      await refresh()
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const requestDelete = (u: UserRow) => {
-    // Verificar que no sea el usuario actual
-    if (u.id === user?.id) {
-      showError('No puedes eliminar tu propio usuario')
-      return
-    }
-    
-    setShowDelete({ open: true, user: u })
-  }
-
-  const doDelete = async () => {
-    if (!showDelete.user) return
-    
-    try {
-      setBusy(true)
-      const token = await getToken()
-      const res = await fetch('/api/admin/secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'delete-profile', userId: showDelete.user.id })
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'Error eliminando administrador')
-      
-      success('Administrador eliminado correctamente')
-      setShowDelete({ open: false })
+      success(`Administrador ${newStatus ? 'activado' : 'desactivado'} exitosamente`)
       await refresh()
     } catch (err: any) {
       showError(err.message || String(err))
@@ -260,460 +180,16 @@ export default function AdministratorsPage() {
       const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : ''
       return roleName === 'superadmin'
     }).length
-    const admins = users.filter(u => {
-      const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : ''
-      return roleName === 'admin'
-    }).length
     
-    return { total, active, inactive, superadmins, admins }
+    return { total, active, inactive, superadmins }
   }, [users])
 
-  // Renderizado de la vista de lista de administradores
-  const renderListView = () => (
-    <div className="space-y-4 p-4 sm:p-6">
-      {/* Header compacto */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Administradores del Sistema</h1>
-          <p className="text-gray-600 mt-1">Gestiona los usuarios administradores con acceso privilegiado</p>
-        </div>
-        <button 
-          onClick={() => router.push('/admin/administrators/new')}
-          disabled={busy}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Crear Administrador</span>
-        </button>
-      </div>
-
-      {/* Estadísticas compactas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-100 text-sm font-medium">Total Administradores</p>
-              <p className="text-3xl font-bold mt-2">{stats.total}</p>
-            </div>
-            <Shield className="w-12 h-12 text-gray-200 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-gray-100 text-sm">
-            <TrendingUp className="w-4 h-4 mr-1" />
-            Usuarios privilegiados
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-pink-100 text-sm font-medium">Superadministradores</p>
-              <p className="text-3xl font-bold mt-2">{stats.superadmins}</p>
-            </div>
-            <Shield className="w-12 h-12 text-pink-100 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-pink-100 text-sm">
-            <Activity className="w-4 h-4 mr-1" />
-            Acceso total
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-teal-100 text-sm font-medium">Administradores</p>
-              <p className="text-3xl font-bold mt-2">{stats.admins}</p>
-            </div>
-            <Users className="w-12 h-12 text-teal-100 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-teal-100 text-sm">
-            <Activity className="w-4 h-4 mr-1" />
-            Gestión general
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-100 text-sm font-medium">Activos</p>
-              <p className="text-3xl font-bold mt-2">{stats.active}</p>
-            </div>
-            <UserCheck className="w-12 h-12 text-gray-200 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-gray-100 text-sm">
-            <Clock className="w-4 h-4 mr-1" />
-            Operativos
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros y búsqueda compactos */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, teléfono o rol..."
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
-          />
-          
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as any)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
-          >
-            <option value="all">Todos los estados</option>
-            <option value="active">Solo activos</option>
-            <option value="inactive">Solo inactivos</option>
-          </select>
-
-          <select
-            value={roleFilter}
-            onChange={e => setRoleFilter(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
-          >
-            <option value="all">Todos los roles</option>
-            {roles.map(r => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Listado de administradores - diseño compacto */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-        <div className="divide-y divide-gray-200">
-          {filteredUsers.length === 0 && (
-            <div className="p-8 text-center text-gray-500 text-sm">
-              {search.trim() || statusFilter !== 'all' || roleFilter !== 'all'
-                ? 'No se encontraron administradores con los criterios de búsqueda'
-                : 'No hay administradores registrados aún'}
-            </div>
-          )}
-          {filteredUsers.map(u => {
-            const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Sin nombre'
-            const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : 'Sin rol'
-            const isCurrentUser = u.id === user?.id
-            const isSuperAdmin = roleName === 'superadmin'
-
-            return (
-              <div
-                key={u.id}
-                className="p-4 hover:bg-gray-50 transition-colors"
-              >
-                {/* Layout compacto: info a la izquierda, badges y botones a la derecha en desktop */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                  {/* Información del usuario */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-base text-gray-900">{fullName}</h3>
-                      {isCurrentUser && (
-                        <span className="text-xs bg-brand-dark text-white px-2 py-0.5 rounded font-medium">
-                          Tú
-                        </span>
-                      )}
-                      {u.is_active ? (
-                        <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium flex items-center gap-1 border border-emerald-200">
-                          <UserCheck className="w-3 h-3" />
-                          Activo
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium flex items-center gap-1 border border-gray-300">
-                          <UserX className="w-3 h-3" />
-                          Inactivo
-                        </span>
-                      )}
-                      <span className={`text-xs px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
-                        isSuperAdmin
-                          ? 'bg-red-50 text-red-700 border border-red-200' 
-                          : 'bg-teal-50 text-teal-700 border border-teal-200'
-                      }`}>
-                        <Shield className="w-3 h-3" />
-                        {roleName}
-                      </span>
-                    </div>
-                    {u.phone && (
-                      <p className="text-sm text-gray-600">
-                        📱 {u.phone}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                      ID: {u.id.substring(0, 8)}...
-                    </p>
-                  </div>
-
-                  {/* Botones de acción - compactos en desktop, full width en móvil */}
-                  <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
-                    <button
-                      disabled={busy}
-                      onClick={(e) => { e.stopPropagation(); beginView(u); }}
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                      title="Ver detalles"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Ver detalles</span>
-                    </button>
-
-                    <button
-                      disabled={busy}
-                      onClick={(e) => { e.stopPropagation(); router.push(`/admin/administrators/${u.id}`); }}
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                      title="Editar administrador"
-                    >
-                      <Edit className="w-4 h-4" />
-                      <span>Editar</span>
-                    </button>
-                    
-                    <button
-                      disabled={busy}
-                      onClick={(e) => { e.stopPropagation(); beginAssignRole(u); }}
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-teal-600 text-white hover:bg-teal-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                      title="Asignar rol"
-                    >
-                      <Shield className="w-4 h-4" />
-                      <span>Cambiar rol</span>
-                    </button>
-
-                    <button
-                      disabled={busy || isCurrentUser}
-                      onClick={(e) => { e.stopPropagation(); toggleUserStatus(u); }}
-                      className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed ${
-                        u.is_active
-                          ? 'bg-neutral-600 text-white hover:bg-neutral-700'
-                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      }`}
-                      title={isCurrentUser ? "No puedes desactivar tu propio usuario" : (u.is_active ? "Desactivar administrador" : "Activar administrador")}
-                    >
-                      {u.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                      <span>{u.is_active ? 'Desactivar' : 'Activar'}</span>
-                    </button>
-
-                    <button
-                      disabled={busy || isCurrentUser}
-                      onClick={(e) => { e.stopPropagation(); requestDelete(u); }}
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-accent text-white hover:bg-brand-accentDark transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={isCurrentUser ? "No puedes eliminar tu propio usuario" : "Eliminar administrador"}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Eliminar</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-
-  // Renderizado de la vista de detalles del administrador
-  const renderViewMode = () => {
-    if (!selectedUser) return null
-
-    const fullName = `${selectedUser.first_name || ''} ${selectedUser.last_name || ''}`.trim() || 'Sin nombre'
-    const roleName = typeof selectedUser.roles === 'object' && selectedUser.roles ? selectedUser.roles.name : 'Sin rol'
-    const isSuperAdmin = roleName === 'superadmin'
-
-    return (
-      <div className="space-y-4 p-4 sm:p-6">
-        {/* Header compacto con navegación */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={cancelView}
-            disabled={busy}
-            className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0"
-            title="Volver a la lista"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Detalles del Administrador</h1>
-          </div>
-        </div>
-
-        {/* Información del administrador */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-dark to-brand-accent flex items-center justify-center text-white text-2xl font-bold">
-              {(selectedUser.first_name?.[0] || '?').toUpperCase()}
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{fullName}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                {selectedUser.is_active ? (
-                  <span className="text-sm bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium flex items-center gap-1 border border-emerald-200">
-                    <UserCheck className="w-4 h-4" />
-                    Activo
-                  </span>
-                ) : (
-                  <span className="text-sm bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium flex items-center gap-1 border border-gray-300">
-                    <UserX className="w-4 h-4" />
-                    Inactivo
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Nombre</label>
-              <p className="text-base text-gray-900">{selectedUser.first_name || 'No especificado'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Apellido</label>
-              <p className="text-base text-gray-900">{selectedUser.last_name || 'No especificado'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Teléfono</label>
-              <p className="text-base text-gray-900">{selectedUser.phone || 'No especificado'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Rol Administrativo</label>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm px-3 py-1 rounded font-medium flex items-center gap-1 ${
-                  isSuperAdmin
-                    ? 'bg-red-50 text-red-700 border border-red-200'
-                    : 'bg-teal-50 text-teal-700 border border-teal-200'
-                }`}>
-                  <Shield className="w-4 h-4" />
-                  {roleName}
-                </span>
-              </div>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-600 mb-1">ID de usuario</label>
-              <p className="text-sm text-gray-900 font-mono bg-gray-50 p-2 rounded border border-gray-200">
-                {selectedUser.id}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Acciones */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button
-            disabled={busy}
-            onClick={() => beginAssignRole(selectedUser)}
-            className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 transition-colors font-medium text-sm w-full sm:w-auto"
-          >
-            Cambiar rol administrativo
-          </button>
-          <button
-            disabled={busy}
-            onClick={cancelView}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium text-sm w-full sm:w-auto"
-          >
-            Volver a la lista
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Renderizado de la vista de asignación de rol
-  const renderAssignRoleMode = () => {
-    if (!selectedUser) return null
-
-    const fullName = `${selectedUser.first_name || ''} ${selectedUser.last_name || ''}`.trim() || 'Sin nombre'
-
-    return (
-      <div className="space-y-4 p-4 sm:p-6">
-        {/* Header compacto con navegación */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={cancelView}
-            disabled={busy}
-            className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0"
-            title="Volver a la lista"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </button>
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Cambiar Rol Administrativo</h1>
-            <p className="text-sm text-gray-600 mt-1">Administrador: {fullName}</p>
-          </div>
-        </div>
-
-        {/* Selección de rol */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-base font-semibold mb-3 text-gray-900">Seleccionar rol administrativo</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Elige entre Superadministrador (acceso total) o Administrador (gestión general)
-          </p>
-
-          <div className="space-y-2">
-            {roles.map(r => {
-              const isSuperAdmin = r.name === 'superadmin'
-              return (
-                <label
-                  key={r.id}
-                  className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    selectedRoleId === r.id
-                      ? 'border-brand-accent bg-pink-50'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={r.id}
-                    checked={selectedRoleId === r.id}
-                    onChange={e => setSelectedRoleId(e.target.value)}
-                    className="w-4 h-4 text-brand-accent focus:ring-2 focus:ring-brand-accent"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Shield className={`w-4 h-4 ${isSuperAdmin ? 'text-red-600' : 'text-teal-600'}`} />
-                      <span className="font-medium text-gray-900">{r.name}</span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1">
-                      {isSuperAdmin 
-                        ? 'Acceso completo a todas las funciones del sistema' 
-                        : 'Gestión de usuarios, asociados y configuraciones generales'}
-                    </p>
-                  </div>
-                </label>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Botones de acción */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button
-            disabled={busy || !selectedRoleId}
-            onClick={assignRole}
-            className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm w-full sm:w-auto"
-          >
-            {busy ? 'Asignando...' : 'Asignar rol'}
-          </button>
-          <button
-            disabled={busy}
-            onClick={cancelView}
-            className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium text-sm w-full sm:w-auto"
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Determinar qué contenido mostrar
-  const content = viewMode === 'list' 
-    ? renderListView() 
-    : viewMode === 'view'
-      ? renderViewMode()
-      : renderAssignRoleMode()
-
-  // Loading general del provider
+  // Mostrar loading mientras se verifica la sesión
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh] p-6">
+    <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-accent mx-auto mb-3"></div>
-        <p className="text-gray-600 text-sm">Cargando...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <p className="text-gray-600">Verificando sesión...</p>
       </div>
     </div>
   )
@@ -727,27 +203,406 @@ export default function AdministratorsPage() {
     </div>
   )
 
+  // Renderizar contenido según el rol
   return (
-    <RequireRoleClient allow={["superadmin"]} fallback={
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 font-medium text-sm">Acceso restringido. Solo superadministradores pueden gestionar administradores.</p>
+    <RequireRoleClient allow={['superadmin']}>
+      <div className="space-y-6">
+        {/* Lista de administradores */}
+        <div className="space-y-4 p-4 sm:p-6">
+          {/* Header compacto */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Administradores</h1>
+              <p className="text-gray-600 mt-1">Administre los usuarios con privilegios de administración del sistema</p>
+            </div>
+            <button 
+              onClick={handleCreate}
+              disabled={busy}
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Administrador</span>
+            </button>
+          </div>
+
+          {/* Estadísticas - Carrusel en mobile, Grid en desktop */}
+          
+          {/* Mobile: Carrusel horizontal con scroll */}
+          <div className="sm:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
+            <div className="flex gap-3 pb-2">
+              {/* Total Administradores */}
+              <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-gray-100 text-sm font-medium">Total Administradores</p>
+                    <p className="text-4xl font-bold mt-2">{stats.total}</p>
+                  </div>
+                  <Shield className="w-16 h-16 text-gray-200 opacity-40" />
+                </div>
+                <div className="flex items-center text-gray-100 text-xs border-t border-white/20 pt-3">
+                  <Shield className="w-4 h-4 mr-1.5" />
+                  <span>Registrados</span>
+                </div>
+              </div>
+
+              {/* Superadministradores */}
+              <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-pink-100 text-sm font-medium">Superadministradores</p>
+                    <p className="text-4xl font-bold mt-2">{stats.superadmins}</p>
+                  </div>
+                  <Shield className="w-16 h-16 text-pink-100 opacity-40" />
+                </div>
+                <div className="flex items-center text-pink-100 text-xs border-t border-white/20 pt-3">
+                  <Shield className="w-4 h-4 mr-1.5" />
+                  <span>Acceso Total</span>
+                </div>
+              </div>
+
+              {/* Activos */}
+              <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-emerald-100 text-sm font-medium">Activos</p>
+                    <p className="text-4xl font-bold mt-2">{stats.active}</p>
+                  </div>
+                  <UserCheck className="w-16 h-16 text-emerald-100 opacity-40" />
+                </div>
+                <div className="flex items-center text-emerald-100 text-xs border-t border-white/20 pt-3">
+                  <UserCheck className="w-4 h-4 mr-1.5" />
+                  <span>Operativos</span>
+                </div>
+              </div>
+
+              {/* Inactivos */}
+              <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-gray-100 text-sm font-medium">Inactivos</p>
+                    <p className="text-4xl font-bold mt-2">{stats.inactive}</p>
+                  </div>
+                  <UserX className="w-16 h-16 text-gray-200 opacity-40" />
+                </div>
+                <div className="flex items-center text-gray-100 text-xs border-t border-white/20 pt-3">
+                  <UserX className="w-4 h-4 mr-1.5" />
+                  <span>Suspendidos</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop: Grid tradicional */}
+          <div className="hidden sm:grid sm:grid-cols-4 gap-4">
+            {/* Total Administradores */}
+            <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-100 text-sm font-medium">Total Administradores</p>
+                  <p className="text-3xl font-bold mt-2">{stats.total}</p>
+                </div>
+                <Shield className="w-12 h-12 text-gray-200 opacity-80" />
+              </div>
+              <div className="mt-4 flex items-center text-gray-100 text-sm">
+                <Shield className="w-4 h-4 mr-1" />
+                Registrados
+              </div>
+            </div>
+
+            {/* Superadministradores */}
+            <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-pink-100 text-sm font-medium">Superadministradores</p>
+                  <p className="text-3xl font-bold mt-2">{stats.superadmins}</p>
+                </div>
+                <Shield className="w-12 h-12 text-pink-100 opacity-80" />
+              </div>
+              <div className="mt-4 flex items-center text-pink-100 text-sm">
+                <Shield className="w-4 h-4 mr-1" />
+                Acceso Total
+              </div>
+            </div>
+
+            {/* Activos */}
+            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium">Activos</p>
+                  <p className="text-3xl font-bold mt-2">{stats.active}</p>
+                </div>
+                <UserCheck className="w-12 h-12 text-emerald-100 opacity-80" />
+              </div>
+              <div className="mt-4 flex items-center text-emerald-100 text-sm">
+                <UserCheck className="w-4 h-4 mr-1" />
+                Operativos
+              </div>
+            </div>
+
+            {/* Inactivos */}
+            <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-100 text-sm font-medium">Inactivos</p>
+                  <p className="text-3xl font-bold mt-2">{stats.inactive}</p>
+                </div>
+                <UserX className="w-12 h-12 text-gray-200 opacity-80" />
+              </div>
+              <div className="mt-4 flex items-center text-gray-100 text-sm">
+                <UserX className="w-4 h-4 mr-1" />
+                Suspendidos
+              </div>
+            </div>
+          </div>
+
+          {/* Búsqueda */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por nombre, teléfono o rol..."
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
+            />
+          </div>
+
+          {/* Listado de administradores - diseño compacto */}
+          {busy && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando administradores...</p>
+            </div>
+          )}
+
+          {!busy && (
+            <div className="rounded-lg shadow-sm overflow-hidden border border-gray-200">
+              {/* Header de tabla solo en desktop */}
+              <div className="hidden lg:block bg-gradient-to-r from-brand-dark to-[#003d66] text-white px-4 py-2.5 border-b border-gray-300">
+                <div className="flex items-center gap-4">
+                  <div className="w-20 flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Estado</span>
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Administrador</span>
+                  </div>
+                  <div className="w-32 flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Teléfono</span>
+                  </div>
+                  <div className="w-32 flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Rol</span>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Acciones</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                {filteredUsers.length === 0 && (
+                  <div className="p-8 text-center text-gray-500 text-sm bg-white">
+                    {search.trim()
+                      ? 'No se encontraron administradores con los criterios de búsqueda'
+                      : 'No hay administradores registrados aún'}
+                  </div>
+                )}
+                {filteredUsers.map((admin, index) => {
+                  const fullName = `${admin.first_name || ''} ${admin.last_name || ''}`.trim() || 'Sin nombre'
+                  const roleName = typeof admin.roles === 'object' && admin.roles ? admin.roles.name : 'Sin rol'
+                  const isCurrentUser = admin.id === user?.id
+                  const isSuperAdmin = roleName === 'superadmin'
+                  
+                  // Efecto striped: alternar entre blanco y gris claro
+                  const isEven = index % 2 === 0
+                  const bgColor = isEven ? 'bg-white' : 'bg-gray-100'
+                  const hoverColor = isEven ? 'hover:bg-gray-50' : 'hover:bg-gray-200'
+                  
+                  return (
+                    <div
+                      key={admin.id}
+                      className={`p-3 sm:p-4 ${bgColor} ${hoverColor} transition-colors border-b border-gray-200 last:border-b-0`}
+                    >
+                      {/* Mobile: Layout compacto vertical */}
+                      <div className="flex flex-col gap-2 lg:hidden">
+                        {/* Header con nombre y estado */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <Shield className="w-4 h-4 text-brand-dark flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold text-sm text-gray-900 leading-tight">{fullName}</h3>
+                                {isCurrentUser && (
+                                  <span className="text-xs bg-brand-dark text-white px-2 py-0.5 rounded font-medium">
+                                    Tú
+                                  </span>
+                                )}
+                              </div>
+                              {admin.phone && (
+                                <p className="text-xs text-gray-600 leading-tight mt-0.5">📱 {admin.phone}</p>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded font-medium ${
+                            admin.is_active
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {admin.is_active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                        
+                        {/* Info condensada */}
+                        <div className="flex items-center gap-2 text-xs ml-6">
+                          <span className={`px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
+                            isSuperAdmin
+                              ? 'bg-red-50 text-red-700 border border-red-200' 
+                              : 'bg-teal-50 text-teal-700 border border-teal-200'
+                          }`}>
+                            <Shield className="w-3 h-3" />
+                            {roleName}
+                          </span>
+                        </div>
+
+                        {/* Botones - grid flexible según permisos */}
+                        <div className={`grid gap-2 mt-1 ${isCurrentUser ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                          <button
+                            disabled={busy}
+                            onClick={() => handleEdit(admin)}
+                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors text-xs font-medium disabled:opacity-50"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Editar</span>
+                          </button>
+
+                          <button
+                            disabled={busy || isCurrentUser}
+                            onClick={() => toggleUserStatus(admin)}
+                            className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded transition-colors text-xs font-medium disabled:opacity-50 ${
+                              admin.is_active
+                                ? 'bg-neutral-600 text-white hover:bg-neutral-700'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            }`}
+                            title={isCurrentUser ? "No puedes modificar tu propio estado" : undefined}
+                          >
+                            {admin.is_active ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                            <span>{admin.is_active ? 'Desactivar' : 'Activar'}</span>
+                          </button>
+
+                          {!isCurrentUser && (
+                            <button
+                              disabled={busy}
+                              onClick={() => setShowDelete({ open: true, user: admin })}
+                              className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-brand-accent text-white hover:bg-brand-accentDark transition-colors text-xs font-medium disabled:opacity-50"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Eliminar</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Desktop: Layout horizontal tipo tabla */}
+                      <div className="hidden lg:flex lg:items-center lg:gap-4">
+                        {/* Columna 1: Estado (80px) */}
+                        <div className="w-20 flex-shrink-0">
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                            admin.is_active
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-gray-100 text-gray-600 border border-gray-300'
+                          }`}>
+                            {admin.is_active ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+
+                        {/* Columna 2: Nombre (flex-1, min 200px) */}
+                        <div className="flex-1 min-w-[200px]">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-brand-dark flex-shrink-0" />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-sm text-gray-900 truncate">{fullName}</h3>
+                                {isCurrentUser && (
+                                  <span className="text-xs bg-brand-dark text-white px-2 py-0.5 rounded font-medium flex-shrink-0">
+                                    Tú
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Columna 3: Teléfono (130px) */}
+                        <div className="w-32 flex-shrink-0">
+                          <p className="text-xs text-gray-600 truncate">
+                            {admin.phone || <span className="text-gray-400">Sin teléfono</span>}
+                          </p>
+                        </div>
+
+                        {/* Columna 4: Rol (130px) */}
+                        <div className="w-32 flex-shrink-0">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                            isSuperAdmin
+                              ? 'bg-red-50 text-red-700 border border-red-200'
+                              : 'bg-teal-50 text-teal-700 border border-teal-200'
+                          }`}>
+                            <Shield className="w-3 h-3" />
+                            {roleName}
+                          </span>
+                        </div>
+
+                        {/* Columna 5: Acciones */}
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            disabled={busy}
+                            onClick={() => handleEdit(admin)}
+                            className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            disabled={busy || isCurrentUser}
+                            onClick={() => toggleUserStatus(admin)}
+                            className={`p-1.5 rounded transition-colors disabled:opacity-50 ${
+                              admin.is_active
+                                ? 'bg-neutral-600 text-white hover:bg-neutral-700'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            }`}
+                            title={isCurrentUser ? "No puedes modificar tu propio estado" : (admin.is_active ? "Desactivar" : "Activar")}
+                          >
+                            {admin.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                          </button>
+
+                          {!isCurrentUser && (
+                            <button
+                              disabled={busy}
+                              onClick={() => setShowDelete({ open: true, user: admin })}
+                              className="p-1.5 rounded bg-brand-accent text-white hover:bg-brand-accentDark transition-colors disabled:opacity-50"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Modal de confirmación de eliminación */}
+        <ConfirmModal
+          isOpen={showDelete.open}
+          onCancel={() => setShowDelete({ open: false })}
+          onConfirm={handleDeleteConfirm}
+          title="Eliminar Administrador"
+          message={`¿Está seguro de que desea eliminar al administrador "${showDelete.user ? `${showDelete.user.first_name || ''} ${showDelete.user.last_name || ''}`.trim() : ''}"? Esta acción no se puede deshacer.`}
+          confirmText="Eliminar"
+          type="danger"
+        />
       </div>
-    }>
-      <div className="min-h-screen bg-gray-50">
-        {content}
-      </div>
-      
-      <ConfirmModal
-        isOpen={showDelete.open}
-        title="Eliminar Administrador"
-        message={`¿Seguro que deseas eliminar al administrador "${showDelete.user ? `${showDelete.user.first_name || ''} ${showDelete.user.last_name || ''}`.trim() : ''}"? Esta acción eliminará su perfil y no se puede deshacer.`}
-        type="danger"
-        confirmText="Eliminar"
-        onConfirm={doDelete}
-        onCancel={() => setShowDelete({ open: false })}
-      />
     </RequireRoleClient>
   )
 }
