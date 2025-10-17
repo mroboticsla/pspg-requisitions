@@ -498,6 +498,80 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, data })
     }
 
+    // =====================================================
+    // USER EMAIL AND PASSWORD MANAGEMENT
+    // =====================================================
+
+    // GET USER EMAIL (admin or superadmin)
+    if (action === 'get-user-email') {
+      const { userId } = body
+      if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+
+      const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(userId)
+      if (userError) return NextResponse.json({ error: userError.message }, { status: 500 })
+      if (!userData?.user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+      return NextResponse.json({ ok: true, data: { email: userData.user.email } })
+    }
+
+    // UPDATE USER EMAIL (admin or superadmin)
+    if (action === 'update-user-email') {
+      const { userId, email } = body
+      if (!userId || !email) return NextResponse.json({ error: 'userId and email required' }, { status: 400 })
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
+      }
+
+      // Check if email is already in use by another user
+      const { data: existingUser } = await adminClient.auth.admin.listUsers()
+      const emailInUse = existingUser?.users?.find(u => u.email === email && u.id !== userId)
+      if (emailInUse) {
+        return NextResponse.json({ error: 'Este correo electrónico ya está en uso por otro usuario' }, { status: 409 })
+      }
+
+      const { data, error } = await adminClient.auth.admin.updateUserById(userId, {
+        email,
+        email_confirm: true // Auto-confirm the new email
+      })
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data })
+    }
+
+    // SEND PASSWORD RESET EMAIL (admin or superadmin)
+    if (action === 'send-password-reset') {
+      const { email } = body
+      if (!email) return NextResponse.json({ error: 'email required' }, { status: 400 })
+
+      // Use regular supabase client to send reset email
+      const { data, error } = await adminClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/change-password`
+      })
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data, message: 'Se ha enviado un correo electrónico para restablecer la contraseña' })
+    }
+
+    // SET TEMPORARY PASSWORD (admin or superadmin)
+    if (action === 'set-temporary-password') {
+      const { userId, password } = body
+      if (!userId || !password) return NextResponse.json({ error: 'userId and password required' }, { status: 400 })
+
+      if (password.length < 6) {
+        return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
+      }
+
+      const { data, error } = await adminClient.auth.admin.updateUserById(userId, {
+        password
+      })
+      
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ ok: true, data, message: 'Contraseña temporal establecida exitosamente' })
+    }
+
     return NextResponse.json({ error: 'unknown action' }, { status: 400 })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 })

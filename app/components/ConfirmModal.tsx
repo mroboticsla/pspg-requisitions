@@ -5,7 +5,7 @@ import React from 'react';
 interface ConfirmModalProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: string | React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   onConfirm: () => void;

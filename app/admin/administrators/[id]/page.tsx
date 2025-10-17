@@ -6,8 +6,9 @@ import { useAuth } from '@/app/providers/AuthProvider'
 import { supabase } from '@/lib/supabaseClient'
 import { RequireRoleClient } from '@/app/components/RequireRole'
 import { useToast } from '@/lib/useToast'
-import { ArrowLeft, Save, User, Mail, Phone, Shield, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Save, User, Mail, Phone, Shield, Eye, EyeOff, KeyRound, Send, Lock } from 'lucide-react'
 import PhoneInput, { getUnformattedPhone, COUNTRY_CODES, composePhoneCountryValue, parsePhoneCountryValue, getCountryByValue, formatPhoneNumber } from '@/app/components/PhoneInput'
+import ConfirmModal from '@/app/components/ConfirmModal'
 
 interface RoleOption {
   id: string
@@ -46,11 +47,18 @@ export default function AdminUserFormPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
+  const [currentEmail, setCurrentEmail] = useState('') // Store original email
   const [phoneCountry, setPhoneCountry] = useState(() => composePhoneCountryValue('MX', '+52'))
   const [phoneNumber, setPhoneNumber] = useState('')
   const [password, setPassword] = useState('')
   const [roleId, setRoleId] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  // Password management states
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false)
+  const [showTempPasswordModal, setShowTempPasswordModal] = useState(false)
+  const [tempPassword, setTempPassword] = useState('')
+  const [showTempPassword, setShowTempPassword] = useState(false)
 
   const isSuper = (profile as any)?.roles?.name === 'superadmin'
 
@@ -104,6 +112,7 @@ export default function AdminUserFormPage() {
         const s = await supabase.auth.getSession()
         const token = (s as any).data?.session?.access_token ?? null
 
+        // Load profile data
         const res = await fetch('/api/admin/secure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -127,6 +136,18 @@ export default function AdminUserFormPage() {
         setFirstName(foundUser.first_name || '')
         setLastName(foundUser.last_name || '')
         setRoleId(foundUser.role_id || '')
+
+        // Load email separately
+        const emailRes = await fetch('/api/admin/secure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ action: 'get-user-email', userId })
+        })
+        const emailBody = await emailRes.json()
+        if (emailRes.ok && emailBody.data?.email) {
+          setEmail(emailBody.data.email)
+          setCurrentEmail(emailBody.data.email)
+        }
 
         // Parse phone
         if (foundUser.phone) {
@@ -213,6 +234,7 @@ export default function AdminUserFormPage() {
         // Update existing user
         payload.userId = userId
 
+        // Update profile
         const res = await fetch('/api/admin/secure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -221,12 +243,85 @@ export default function AdminUserFormPage() {
         const body = await res.json()
         if (!res.ok) throw new Error(body.error || 'Error updating administrator')
 
+        // Update email if changed
+        if (email.trim() !== currentEmail) {
+          const emailRes = await fetch('/api/admin/secure', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ action: 'update-user-email', userId, email: email.trim() })
+          })
+          const emailBody = await emailRes.json()
+          if (!emailRes.ok) throw new Error(emailBody.error || 'Error updating email')
+        }
+
         success('Administrador actualizado correctamente')
       }
 
       router.push('/admin/administrators')
     } catch (err: any) {
       showError(err.message || 'Error processing form')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleSendPasswordReset = async () => {
+    if (!email) {
+      showError('No hay correo electrónico registrado')
+      return
+    }
+
+    try {
+      setBusy(true)
+      const s = await supabase.auth.getSession()
+      const token = (s as any).data?.session?.access_token ?? null
+
+      const res = await fetch('/api/admin/secure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'send-password-reset', email })
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Error sending password reset')
+
+      success('Se ha enviado un correo electrónico de recuperación de contraseña')
+      setShowPasswordResetModal(false)
+    } catch (err: any) {
+      showError(err.message || 'Error sending password reset')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleSetTempPassword = async () => {
+    if (!tempPassword) {
+      showError('Debe ingresar una contraseña temporal')
+      return
+    }
+
+    if (tempPassword.length < 6) {
+      showError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+
+    try {
+      setBusy(true)
+      const s = await supabase.auth.getSession()
+      const token = (s as any).data?.session?.access_token ?? null
+
+      const res = await fetch('/api/admin/secure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'set-temporary-password', userId, password: tempPassword })
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Error setting temporary password')
+
+      success('Contraseña temporal establecida correctamente')
+      setShowTempPasswordModal(false)
+      setTempPassword('')
+    } catch (err: any) {
+      showError(err.message || 'Error setting temporary password')
     } finally {
       setBusy(false)
     }
@@ -345,6 +440,33 @@ export default function AdminUserFormPage() {
                 </div>
               )}
 
+              {/* Email (editable for existing users) */}
+              {!isNew && (
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                    Correo Electrónico *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail className="h-5 w-5 text-gray-400" />
+                    </span>
+                    <input
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent"
+                      placeholder="admin@ejemplo.com"
+                      required
+                      disabled={busy}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    El correo electrónico puede ser modificado. Se confirmará automáticamente.
+                  </p>
+                </div>
+              )}
+
               {/* Password (only for new users) */}
               {isNew && (
                 <div>
@@ -421,6 +543,39 @@ export default function AdminUserFormPage() {
                 </p>
               </div>
 
+              {/* Password Management (only for existing users) */}
+              {!isNew && (
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center gap-2 mb-3">
+                    <KeyRound className="w-5 h-5 text-gray-600" />
+                    <h3 className="text-sm font-semibold text-gray-900">Gestión de Contraseña</h3>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Puede enviar un correo de recuperación o establecer una contraseña temporal para este usuario.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordResetModal(true)}
+                      disabled={busy || !email}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    >
+                      <Send className="w-4 h-4" />
+                      Enviar Recuperación de Contraseña
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTempPasswordModal(true)}
+                      disabled={busy}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    >
+                      <Lock className="w-4 h-4" />
+                      Establecer Contraseña Temporal
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
                 <button
@@ -452,6 +607,61 @@ export default function AdminUserFormPage() {
             </form>
           </div>
         </div>
+
+        {/* Password Reset Modal */}
+        <ConfirmModal
+          isOpen={showPasswordResetModal}
+          onCancel={() => setShowPasswordResetModal(false)}
+          onConfirm={handleSendPasswordReset}
+          title="Enviar Recuperación de Contraseña"
+          message={`Se enviará un correo electrónico de recuperación de contraseña a ${email}. El usuario podrá establecer una nueva contraseña siguiendo las instrucciones del correo.`}
+          confirmText="Enviar Correo"
+          type="warning"
+        />
+
+        {/* Temporary Password Modal */}
+        <ConfirmModal
+          isOpen={showTempPasswordModal}
+          onCancel={() => {
+            setShowTempPasswordModal(false)
+            setTempPassword('')
+            setShowTempPassword(false)
+          }}
+          onConfirm={handleSetTempPassword}
+          title="Establecer Contraseña Temporal"
+          message={
+            <div className="space-y-4">
+              <p className="text-sm text-gray-700">
+                Establezca una contraseña temporal para este usuario. Asegúrese de comunicar esta contraseña de forma segura al usuario.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contraseña Temporal *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showTempPassword ? "text" : "password"}
+                    value={tempPassword}
+                    onChange={(e) => setTempPassword(e.target.value)}
+                    className="w-full pr-10 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent"
+                    placeholder="Mínimo 6 caracteres"
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowTempPassword(!showTempPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    {showTempPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Mínimo 6 caracteres</p>
+              </div>
+            </div>
+          }
+          confirmText="Establecer Contraseña"
+          type="warning"
+        />
       </div>
     </RequireRoleClient>
   )
