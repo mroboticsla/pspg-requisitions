@@ -8,6 +8,7 @@ import { RequireRoleClient } from '@/app/components/RequireRole'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
 import { Trash2, Plus, UserCheck, UserX, Shield, Users, Edit } from 'lucide-react'
+import { COUNTRY_CODES } from '@/app/components/PhoneInput'
 
 // Types
 interface UserRow {
@@ -29,35 +30,98 @@ interface RoleOption {
   name: string
 }
 
-// Función para formatear teléfono
-const formatPhoneDisplay = (phone: string | null): string => {
-  if (!phone) return 'Sin teléfono'
+// Función para formatear teléfono con bandera y formato correcto
+const formatPhoneDisplay = (phone: string | null): { countryCode: string; formatted: string; raw: string } => {
+  if (!phone) return { countryCode: '', formatted: 'Sin teléfono', raw: '' }
   
-  // Detectar código de país y formatear
-  if (phone.startsWith('+52')) {
-    // México: +52 XXX XXX XXXX
-    const number = phone.slice(3)
-    if (number.length === 10) {
-      return `+52 ${number.slice(0, 3)} ${number.slice(3, 6)} ${number.slice(6)}`
-    }
-  } else if (phone.startsWith('+1')) {
-    // USA/Canadá: +1 (XXX) XXX-XXXX
-    const number = phone.slice(2)
-    if (number.length === 10) {
-      return `+1 (${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`
-    }
-  } else if (phone.startsWith('+')) {
-    // Otros países: mostrar con espacios
-    const code = phone.match(/^\+\d{1,4}/)?.[0] || ''
-    const number = phone.slice(code.length)
-    if (number.length >= 8) {
-      const parts = number.match(/.{1,4}/g) || []
-      return `${code} ${parts.join(' ')}`
-    }
+  // Buscar el país correspondiente
+  const matchedCountry = COUNTRY_CODES.find(c => phone.startsWith(c.code))
+  
+  if (!matchedCountry) {
+    return { countryCode: '', formatted: phone, raw: phone }
   }
   
-  // Fallback: mostrar tal cual
-  return phone
+  // Extraer el número sin código de país
+  const number = phone.slice(matchedCountry.code.length)
+  
+  // Formatear según el país
+  let formattedNumber = ''
+  
+  switch (matchedCountry.country) {
+    case 'MX': // México
+      if (number.length === 10) {
+        formattedNumber = `${number.slice(0, 3)} ${number.slice(3, 6)} ${number.slice(6)}`
+      } else {
+        formattedNumber = number
+      }
+      break
+      
+    case 'US': // USA
+    case 'CA': // Canadá
+      if (number.length === 10) {
+        formattedNumber = `(${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`
+      } else {
+        formattedNumber = number
+      }
+      break
+      
+    case 'SV': // El Salvador
+    case 'GT': // Guatemala
+    case 'HN': // Honduras
+    case 'NI': // Nicaragua
+    case 'CR': // Costa Rica
+    case 'PA': // Panamá
+      if (number.length === 8) {
+        formattedNumber = `${number.slice(0, 4)}-${number.slice(4)}`
+      } else {
+        formattedNumber = number
+      }
+      break
+      
+    case 'ES': // España
+      if (number.length === 9) {
+        formattedNumber = `${number.slice(0, 3)} ${number.slice(3, 6)} ${number.slice(6)}`
+      } else {
+        formattedNumber = number
+      }
+      break
+      
+    default:
+      // Para otros países, agrupar en bloques de 4 dígitos
+      const parts = number.match(/.{1,4}/g) || [number]
+      formattedNumber = parts.join(' ')
+  }
+  
+  return {
+    countryCode: matchedCountry.country.toLowerCase(),
+    formatted: `${matchedCountry.code} ${formattedNumber}`,
+    raw: phone
+  }
+}
+
+// Componente para mostrar teléfono con bandera
+const PhoneDisplay = ({ phone }: { phone: string | null }) => {
+  const { countryCode, formatted } = formatPhoneDisplay(phone)
+  
+  if (!phone || formatted === 'Sin teléfono') {
+    return <span className="text-gray-400">Sin teléfono</span>
+  }
+  
+  return (
+    <div className="flex items-center gap-1.5">
+      {countryCode && (
+        <img 
+          src={`https://flagcdn.com/w40/${countryCode}.png`}
+          alt={`Bandera`}
+          className="w-5 h-3.5 object-cover rounded-sm shadow-sm flex-shrink-0"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none'
+          }}
+        />
+      )}
+      <span className="truncate">{formatted}</span>
+    </div>
+  )
 }
 
 // Roles de administradores del sistema
@@ -496,7 +560,10 @@ export default function AdministratorsPage() {
                                 <p className="text-xs text-gray-600 leading-tight mt-0.5">📧 {admin.email}</p>
                               )}
                               {admin.phone && (
-                                <p className="text-xs text-gray-600 leading-tight mt-0.5">📱 {formatPhoneDisplay(admin.phone)}</p>
+                                <div className="text-xs text-gray-600 leading-tight mt-0.5 flex items-center gap-1">
+                                  <span>📱</span>
+                                  <PhoneDisplay phone={admin.phone} />
+                                </div>
                               )}
                             </div>
                           </div>
@@ -598,9 +665,9 @@ export default function AdministratorsPage() {
 
                         {/* Columna 4: Teléfono (145px) */}
                         <div className="w-36 flex-shrink-0">
-                          <p className="text-xs text-gray-600 truncate" title={formatPhoneDisplay(admin.phone)}>
-                            {formatPhoneDisplay(admin.phone)}
-                          </p>
+                          <div className="text-xs text-gray-600">
+                            <PhoneDisplay phone={admin.phone} />
+                          </div>
                         </div>
 
                         {/* Columna 5: Rol (130px) */}
