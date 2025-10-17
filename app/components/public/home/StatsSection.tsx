@@ -8,54 +8,94 @@ export const StatsSection: React.FC = () => {
     {
       icon: Users,
       value: '5,000+',
-      label: 'Profesionales Colocados',
-      color: 'from-blue-500 to-blue-600'
+      label: 'Contrataciones Exitosas',
+      description: 'Transfromando Carreras'
     },
     {
       icon: Building,
       value: '300+',
       label: 'Empresas Clientes',
-      color: 'from-purple-500 to-purple-600'
+      description: 'Confiando en nosotros'
     },
     {
       icon: Award,
       value: '15',
       label: 'Años de Experiencia',
-      color: 'from-green-500 to-green-600'
+      description: 'Liderando el mercado'
     },
     {
       icon: TrendingUp,
       value: '95%',
       label: 'Tasa de Éxito',
-      color: 'from-orange-500 to-orange-600'
+      description: 'En colocaciones'
     }
   ];
 
   return (
-    <section className="py-16 bg-gradient-to-br from-gray-900 to-gray-800 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4">Resultados que Hablan por Sí Mismos</h2>
-          <p className="text-xl text-gray-300">
-            Números que demuestran nuestro compromiso con la excelencia
+    <section className="py-20 bg-gradient-to-br from-brand-dark via-brand-dark to-[#003558] text-white relative overflow-hidden">
+      {/* Decorative Elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-accent opacity-5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-white opacity-5 rounded-full blur-3xl"></div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            Resultados que Hablan por Sí Mismos
+          </h2>
+          <div className="w-20 h-1 bg-brand-accent mx-auto mb-6"></div>
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+            Números que demuestran nuestro compromiso con la excelencia y la satisfacción de nuestros clientes
           </p>
         </div>
 
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {stats.map((stat, index) => (
             <div
               key={index}
               className="relative group"
             >
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-8 text-center hover:bg-opacity-20 transition-all duration-300 transform hover:-translate-y-2">
-                <div className={`bg-gradient-to-br ${stat.color} w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform`}>
-                  <stat.icon className="h-10 w-10 text-white" />
+              {/* Card */}
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-center border border-white/20 hover:bg-white/15 hover:border-brand-accent/50 transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl">
+                {/* Icon Container */}
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 bg-brand-accent opacity-20 rounded-xl blur-xl group-hover:opacity-30 transition-opacity"></div>
+                  <div className="relative bg-gradient-to-br from-brand-accent to-brand-accentDark w-16 h-16 rounded-xl flex items-center justify-center mx-auto group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-lg">
+                    <stat.icon className="h-8 w-8 text-white" strokeWidth={2.5} />
+                  </div>
                 </div>
-                <div className="text-5xl font-bold mb-2">{stat.value}</div>
-                <div className="text-gray-300 text-lg">{stat.label}</div>
+
+                {/* Value */}
+                <div className="text-5xl md:text-6xl font-bold mb-3 bg-gradient-to-br from-white to-gray-200 bg-clip-text text-transparent">
+                  {stat.value}
+                </div>
+
+                {/* Label */}
+                <div className="text-white text-lg font-semibold mb-2">
+                  {stat.label}
+                </div>
+
+                {/* Description */}
+                <div className="text-gray-300 text-sm">
+                  {stat.description}
+                </div>
+
+                {/* Decorative line */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-1 bg-brand-accent group-hover:w-3/4 transition-all duration-300 rounded-full"></div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-16 text-center">
+          <p className="text-gray-300 text-lg mb-6">
+            ¿Listo para formar parte de estas estadísticas?
+          </p>
+          <button className="bg-brand-accent text-white px-8 py-3 rounded-md font-semibold hover:bg-brand-accentDark transition-all duration-300 hover:shadow-lg hover:scale-105">
+            Únete a Nosotros
+          </button>
         </div>
       </div>
     </section>

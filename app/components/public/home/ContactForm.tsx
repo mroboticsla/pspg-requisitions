@@ -240,7 +240,6 @@ export const ContactForm: React.FC = () => {
                   <div className="ml-4">
                     <h4 className="font-semibold mb-1">Teléfonos</h4>
                     <p className="text-gray-100">+52 55 2662 2966</p>
-                    <p className="text-gray-100">+507 6000-0001</p>
                   </div>
                 </div>
 
@@ -251,7 +250,6 @@ export const ContactForm: React.FC = () => {
                   <div className="ml-4">
                     <h4 className="font-semibold mb-1">Emails</h4>
                     <p className="text-gray-100">info@pspgroup.com.mx</p>
-                    <p className="text-gray-100">contact@pspg.com</p>
                   </div>
                 </div>
 
@@ -276,7 +274,7 @@ export const ContactForm: React.FC = () => {
             {/* Map Placeholder */}
             <div className="bg-gray-200 rounded-2xl overflow-hidden shadow-lg h-64">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d126094.47516044226!2d-79.59912743359375!3d8.983333!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8faca8f1dbe80363%3A0xaba25df1f042c10e!2zUGFuYW3DoQ!5e0!3m2!1ses!2spa!4v1697582400000!5m2!1ses!2spa"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d240840.1802268492!2d-99.28324849999999!3d19.42847!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85ce0026db097507%3A0x54061076265ee841!2sCiudad%20de%20M%C3%A9xico%2C%20CDMX%2C%20M%C3%A9xico!5e0!3m2!1ses!2smx!4v1697582400000!5m2!1ses!2smx"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}
