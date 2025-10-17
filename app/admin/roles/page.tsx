@@ -5,77 +5,30 @@ import { useAuth } from '@/app/providers/AuthProvider'
 import { useSafeRouter } from '@/lib/useSafeRouter'
 import { supabase } from '@/lib/supabaseClient'
 import { RequireRoleClient } from '@/app/components/RequireRole'
-import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
-import { MENU } from '@/app/components/navigation/menuConfig'
-import { Eye, Trash2, Plus } from 'lucide-react'
+import { Plus, Shield, Edit, UserCheck, TrendingUp } from 'lucide-react'
 
 // Types
-interface RoleRow { id: string; name: string; permissions?: any }
-
-type FormState = {
-  id?: string
+interface RoleRow { 
+  id: string
   name: string
-  description: string
-  modules: Record<string, boolean>
-  canDo: string[]
-  extras: Record<string, any> // claves adicionales para conservar compatibilidad
+  permissions?: any
 }
-
-type ViewMode = 'list' | 'create' | 'edit'
 
 export default function RolesAdminPage() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
-  const { success, error: showError, info } = useToast()
+  const { error: showError } = useToast()
 
   const [roles, setRoles] = useState<RoleRow[]>([])
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
-
-  // Derivar módulos disponibles desde el menú principal para evitar duplicación
-  const availableModules = useMemo(() => {
-    // Tomamos todos los ids de primer nivel
-    return MENU.map(m => ({ id: m.id, label: m.label }))
-  }, [])
-
-  const defaultModulesMap = useMemo(() => Object.fromEntries(availableModules.map(m => [m.id, false])) as Record<string, boolean>, [availableModules])
-
-  const [form, setForm] = useState<FormState>({ name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
-  const [formErrors, setFormErrors] = useState<{ name?: string; description?: string }>({})
-  const [showDelete, setShowDelete] = useState<{ open: boolean; id?: string; name?: string }>({ open: false })
 
   const isSuper = (profile as any)?.roles?.name === 'superadmin'
 
-  // Roles que no se pueden eliminar
+  // Roles protegidos que no se pueden eliminar
   const PROTECTED_ROLES = ['admin', 'superadmin', 'partner', 'candidate']
 
-  // Verificar si un rol está protegido
-  const isRoleProtected = (roleName: string): boolean => {
-    return PROTECTED_ROLES.includes(roleName.toLowerCase())
-  }
-
-  // Verificar si un rol está en uso
-  const isRoleInUse = async (roleId: string): Promise<boolean> => {
-    try {
-      const token = await getToken()
-      const res = await fetch('/api/admin/secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'list-users' })
-      })
-      const body = await res.json()
-      if (!res.ok) return false
-      
-      const users = body.data || []
-      return users.some((u: any) => u.role_id === roleId)
-    } catch {
-      return false
-    }
-  }
-
-  // Seguridad adicional: redirigir si no autenticado tras cargar
   useEffect(() => {
     if (!loading && (!user || !profile)) {
       router.replace('/auth')
@@ -87,12 +40,15 @@ export default function RolesAdminPage() {
       setBusy(true)
       const s = await supabase.auth.getSession()
       const token = (s as any).data?.session?.access_token ?? null
+      
       const r1 = await fetch('/api/admin/secure', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
         body: JSON.stringify({ action: 'list-roles' }) 
       })
-      const b1 = await r1.json(); if (!r1.ok) throw new Error(b1.error || 'No se pudo obtener roles')
+      const b1 = await r1.json()
+      if (!r1.ok) throw new Error(b1.error || 'No se pudo obtener roles')
+      
       setRoles(b1.data || [])
     } catch (err: any) {
       showError(err.message || String(err))
@@ -116,527 +72,298 @@ export default function RolesAdminPage() {
   const filteredRoles = useMemo(() => {
     if (!search.trim()) return roles
     const s = search.toLowerCase()
-    return roles.filter(r => r.name.toLowerCase().includes(s))
+    return roles.filter(r => {
+      const desc = r.permissions?.description || ''
+      return r.name.toLowerCase().includes(s) || desc.toLowerCase().includes(s)
+    })
   }, [roles, search])
 
-  const beginCreate = () => {
-    setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
-    setFormErrors({})
-    setViewMode('create')
+  const handleCreate = () => {
+    router.push('/admin/roles/new')
   }
 
-  const beginEdit = (r: RoleRow) => {
-    const p = r.permissions || {}
-    const desc = typeof p?.description === 'string' ? p.description : ''
-    const canDo = Array.isArray(p?.can_do) ? (p.can_do as string[]) : []
-    const modulesObj = typeof p?.modules === 'object' && p.modules ? p.modules as Record<string, boolean> : {}
-    const mergedModules: Record<string, boolean> = { ...defaultModulesMap }
-    Object.keys(mergedModules).forEach(k => { mergedModules[k] = Boolean(modulesObj[k]) })
-    // extras: conservar cualquier otra clave
-    const { description, can_do, modules, ...rest } = (p || {})
-    setForm({ id: r.id, name: r.name, description: desc, modules: mergedModules, canDo, extras: rest })
-    setFormErrors({})
-    setViewMode('edit')
+  const handleEdit = (roleId: string) => {
+    router.push(`/admin/roles/${roleId}`)
   }
 
-  const cancelEdit = () => {
-    setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
-    setFormErrors({})
-    setViewMode('list')
-  }
-
-  const save = async () => {
-    try {
-      setBusy(true)
-      
-      const normalizedName = form.name.trim().toLowerCase()
-      if (!normalizedName) {
-        setFormErrors(errs => ({ ...errs, name: 'El nombre es requerido' }))
-        return
-      }
-      
-      // Nota: El superadmin puede modificar roles del sistema (solo permisos y módulos, no el nombre)
-      // La validación del backend se encargará de prevenir renombrar roles del sistema
-      
-      if (normalizedName.length < 3 || normalizedName.length > 30) {
-        setFormErrors(errs => ({ ...errs, name: 'El nombre debe tener entre 3 y 30 caracteres' }))
-        return
-      }
-      if (!/^[a-z0-9_-]+$/.test(normalizedName)) {
-        setFormErrors(errs => ({ ...errs, name: 'Solo a-z, 0-9, guion y guion bajo' }))
-        return
-      }
-      
-      // construir objeto de permisos desde la UI
-      const permissions: any = {
-        description: form.description?.trim() || undefined,
-        can_do: form.canDo,
-        modules: Object.fromEntries(Object.entries(form.modules).filter(([, v]) => Boolean(v))),
-        ...form.extras,
-      }
-      
-      const token = await getToken()
-      if (form.id) {
-        const res = await fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'update-role', id: form.id, name: normalizedName, permissions }) })
-        const body = await res.json(); if (!res.ok) throw new Error(body.error || 'Error actualizando rol')
-        success('Rol actualizado')
-      } else {
-        const res = await fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'create-role', name: normalizedName, permissions }) })
-        const body = await res.json(); if (!res.ok) throw new Error(body.error || 'Error creando rol')
-        success('Rol creado')
-      }
-      setForm({ id: undefined, name: '', description: '', modules: defaultModulesMap, canDo: [], extras: {} })
-      setFormErrors({})
-      setViewMode('list')
-      await refresh()
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  // Acciones sugeridas
-  const suggested = [
-    { key: 'manage_administrators', label: 'Gestionar administradores' },
-    { key: 'manage_partners', label: 'Gestionar asociados' },
-    { key: 'manage_users', label: 'Gestionar usuarios' },
-    { key: 'manage_roles', label: 'Gestionar roles' },
-    { key: 'approve_requisitions', label: 'Aprobar requisiciones' },
-    { key: 'create_requisitions', label: 'Crear requisiciones' },
-    { key: 'view_reports', label: 'Ver reportes' },
-    { key: 'export_data', label: 'Exportar datos' },
-  ]
-
-  const toggleCanDo = (key: string) => {
-    setForm(f => {
-      const has = f.canDo.includes(key)
-      return { ...f, canDo: has ? f.canDo.filter(k => k !== key) : [...f.canDo, key] }
-    })
-  }
-
-  const setModule = (key: string, value: boolean) => {
-    setForm(f => ({ ...f, modules: { ...f.modules, [key]: value } }))
-  }
-
-  const [customPerm, setCustomPerm] = useState('')
-  const addCustomPerm = () => {
-    const k = customPerm.trim()
-    if (!k) return
-    if (form.canDo.includes(k)) return
-    setForm(f => ({ ...f, canDo: [...f.canDo, k] }))
-    setCustomPerm('')
-  }
-  const removeCustomPerm = (k: string) => setForm(f => ({ ...f, canDo: f.canDo.filter(x => x !== k) }))
-
-  const requestDelete = async (r: RoleRow) => {
-    // Validar si el rol está protegido
-    if (isRoleProtected(r.name)) {
-      showError(`El rol "${r.name}" es un rol del sistema y no puede ser eliminado`)
-      return
-    }
-
-    // Verificar si el rol está en uso
-    const inUse = await isRoleInUse(r.id)
-    if (inUse) {
-      showError(`El rol "${r.name}" no puede ser eliminado porque hay usuarios asignados a este rol`)
-      return
-    }
-
-    setShowDelete({ open: true, id: r.id, name: r.name })
-  }
-
-  const doDelete = async () => {
-    if (!showDelete.id) return
-    try {
-      setBusy(true)
-      const token = await getToken()
-      const res = await fetch('/api/admin/secure', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'delete-role', id: showDelete.id }) })
-      const body = await res.json(); if (!res.ok) throw new Error(body.error || 'Error eliminando rol')
-      success('Rol eliminado')
-      setShowDelete({ open: false })
-      await refresh()
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  // Renderizado de la vista de lista de roles
-  const renderListView = () => (
-    <div className="space-y-4 p-4 sm:p-6">
-      {/* Header compacto */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl font-bold text-admin-text-primary">Administración de roles</h1>
-        <button 
-          onClick={beginCreate} 
-          disabled={busy}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-admin-success text-white hover:bg-admin-successHover disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Crear nuevo rol</span>
-        </button>
-      </div>
-
-      {/* Búsqueda compacta */}
-      <div className="bg-white rounded-lg shadow-sm p-3">
-        <input 
-          value={search} 
-          onChange={e => setSearch(e.target.value)} 
-          placeholder="Buscar roles..." 
-          className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-admin-accent focus:border-admin-accent text-sm" 
-        />
-      </div>
-
-      {/* Listado de roles - diseño compacto */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="divide-y divide-gray-200">
-          {filteredRoles.length === 0 && (
-            <div className="p-8 text-center text-gray-500 text-sm">
-              {search.trim() ? 'No se encontraron roles con ese criterio de búsqueda' : 'No hay roles creados aún'}
-            </div>
-          )}
-          {filteredRoles.map(r => {
-            const p = r.permissions || {}
-            const desc = p?.description || ''
-            const modules = Object.entries(p?.modules || {}).filter(([, v]) => Boolean(v)).map(([k]) => k)
-            const canDo = Array.isArray(p?.can_do) ? (p.can_do as string[]) : []
-            const isProtected = isRoleProtected(r.name)
-            
-            return (
-              <div 
-                key={r.id} 
-                className="p-4 hover:bg-gray-50 transition-colors"
-              >
-                {/* Layout compacto: info a la izquierda, badges y botones a la derecha en desktop */}
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                  {/* Información del rol */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-base text-gray-900">{r.name}</h3>
-                      {isProtected && (
-                        <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-medium border border-amber-200" title="Rol del sistema protegido">
-                          🔒 Protegido
-                        </span>
-                      )}
-                      {modules.length > 0 && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-medium">
-                          {modules.length} {modules.length === 1 ? 'módulo' : 'módulos'}
-                        </span>
-                      )}
-                      {canDo.length > 0 && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">
-                          {canDo.length} {canDo.length === 1 ? 'permiso' : 'permisos'}
-                        </span>
-                      )}
-                    </div>
-                    {desc && <p className="text-sm text-gray-600 line-clamp-1">{desc}</p>}
-                    
-                    {/* Módulos inline en desktop para ahorrar espacio */}
-                    {modules.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {modules.slice(0, 5).map(m => (
-                          <span 
-                            key={m} 
-                            className="inline-block text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded"
-                          >
-                            {m}
-                          </span>
-                        ))}
-                        {modules.length > 5 && (
-                          <span className="text-xs text-gray-500 px-2 py-0.5">
-                            +{modules.length - 5} más
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Botones de acción - compactos en desktop, full width en móvil */}
-                  <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
-                    <button 
-                      disabled={busy} 
-                      onClick={(e) => { e.stopPropagation(); beginEdit(r); }} 
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                      title="Ver detalles"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Ver detalles</span>
-                    </button>
-                    <button 
-                      disabled={busy || isProtected} 
-                      onClick={(e) => { e.stopPropagation(); requestDelete(r); }} 
-                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={isProtected ? "Este rol está protegido y no puede ser eliminado" : "Eliminar rol"}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Eliminar</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-
-  // Renderizado de la vista de creación/edición
-  const renderFormView = () => {
-    const isEditingProtectedRole = form.id && isRoleProtected(form.name)
+  const stats = useMemo(() => {
+    const total = roles.length
+    const system = roles.filter(r => PROTECTED_ROLES.includes(r.name.toLowerCase())).length
+    const custom = total - system
     
-    return (
-    <div className="space-y-4 p-4 sm:p-6">
-      {/* Header compacto con navegación */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={cancelEdit}
-          disabled={busy}
-          className="p-2 rounded-md hover:bg-gray-100 transition-colors flex-shrink-0"
-          title="Volver a la lista"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </button>
-        <div className="flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            {viewMode === 'create' ? 'Crear nuevo rol' : `Editar: ${form.name}`}
-          </h1>
-          {isEditingProtectedRole && (
-            <p className="text-sm text-blue-700 mt-1 flex items-center gap-1 bg-blue-50 border border-blue-200 rounded px-3 py-2">
-              <span>ℹ️</span>
-              <span>Rol del sistema: Puedes modificar permisos y módulos. El nombre no se puede cambiar para mantener la integridad del sistema.</span>
-            </p>
-          )}
-        </div>
-      </div>
+    return { total, system, custom }
+  }, [roles])
 
-      {/* Layout más compacto: sidebar colapsable en móvil */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Columna principal - 3/4 en desktop */}
-        <div className="lg:col-span-3 space-y-4">
-          {/* Información básica */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="text-base font-semibold mb-3 text-gray-900">Información básica</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1.5 text-gray-700">
-                  Nombre del rol <span className="text-red-600">*</span>
-                </label>
-                <input 
-                  disabled={busy || viewMode === 'edit'} 
-                  value={form.name} 
-                  onChange={e => { 
-                    setForm(f => ({ ...f, name: e.target.value })); 
-                    setFormErrors(errs => ({ ...errs, name: undefined })) 
-                  }} 
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent disabled:bg-gray-100 disabled:text-gray-500" 
-                  placeholder="p. ej. partner" 
-                />
-                {formErrors.name && <p className="text-xs text-red-600 mt-1">{formErrors.name}</p>}
-                {viewMode === 'edit' && (
-                  <p className="text-xs text-gray-500 mt-1">El nombre del rol no se puede modificar</p>
-                )}
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1.5 text-gray-700">Descripción</label>
-                <textarea 
-                  disabled={busy} 
-                  value={form.description} 
-                  onChange={e => { 
-                    setForm(f => ({ ...f, description: e.target.value })); 
-                    setFormErrors(errs => ({ ...errs, description: undefined })) 
-                  }} 
-                  rows={3}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent resize-none" 
-                  placeholder="Describe el alcance y responsabilidades de este rol" 
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Permisos y acciones en grid */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <h2 className="text-base font-semibold mb-1 text-gray-900">Permisos y acciones</h2>
-            <p className="text-xs text-gray-600 mb-3">
-              Define las acciones específicas que pueden realizar los usuarios con este rol
-            </p>
-            
-            {/* Permisos en grid compacto */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium mb-2 text-gray-700">Acciones comunes</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {suggested.map(s => (
-                  <label 
-                    key={s.key} 
-                    className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors text-sm"
-                  >
-                    <input 
-                      type="checkbox" 
-                      disabled={busy} 
-                      checked={form.canDo.includes(s.key)} 
-                      onChange={() => toggleCanDo(s.key)} 
-                      className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent flex-shrink-0"
-                    />
-                    <span>{s.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Permisos personalizados compactos */}
-            <div>
-              <h3 className="text-sm font-medium mb-2 text-gray-700">Permisos personalizados</h3>
-              <div className="flex gap-2 mb-2">
-                <input 
-                  value={customPerm} 
-                  onChange={e => setCustomPerm(e.target.value)} 
-                  onKeyPress={e => e.key === 'Enter' && addCustomPerm()}
-                  placeholder="ej. export_reports" 
-                  className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent" 
-                />
-                <button 
-                  type="button" 
-                  onClick={addCustomPerm} 
-                  disabled={busy || !customPerm.trim()}
-                  className="px-3 py-1.5 text-sm rounded-md border border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white disabled:opacity-50 transition-colors font-medium"
-                >
-                  Agregar
-                </button>
-              </div>
-              {form.canDo.filter(k => !suggested.some(s => s.key === k)).length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {form.canDo.filter(k => !suggested.some(s => s.key === k)).map(k => (
-                    <span 
-                      key={k} 
-                      className="inline-flex items-center gap-1.5 text-xs bg-gray-100 px-2 py-1 rounded"
-                    >
-                      <code className="text-xs">{k}</code>
-                      <button 
-                        onClick={() => removeCustomPerm(k)} 
-                        className="text-gray-500 hover:text-red-600 transition-colors text-base leading-none"
-                        title="Eliminar"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Botones de acción */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button 
-              disabled={busy || !form.name.trim()} 
-              onClick={save} 
-              className="px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm w-full sm:w-auto"
-            >
-              {busy ? 'Guardando...' : (viewMode === 'create' ? 'Crear rol' : 'Guardar cambios')}
-            </button>
-            <button 
-              disabled={busy} 
-              onClick={cancelEdit} 
-              className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium text-sm w-full sm:w-auto"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-
-        {/* Sidebar compacto - 1/4 en desktop */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm p-4 lg:sticky lg:top-4">
-            <h2 className="text-sm font-semibold mb-2 text-gray-900">Módulos del menú</h2>
-            <p className="text-xs text-gray-600 mb-3">
-              Selecciona módulos disponibles
-            </p>
-            <div className="space-y-1.5">
-              {availableModules.map(m => (
-                <label 
-                  key={m.id} 
-                  className="flex items-center gap-2 p-2 rounded-md border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  <input 
-                    type="checkbox" 
-                    disabled={busy} 
-                    checked={Boolean(form.modules[m.id])} 
-                    onChange={e => setModule(m.id, e.target.checked)} 
-                    className="rounded text-brand-accent focus:ring-2 focus:ring-brand-accent flex-shrink-0"
-                  />
-                  <span className="text-xs font-medium text-gray-700">{m.label}</span>
-                </label>
-              ))}
-            </div>
-            
-            {/* Resumen compacto */}
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="text-xs text-gray-500 mb-1.5">Resumen</div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">Módulos:</span>
-                  <span className="font-semibold text-gray-900">
-                    {Object.values(form.modules).filter(Boolean).length}/{availableModules.length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">Permisos:</span>
-                  <span className="font-semibold text-gray-900">{form.canDo.length}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    )
-  }
-
-  const content = viewMode === 'list' ? renderListView() : renderFormView()
-
-  // Loading general del provider
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh] p-6">
+    <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-accent mx-auto mb-3"></div>
-        <p className="text-gray-600 text-sm">Cargando...</p>
-      </div>
-    </div>
-  )
-
-  // Fallback si no superadmin
-  if (!isSuper) return (
-    <div className="p-6">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-700 font-medium text-sm">Acceso restringido. No tiene permisos suficientes.</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <p className="text-gray-600">Verificando sesión...</p>
       </div>
     </div>
   )
 
   return (
-    <RequireRoleClient allow={["superadmin"]} fallback={
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700 font-medium text-sm">Acceso restringido. No tiene permisos suficientes.</p>
+    <RequireRoleClient allow={['superadmin']}>
+      <div className="space-y-6">
+        <div className="space-y-4 p-4 sm:p-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Roles</h1>
+              <p className="text-gray-600 mt-1">Administre los roles y permisos del sistema</p>
+            </div>
+            <button 
+              onClick={handleCreate}
+              disabled={busy}
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nuevo Rol</span>
+            </button>
+          </div>
+
+          {/* Estadísticas - Carrusel en mobile, Grid en desktop */}
+          <div className="sm:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
+            <div className="flex gap-3 pb-2">
+              <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-gray-100 text-sm font-medium">Total Roles</p>
+                    <p className="text-4xl font-bold mt-2">{stats.total}</p>
+                  </div>
+                  <Shield className="w-16 h-16 text-gray-200 opacity-40" />
+                </div>
+                <div className="flex items-center text-gray-100 text-xs border-t border-white/20 pt-3">
+                  <TrendingUp className="w-4 h-4 mr-1.5" />
+                  <span>Configurados</span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-purple-100 text-sm font-medium">Roles de Sistema</p>
+                    <p className="text-4xl font-bold mt-2">{stats.system}</p>
+                  </div>
+                  <Shield className="w-16 h-16 text-purple-100 opacity-40" />
+                </div>
+                <div className="flex items-center text-purple-100 text-xs border-t border-white/20 pt-3">
+                  <Shield className="w-4 h-4 mr-1.5" />
+                  <span>Protegidos</span>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-emerald-100 text-sm font-medium">Roles Personalizados</p>
+                    <p className="text-4xl font-bold mt-2">{stats.custom}</p>
+                  </div>
+                  <UserCheck className="w-16 h-16 text-emerald-100 opacity-40" />
+                </div>
+                <div className="flex items-center text-emerald-100 text-xs border-t border-white/20 pt-3">
+                  <Edit className="w-4 h-4 mr-1.5" />
+                  <span>Editables</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop: Grid tradicional */}
+          <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+            <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-100 text-sm font-medium">Total Roles</p>
+                  <p className="text-3xl font-bold mt-2">{stats.total}</p>
+                </div>
+                <Shield className="w-12 h-12 text-gray-200 opacity-80" />
+              </div>
+              <div className="mt-4 flex items-center text-gray-100 text-sm">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                Configurados
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Roles de Sistema</p>
+                  <p className="text-3xl font-bold mt-2">{stats.system}</p>
+                </div>
+                <Shield className="w-12 h-12 text-purple-100 opacity-80" />
+              </div>
+              <div className="mt-4 flex items-center text-purple-100 text-sm">
+                <Shield className="w-4 h-4 mr-1" />
+                Protegidos
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-lg shadow-md p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-emerald-100 text-sm font-medium">Roles Personalizados</p>
+                  <p className="text-3xl font-bold mt-2">{stats.custom}</p>
+                </div>
+                <UserCheck className="w-12 h-12 text-emerald-100 opacity-80" />
+              </div>
+              <div className="mt-4 flex items-center text-emerald-100 text-sm">
+                <Edit className="w-4 h-4 mr-1" />
+                Editables
+              </div>
+            </div>
+          </div>
+
+          {/* Búsqueda */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o descripción..."
+              className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
+            />
+          </div>
+
+          {/* Listado */}
+          {busy && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p className="text-gray-600">Cargando roles...</p>
+            </div>
+          )}
+
+          {!busy && (
+            <div className="rounded-lg shadow-sm overflow-hidden border border-gray-200">
+              {/* Header de tabla solo en desktop */}
+              <div className="hidden lg:block bg-gradient-to-r from-brand-dark to-[#003d66] text-white px-4 py-2.5 border-b border-gray-300">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 min-w-[150px]">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Rol</span>
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Descripción</span>
+                  </div>
+                  <div className="w-32 flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Módulos</span>
+                  </div>
+                  <div className="w-32 flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Permisos</span>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Acciones</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                {filteredRoles.length === 0 && (
+                  <div className="p-8 text-center text-gray-500 text-sm bg-white">
+                    {search.trim()
+                      ? 'No se encontraron roles con los criterios de búsqueda'
+                      : 'No hay roles registrados aún'}
+                  </div>
+                )}
+                {filteredRoles.map((role, index) => {
+                  const isProtected = PROTECTED_ROLES.includes(role.name.toLowerCase())
+                  const description = role.permissions?.description || 'Sin descripción'
+                  const modules = role.permissions?.modules || {}
+                  const canDo = role.permissions?.can_do || []
+                  const moduleCount = Object.keys(modules).filter(k => modules[k]).length
+                  const permCount = canDo.length
+                  const isEven = index % 2 === 0
+                  const bgColor = isEven ? 'bg-white' : 'bg-gray-100'
+                  const hoverColor = isEven ? 'hover:bg-gray-50' : 'hover:bg-gray-200'
+                  
+                  return (
+                    <div
+                      key={role.id}
+                      className={`p-3 sm:p-4 ${bgColor} ${hoverColor} transition-colors border-b border-gray-200 last:border-b-0`}
+                    >
+                      {/* Mobile */}
+                      <div className="flex flex-col gap-2 lg:hidden">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <Shield className="w-4 h-4 text-brand-dark flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold text-sm text-gray-900 leading-tight">{role.name}</h3>
+                                {isProtected && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-medium border border-purple-200">
+                                    Sistema
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-600 leading-tight mt-0.5">{description}</p>
+                              <div className="flex gap-2 mt-1">
+                                <span className="text-xs text-blue-600">📦 {moduleCount} módulos</span>
+                                <span className="text-xs text-green-600">✓ {permCount} permisos</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-2 mt-1 grid-cols-2">
+                          <button
+                            disabled={busy}
+                            onClick={() => handleEdit(role.id)}
+                            className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors text-xs font-medium disabled:opacity-50"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Editar</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Desktop */}
+                      <div className="hidden lg:flex lg:items-center lg:gap-4">
+                        <div className="flex-1 min-w-[150px]">
+                          <div className="flex items-center gap-2">
+                            <Shield className="w-4 h-4 text-brand-dark flex-shrink-0" />
+                            <h3 className="font-semibold text-sm text-gray-900 truncate">{role.name}</h3>
+                            {isProtected && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-medium border border-purple-200 flex-shrink-0">
+                                Sistema
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-[200px]">
+                          <p className="text-xs text-gray-600 line-clamp-2">{description}</p>
+                        </div>
+
+                        <div className="w-32 flex-shrink-0">
+                          <span className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-700 font-medium">
+                            {moduleCount} módulos
+                          </span>
+                        </div>
+
+                        <div className="w-32 flex-shrink-0">
+                          <span className="text-xs px-2 py-1 rounded bg-green-50 text-green-700 font-medium">
+                            {permCount} permisos
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <button
+                            disabled={busy}
+                            onClick={() => handleEdit(role.id)}
+                            className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    }>
-      <div className="min-h-screen bg-gray-50">
-        {content}
-      </div>
-      <ConfirmModal
-        isOpen={showDelete.open}
-        title="Eliminar rol"
-        message={`¿Seguro que deseas eliminar el rol "${showDelete.name}"? Esta acción no se puede deshacer.`}
-        type="danger"
-        confirmText="Eliminar"
-        onConfirm={doDelete}
-        onCancel={() => setShowDelete({ open: false })}
-      />
     </RequireRoleClient>
   )
 }
