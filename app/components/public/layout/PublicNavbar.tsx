@@ -76,7 +76,7 @@ export const PublicNavbar: React.FC = () => {
             <button
               onClick={() => {
                 setIsOpen(false);
-                router.push('/dashboard');
+                router.push('/auth');
               }}
               className="w-full text-left px-3 py-2 text-base font-medium bg-brand-accent text-white rounded-md hover:bg-brand-accentDark"
             >
