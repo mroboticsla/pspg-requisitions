@@ -183,8 +183,61 @@ export default function CompaniesAdminPage() {
               </button>
             </div>
 
-            {/* Estadísticas compactas */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Estadísticas - Carrusel en mobile, Grid en desktop */}
+            
+            {/* Mobile: Carrusel horizontal con scroll */}
+            <div className="sm:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <div className="flex gap-3 pb-2">
+                {/* Total Empresas */}
+                <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-gray-100 text-sm font-medium">Total Empresas</p>
+                      <p className="text-4xl font-bold mt-2">{stats.total}</p>
+                    </div>
+                    <Building2 className="w-16 h-16 text-gray-200 opacity-40" />
+                  </div>
+                  <div className="flex items-center text-gray-100 text-xs border-t border-white/20 pt-3">
+                    <Building2 className="w-4 h-4 mr-1.5" />
+                    <span>Registradas</span>
+                  </div>
+                </div>
+
+                {/* Empresas Activas */}
+                <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-pink-100 text-sm font-medium">Empresas Activas</p>
+                      <p className="text-4xl font-bold mt-2">{stats.active}</p>
+                    </div>
+                    <Building2 className="w-16 h-16 text-pink-100 opacity-40" />
+                  </div>
+                  <div className="flex items-center text-pink-100 text-xs border-t border-white/20 pt-3">
+                    <Building2 className="w-4 h-4 mr-1.5" />
+                    <span>Operativas</span>
+                  </div>
+                </div>
+
+                {/* Inactivas */}
+                <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-gray-100 text-sm font-medium">Inactivas</p>
+                      <p className="text-4xl font-bold mt-2">{stats.inactive}</p>
+                    </div>
+                    <Building2 className="w-16 h-16 text-gray-200 opacity-40" />
+                  </div>
+                  <div className="flex items-center text-gray-100 text-xs border-t border-white/20 pt-3">
+                    <Building2 className="w-4 h-4 mr-1.5" />
+                    <span>Suspendidas</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop: Grid tradicional */}
+            <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+              {/* Total Empresas */}
               <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div>
@@ -198,6 +251,8 @@ export default function CompaniesAdminPage() {
                   Registradas
                 </div>
               </div>
+
+              {/* Empresas Activas */}
               <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div>
@@ -211,6 +266,8 @@ export default function CompaniesAdminPage() {
                   Operativas
                 </div>
               </div>
+
+              {/* Inactivas */}
               <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-6 text-white">
                 <div className="flex items-center justify-between">
                   <div>
@@ -227,7 +284,7 @@ export default function CompaniesAdminPage() {
             </div>
 
             {/* Búsqueda */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -246,6 +303,27 @@ export default function CompaniesAdminPage() {
 
             {!busy && (
               <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+                {/* Header de tabla solo en desktop */}
+                <div className="hidden lg:block bg-gradient-to-r from-brand-dark to-[#003d66] text-white px-4 py-2.5 border-b border-gray-300">
+                  <div className="flex items-center gap-4">
+                    <div className="w-20 flex-shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wide">Estado</span>
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
+                      <span className="text-xs font-semibold uppercase tracking-wide">Empresa</span>
+                    </div>
+                    <div className="w-36 flex-shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wide">RFC</span>
+                    </div>
+                    <div className="w-36 flex-shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wide">Industria</span>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <span className="text-xs font-semibold uppercase tracking-wide">Acciones</span>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="divide-y divide-gray-200">
                   {filteredCompanies.length === 0 && (
                     <div className="p-8 text-center text-gray-500 text-sm">
@@ -258,86 +336,169 @@ export default function CompaniesAdminPage() {
                     return (
                       <div
                         key={company.id}
-                        className="p-4 hover:bg-gray-50 transition-colors"
+                        className="p-3 sm:p-4 hover:bg-gray-50 transition-colors"
                       >
-                        {/* Layout compacto: info a la izquierda, badges y botones a la derecha en desktop */}
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                          {/* Información de la empresa */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start gap-2 mb-1">
-                              <Building2 className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                              <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-base text-gray-900 break-words">{company.name}</h3>
+                        {/* Mobile: Layout compacto vertical */}
+                        <div className="flex flex-col gap-2 lg:hidden">
+                          {/* Header con nombre y estado */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
+                              <Building2 className="w-4 h-4 text-brand-dark flex-shrink-0 mt-0.5" />
+                              <div className="min-w-0 flex-1">
+                                <h3 className="font-semibold text-sm text-gray-900 leading-tight">{company.name}</h3>
                                 {company.legal_name && (
-                                  <p className="text-sm text-gray-600 break-words">{company.legal_name}</p>
+                                  <p className="text-xs text-gray-600 leading-tight mt-0.5">{company.legal_name}</p>
                                 )}
                               </div>
-                              <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
-                                company.is_active
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-gray-100 text-gray-600 border border-gray-300'
-                              }`}>
-                                {company.is_active ? 'Activa' : 'Inactiva'}
+                            </div>
+                            <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded font-medium ${
+                              company.is_active
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {company.is_active ? 'Activa' : 'Inactiva'}
+                            </span>
+                          </div>
+                          
+                          {/* Info condensada en una línea */}
+                          <div className="flex items-center gap-3 text-xs text-gray-600 ml-6">
+                            {company.tax_id && (
+                              <span className="truncate">
+                                <span className="font-medium">RFC:</span> {company.tax_id}
                               </span>
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-0.5 ml-7">
-                              {company.tax_id && (
-                                <p>
-                                  <span className="font-medium">RFC:</span> {company.tax_id}
-                                </p>
-                              )}
-                              {company.industry && (
-                                <p>
-                                  <span className="font-medium">Industria:</span> {company.industry}
-                                </p>
-                              )}
-                            </div>
-                            <p className="text-xs text-gray-500 mt-1 ml-7">
-                              ID: {company.id.substring(0, 8)}...
-                            </p>
+                            )}
+                            {company.industry && (
+                              <span className="truncate">
+                                <span className="font-medium">•</span> {company.industry}
+                              </span>
+                            )}
                           </div>
 
-                          {/* Botones de acción - compactos en desktop, full width en móvil */}
-                          <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
+                          {/* Botones en grid 2x2 */}
+                          <div className="grid grid-cols-2 gap-2 mt-1">
                             <button
                               disabled={busy}
                               onClick={() => handleView(company)}
-                              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                              title="Ver detalles"
+                              className="flex items-center justify-center gap-1 px-2 py-1.5 rounded border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white transition-colors text-xs font-medium disabled:opacity-50"
                             >
-                              <Eye className="w-4 h-4" />
-                              <span>Ver detalles</span>
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Ver</span>
                             </button>
 
                             <button
                               disabled={busy}
                               onClick={() => handleEdit(company)}
-                              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                              title="Editar empresa"
+                              className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors text-xs font-medium disabled:opacity-50"
                             >
-                              <Edit className="w-4 h-4" />
+                              <Edit className="w-3.5 h-3.5" />
                               <span>Editar</span>
                             </button>
 
                             <button
                               disabled={busy}
                               onClick={() => handleAssignUsers(company)}
-                              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                              title="Asignar usuarios"
+                              className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-xs font-medium disabled:opacity-50"
                             >
-                              <Users className="w-4 h-4" />
-                              <span>Asignar usuarios</span>
+                              <Users className="w-3.5 h-3.5" />
+                              <span>Usuarios</span>
                             </button>
 
                             {isSuper && (
                               <button
                                 disabled={busy}
                                 onClick={() => setShowDelete({ open: true, company })}
-                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-accent text-white hover:bg-brand-accentDark transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
-                                title="Eliminar empresa"
+                                className="flex items-center justify-center gap-1 px-2 py-1.5 rounded bg-brand-accent text-white hover:bg-brand-accentDark transition-colors text-xs font-medium disabled:opacity-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Eliminar</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Desktop: Layout horizontal tipo tabla */}
+                        <div className="hidden lg:flex lg:items-center lg:gap-4">
+                          {/* Columna 1: Estado (80px) */}
+                          <div className="w-20 flex-shrink-0">
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                              company.is_active
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-gray-100 text-gray-600 border border-gray-300'
+                            }`}>
+                              {company.is_active ? 'Activa' : 'Inactiva'}
+                            </span>
+                          </div>
+
+                          {/* Columna 2: Nombre y razón social (flex-1, min 200px) */}
+                          <div className="flex-1 min-w-[200px]">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-brand-dark flex-shrink-0" />
+                              <div className="min-w-0">
+                                <h3 className="font-semibold text-sm text-gray-900 truncate">{company.name}</h3>
+                                {company.legal_name && (
+                                  <p className="text-xs text-gray-600 truncate">{company.legal_name}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Columna 3: RFC (150px) */}
+                          <div className="w-36 flex-shrink-0">
+                            <p className="text-xs text-gray-600 truncate">
+                              {company.tax_id ? (
+                                <>
+                                  <span className="font-medium">RFC:</span> {company.tax_id}
+                                </>
+                              ) : (
+                                <span className="text-gray-400">Sin RFC</span>
+                              )}
+                            </p>
+                          </div>
+
+                          {/* Columna 4: Industria (150px) */}
+                          <div className="w-36 flex-shrink-0">
+                            <p className="text-xs text-gray-600 truncate">
+                              {company.industry || <span className="text-gray-400">Sin industria</span>}
+                            </p>
+                          </div>
+
+                          {/* Columna 5: Acciones */}
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button
+                              disabled={busy}
+                              onClick={() => handleView(company)}
+                              className="p-1.5 rounded border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white transition-colors disabled:opacity-50"
+                              title="Ver detalles"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              disabled={busy}
+                              onClick={() => handleEdit(company)}
+                              className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              disabled={busy}
+                              onClick={() => handleAssignUsers(company)}
+                              className="p-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                              title="Asignar usuarios"
+                            >
+                              <Users className="w-4 h-4" />
+                            </button>
+
+                            {isSuper && (
+                              <button
+                                disabled={busy}
+                                onClick={() => setShowDelete({ open: true, company })}
+                                className="p-1.5 rounded bg-brand-accent text-white hover:bg-brand-accentDark transition-colors disabled:opacity-50"
+                                title="Eliminar"
                               >
                                 <Trash2 className="w-4 h-4" />
-                                <span>Eliminar</span>
                               </button>
                             )}
                           </div>
