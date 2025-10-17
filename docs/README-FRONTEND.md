@@ -153,6 +153,247 @@ Las páginas de administración usan un diseño compacto y eficiente:
 
 Ejemplo de referencia: `app/admin/roles/page.tsx`
 
+### Patrón de diseño: Gestión de Empresas
+
+La página de Gestión de Empresas (`app/admin/companies/page.tsx`) implementa el **patrón de diseño estándar** para todas las pantallas de administración del sistema. Este patrón garantiza consistencia, usabilidad y experiencia de usuario optimizada tanto en desktop como en mobile.
+
+#### Estructura general
+
+**1. Header con título y acción principal**
+```tsx
+<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  <div>
+    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de [Módulo]</h1>
+    <p className="text-gray-600 mt-1">Descripción breve del módulo</p>
+  </div>
+  <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium">
+    <Plus className="w-4 h-4" />
+    <span>Nueva [Entidad]</span>
+  </button>
+</div>
+```
+
+**2. Tarjetas de estadísticas (KPIs)**
+
+**Desktop:** Grid de 3 columnas con tarjetas completas
+```tsx
+<div className="hidden sm:grid sm:grid-cols-3 gap-4">
+  <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
+    {/* Contenido completo */}
+  </div>
+</div>
+```
+
+**Mobile:** Carrusel horizontal con scroll
+```tsx
+<div className="sm:hidden overflow-x-auto scrollbar-hide -mx-4 px-4">
+  <div className="flex gap-3 pb-2">
+    <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-5 text-white flex-shrink-0 w-[280px]">
+      {/* Tarjeta con ancho fijo para scroll horizontal */}
+    </div>
+  </div>
+</div>
+```
+
+**CSS requerido para carrusel:** En `app/globals.css`:
+```css
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+```
+
+**3. Búsqueda/Filtros**
+```tsx
+<div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+  <input
+    value={search}
+    onChange={e => setSearch(e.target.value)}
+    placeholder="Buscar por [criterios]..."
+    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
+  />
+</div>
+```
+
+**4. Listado con efecto striped**
+
+**Header de tabla (solo desktop):**
+```tsx
+<div className="hidden lg:block bg-gradient-to-r from-brand-dark to-[#003d66] text-white px-4 py-2.5 border-b border-gray-300">
+  <div className="flex items-center gap-4">
+    <div className="w-20 flex-shrink-0">
+      <span className="text-xs font-semibold uppercase tracking-wide">Columna 1</span>
+    </div>
+    {/* Más columnas... */}
+  </div>
+</div>
+```
+
+**Efecto striped en filas:**
+```tsx
+{filteredItems.map((item, index) => {
+  const isEven = index % 2 === 0
+  const bgColor = isEven ? 'bg-white' : 'bg-gray-100'
+  const hoverColor = isEven ? 'hover:bg-gray-50' : 'hover:bg-gray-200'
+  
+  return (
+    <div
+      key={item.id}
+      className={`p-3 sm:p-4 ${bgColor} ${hoverColor} transition-colors border-b border-gray-200 last:border-b-0`}
+    >
+      {/* Contenido... */}
+    </div>
+  )
+})}
+```
+
+**5. Layout responsive para cada item**
+
+**Mobile (vertical stack):**
+```tsx
+<div className="flex flex-col gap-2 lg:hidden">
+  {/* Header con nombre y badge */}
+  <div className="flex items-start justify-between gap-2">
+    <div className="flex items-start gap-2 flex-1 min-w-0">
+      <Icon className="w-4 h-4 text-brand-dark flex-shrink-0 mt-0.5" />
+      <div className="min-w-0 flex-1">
+        <h3 className="font-semibold text-sm text-gray-900 leading-tight">{item.name}</h3>
+        <p className="text-xs text-gray-600 leading-tight mt-0.5">{item.subtitle}</p>
+      </div>
+    </div>
+    <span className="badge">Estado</span>
+  </div>
+  
+  {/* Info condensada */}
+  <div className="flex items-center gap-3 text-xs text-gray-600 ml-6">
+    <span><strong>Campo:</strong> {item.field1}</span>
+    <span>• {item.field2}</span>
+  </div>
+
+  {/* Botones en grid adaptativo */}
+  <div className={`grid gap-2 mt-1 ${hasDeletePermission ? 'grid-cols-3' : 'grid-cols-2'}`}>
+    <button className="btn-primary-sm">Editar</button>
+    <button className="btn-secondary-sm">Acción 2</button>
+    {hasDeletePermission && <button className="btn-danger-sm">Eliminar</button>}
+  </div>
+</div>
+```
+
+**Desktop (horizontal table-like):**
+```tsx
+<div className="hidden lg:flex lg:items-center lg:gap-4">
+  {/* Columnas con anchos definidos */}
+  <div className="w-20 flex-shrink-0">
+    <span className="badge">Estado</span>
+  </div>
+  
+  <div className="flex-1 min-w-[200px]">
+    <div className="flex items-center gap-2">
+      <Icon className="w-4 h-4 text-brand-dark flex-shrink-0" />
+      <div className="min-w-0">
+        <h3 className="font-semibold text-sm text-gray-900 truncate">{item.name}</h3>
+        <p className="text-xs text-gray-600 truncate">{item.subtitle}</p>
+      </div>
+    </div>
+  </div>
+
+  <div className="w-36 flex-shrink-0">
+    <p className="text-xs text-gray-600 truncate">{item.field1}</p>
+  </div>
+
+  {/* Acciones: solo iconos con tooltips */}
+  <div className="flex items-center gap-1.5 flex-shrink-0">
+    <button className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700" title="Editar">
+      <Edit className="w-4 h-4" />
+    </button>
+    <button className="p-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700" title="Acción">
+      <Icon className="w-4 h-4" />
+    </button>
+    {hasDeletePermission && (
+      <button className="p-1.5 rounded bg-brand-accent text-white hover:bg-brand-accentDark" title="Eliminar">
+        <Trash2 className="w-4 h-4" />
+      </button>
+    )}
+  </div>
+</div>
+```
+
+#### Principios de diseño aplicados
+
+**✅ Simplicidad funcional**
+- **NO** incluir pantallas redundantes (ej: "Ver detalles" cuando "Editar" ya muestra todo)
+- Consolidar funciones en una sola pantalla con permisos granulares
+
+**✅ Contraste visual**
+- Efecto striped con `bg-white` / `bg-gray-100` para distinguir filas
+- Bordes sutiles `border-gray-200` entre elementos
+- Estados hover diferenciados
+
+**✅ Responsive by design**
+- Mobile: Layout vertical, carrusel de KPIs, botones full-width
+- Desktop: Layout horizontal tipo tabla, grid de KPIs, iconos compactos
+- Breakpoints: `sm:` (640px), `lg:` (1024px)
+
+**✅ Feedback visual**
+- Transiciones suaves: `transition-colors`
+- Estados disabled: `disabled:opacity-50`
+- Loading states con spinners centrados
+
+**✅ Accesibilidad**
+- Tooltips descriptivos en botones de solo icono
+- Contrastes de color WCAG AA
+- Textos con `truncate` en lugar de overflow
+
+#### Cómo referenciar este patrón
+
+Cuando necesites crear o modificar una pantalla de administración:
+
+1. **Copia la estructura base** de `app/admin/companies/page.tsx`
+2. **Adapta los siguientes elementos:**
+   - Título del módulo y descripción
+   - Campos de las columnas (mantén la estructura de anchos)
+   - Acciones específicas (mantén los colores semánticos)
+   - Estados/badges según tu entidad
+3. **Mantén la filosofía:**
+   - Carrusel en mobile para KPIs
+   - Efecto striped en listados
+   - Sin redundancia de pantallas
+   - Layout responsive nativo
+
+**Referencia visual completa:** Ver `app/admin/companies/page.tsx` líneas 1-490
+
+**Componentes reutilizables:**
+- Header: líneas 170-184
+- KPIs Desktop: líneas 245-283
+- KPIs Mobile (carrusel): líneas 189-243
+- Búsqueda: líneas 286-293
+- Header tabla: líneas 307-327
+- Items con striped: líneas 336-470
+
+**Clases CSS clave:**
+- Carrusel: `overflow-x-auto scrollbar-hide -mx-4 px-4`
+- Striped: `bg-white` / `bg-gray-100` alternados
+- Responsive grid botones: `grid grid-cols-2` o `grid-cols-3`
+- Header tabla: `bg-gradient-to-r from-brand-dark to-[#003d66]`
+
+#### Ejemplo de aplicación
+
+Para crear "Gestión de Partners":
+1. Copiar `app/admin/companies/page.tsx` → `app/admin/partners/page.tsx`
+2. Reemplazar:
+   - `Company` → `Partner`
+   - `companies` → `partners`
+   - Campos: adaptar columnas a modelo Partner
+   - KPIs: Total Partners, Activos, Inactivos
+3. Mantener intacto:
+   - Estructura del carrusel mobile
+   - Efecto striped
+   - Layout responsive
+   - Sistema de botones con permisos
+
 ## Avatares de usuario
 
 Componentes
