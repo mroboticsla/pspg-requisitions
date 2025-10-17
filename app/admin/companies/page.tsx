@@ -31,20 +31,6 @@ export default function CompaniesAdminPage() {
   const [busy, setBusy] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedCompany, setSelectedCompany] = useState<CompanyWithUsers | null>(null)
-
-  // Form state
-  const [form, setForm] = useState({
-    id: '',
-    name: '',
-    legal_name: '',
-    tax_id: '',
-    industry: '',
-    website: '',
-    address: { street: '', city: '', state: '', zip: '', country: '' },
-    contact_info: { email: '', phone: '', mobile: '' },
-    is_active: true
-  })
-  const [formErrors, setFormErrors] = useState<{ name?: string; tax_id?: string }>({})
   
   // User assignment state
   const [selectedUserId, setSelectedUserId] = useState('')
@@ -111,52 +97,14 @@ export default function CompaniesAdminPage() {
     }
   }, [loading, user, profile, refresh])
 
-  const resetForm = () => {
-    setForm({
-      id: '',
-      name: '',
-      legal_name: '',
-      tax_id: '',
-      industry: '',
-      website: '',
-      address: { street: '', city: '', state: '', zip: '', country: '' },
-      contact_info: { email: '', phone: '', mobile: '' },
-      is_active: true
-    })
-    setFormErrors({})
-  }
+
 
   const handleCreate = () => {
-    resetForm()
-    setViewMode('create')
+    router.push('/admin/companies/new')
   }
 
   const handleEdit = async (company: Company) => {
-    const address = company.address || {}
-    const contact_info = company.contact_info || {}
-    
-    setForm({
-      id: company.id,
-      name: company.name,
-      legal_name: company.legal_name || '',
-      tax_id: company.tax_id || '',
-      industry: company.industry || '',
-      website: company.website || '',
-      address: { 
-        street: address.street || '', 
-        city: address.city || '', 
-        state: address.state || '', 
-        zip: address.zip || '', 
-        country: address.country || '' 
-      },
-      contact_info: { 
-        email: contact_info.email || '', 
-        phone: contact_info.phone || '', 
-        mobile: contact_info.mobile || '' 
-      },
-      is_active: company.is_active
-    })
-    setViewMode('edit')
+    router.push(`/admin/companies/${company.id}`)
   }
 
   const handleView = async (company: Company) => {
@@ -201,58 +149,7 @@ export default function CompaniesAdminPage() {
     }
   }
 
-  const validateForm = (): boolean => {
-    const errors: { name?: string; tax_id?: string } = {}
-    
-    if (!form.name.trim()) {
-      errors.name = 'El nombre de la empresa es requerido'
-    }
-    
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
-  }
 
-  const handleSave = async () => {
-    if (!validateForm()) return
-
-    try {
-      setBusy(true)
-      const token = await getToken()
-      const action = viewMode === 'create' ? 'create-company' : 'update-company'
-      const payload: any = {
-        action,
-        name: form.name.trim(),
-        legal_name: form.legal_name.trim() || null,
-        tax_id: form.tax_id.trim() || null,
-        industry: form.industry.trim() || null,
-        website: form.website.trim() || null,
-        address: form.address,
-        contact_info: form.contact_info,
-        is_active: form.is_active
-      }
-      
-      if (viewMode === 'edit') {
-        payload.companyId = form.id
-      }
-
-      const res = await fetch('/api/admin/secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'Error al guardar empresa')
-
-      success(viewMode === 'create' ? 'Empresa creada exitosamente' : 'Empresa actualizada exitosamente')
-      setViewMode('list')
-      resetForm()
-      refresh()
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const handleDeleteConfirm = async () => {
     if (!showDelete.company) return
@@ -350,6 +247,15 @@ export default function CompaniesAdminPage() {
     return partners.filter(p => !assignedUserIds.has(p.id))
   }, [partners, selectedCompany])
 
+  // Estadísticas rápidas
+  const stats = useMemo(() => {
+    const total = companies.length
+    const active = companies.filter(c => c.is_active).length
+    const inactive = total - active
+    
+    return { total, active, inactive }
+  }, [companies])
+
   // Mostrar loading mientras se verifica la sesión
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -364,405 +270,194 @@ export default function CompaniesAdminPage() {
   return (
     <RequireRoleClient allow={['superadmin', 'admin']}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Gestión de Empresas</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">Administre las empresas y sus usuarios asignados</p>
-          </div>
-          {viewMode === 'list' && (
-            <button
-              onClick={handleCreate}
-              disabled={busy}
-              className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
-              <Plus className="w-5 h-5" />
-              <span className="sm:inline">Nueva Empresa</span>
-            </button>
-          )}
-        </div>
-
         {/* Lista de empresas */}
         {viewMode === 'list' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b border-gray-200">
+          <div className="space-y-4 p-4 sm:p-6">
+            {/* Header compacto */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestión de Empresas</h1>
+                <p className="text-gray-600 mt-1">Administre las empresas y sus usuarios asignados</p>
+              </div>
+              <button 
+                onClick={handleCreate}
+                disabled={busy}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark disabled:opacity-50 transition-colors w-full sm:w-auto shadow-sm text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Nueva Empresa</span>
+              </button>
+            </div>
+
+            {/* Estadísticas compactas */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-100 text-sm font-medium">Total Empresas</p>
+                    <p className="text-3xl font-bold mt-2">{stats.total}</p>
+                  </div>
+                  <Building2 className="w-12 h-12 text-gray-200 opacity-80" />
+                </div>
+                <div className="mt-4 flex items-center text-gray-100 text-sm">
+                  <Building2 className="w-4 h-4 mr-1" />
+                  Registradas
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-pink-100 text-sm font-medium">Empresas Activas</p>
+                    <p className="text-3xl font-bold mt-2">{stats.active}</p>
+                  </div>
+                  <Building2 className="w-12 h-12 text-pink-100 opacity-80" />
+                </div>
+                <div className="mt-4 flex items-center text-pink-100 text-sm">
+                  <Building2 className="w-4 h-4 mr-1" />
+                  Operativas
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-100 text-sm font-medium">Inactivas</p>
+                    <p className="text-3xl font-bold mt-2">{stats.inactive}</p>
+                  </div>
+                  <Building2 className="w-12 h-12 text-gray-200 opacity-80" />
+                </div>
+                <div className="mt-4 flex items-center text-gray-100 text-sm">
+                  <Building2 className="w-4 h-4 mr-1" />
+                  Suspendidas
+                </div>
+              </div>
+            </div>
+
+            {/* Búsqueda */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
               <input
-                type="text"
-                placeholder="Buscar por nombre, razón social o RFC..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-transparent"
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por nombre, razón social o RFC..."
+                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
               />
             </div>
 
+            {/* Listado de empresas - diseño compacto */}
             {busy && (
-              <div className="p-8 text-center">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
                 <p className="text-gray-600">Cargando empresas...</p>
               </div>
             )}
 
-            {!busy && filteredCompanies.length === 0 && (
-              <div className="p-8 text-center text-gray-500">
-                {search ? 'No se encontraron empresas con ese criterio' : 'No hay empresas registradas'}
-              </div>
-            )}
-
-            {!busy && filteredCompanies.length > 0 && (
-              <div className="overflow-x-auto -mx-4 sm:mx-0">
-                <div className="inline-block min-w-full align-middle">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-brand-dark">
-                      <tr>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                          Empresa
-                        </th>
-                        <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                          RFC/Tax ID
-                        </th>
-                        <th className="hidden lg:table-cell px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                          Industria
-                        </th>
-                        <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
-                          Estado
-                        </th>
-                        <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredCompanies.map((company) => (
-                        <tr key={company.id} className="hover:bg-gray-50">
-                          <td className="px-3 sm:px-6 py-4">
-                            <div className="flex items-start sm:items-center">
-                              <Building2 className="w-5 h-5 text-gray-400 mr-2 sm:mr-3 flex-shrink-0 mt-0.5 sm:mt-0" />
-                              <div className="min-w-0">
-                                <div className="text-sm font-medium text-gray-900 truncate">{company.name}</div>
+            {!busy && (
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
+                <div className="divide-y divide-gray-200">
+                  {filteredCompanies.length === 0 && (
+                    <div className="p-8 text-center text-gray-500 text-sm">
+                      {search.trim()
+                        ? 'No se encontraron empresas con los criterios de búsqueda'
+                        : 'No hay empresas registradas aún'}
+                    </div>
+                  )}
+                  {filteredCompanies.map((company) => {
+                    return (
+                      <div
+                        key={company.id}
+                        className="p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        {/* Layout compacto: info a la izquierda, badges y botones a la derecha en desktop */}
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                          {/* Información de la empresa */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-2 mb-1">
+                              <Building2 className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-base text-gray-900 break-words">{company.name}</h3>
                                 {company.legal_name && (
-                                  <div className="text-sm text-gray-500 truncate">{company.legal_name}</div>
+                                  <p className="text-sm text-gray-600 break-words">{company.legal_name}</p>
                                 )}
-                                {/* Mostrar RFC e Industria en móviles */}
-                                <div className="md:hidden text-xs text-gray-500 mt-1 space-y-0.5">
-                                  {company.tax_id && <div>RFC: {company.tax_id}</div>}
-                                  {company.industry && <div>{company.industry}</div>}
-                                </div>
                               </div>
+                              <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded font-medium flex items-center gap-1 ${
+                                company.is_active
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : 'bg-gray-100 text-gray-600 border border-gray-300'
+                              }`}>
+                                {company.is_active ? 'Activa' : 'Inactiva'}
+                              </span>
                             </div>
-                          </td>
-                          <td className="hidden md:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {company.tax_id || '-'}
-                          </td>
-                          <td className="hidden lg:table-cell px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {company.industry || '-'}
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              company.is_active
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {company.is_active ? 'Activa' : 'Inactiva'}
-                            </span>
-                          </td>
-                          <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex items-center justify-end gap-1 sm:gap-2">
-                              <button
-                                onClick={() => handleView(company)}
-                                className="text-brand-dark hover:text-brand-accent transition-colors p-1"
-                                title="Ver detalles"
-                              >
-                                <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-                              </button>
-                              <button
-                                onClick={() => handleEdit(company)}
-                                className="text-brand-dark hover:text-brand-accent transition-colors p-1"
-                                title="Editar"
-                              >
-                                <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
-                              </button>
-                              <button
-                                onClick={() => handleAssignUsers(company)}
-                                className="text-brand-dark hover:text-brand-accent transition-colors p-1"
-                                title="Asignar usuarios"
-                              >
-                                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-                              </button>
-                              {isSuper && (
-                                <button
-                                  onClick={() => setShowDelete({ open: true, company })}
-                                  className="text-red-600 hover:text-red-800 transition-colors p-1"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                                </button>
+                            <div className="text-sm text-gray-600 space-y-0.5 ml-7">
+                              {company.tax_id && (
+                                <p>
+                                  <span className="font-medium">RFC:</span> {company.tax_id}
+                                </p>
+                              )}
+                              {company.industry && (
+                                <p>
+                                  <span className="font-medium">Industria:</span> {company.industry}
+                                </p>
                               )}
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <p className="text-xs text-gray-500 mt-1 ml-7">
+                              ID: {company.id.substring(0, 8)}...
+                            </p>
+                          </div>
+
+                          {/* Botones de acción - compactos en desktop, full width en móvil */}
+                          <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
+                            <button
+                              disabled={busy}
+                              onClick={() => handleView(company)}
+                              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
+                              title="Ver detalles"
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span>Ver detalles</span>
+                            </button>
+
+                            <button
+                              disabled={busy}
+                              onClick={() => handleEdit(company)}
+                              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
+                              title="Editar empresa"
+                            >
+                              <Edit className="w-4 h-4" />
+                              <span>Editar</span>
+                            </button>
+
+                            <button
+                              disabled={busy}
+                              onClick={() => handleAssignUsers(company)}
+                              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
+                              title="Asignar usuarios"
+                            >
+                              <Users className="w-4 h-4" />
+                              <span>Asignar usuarios</span>
+                            </button>
+
+                            {isSuper && (
+                              <button
+                                disabled={busy}
+                                onClick={() => setShowDelete({ open: true, company })}
+                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md bg-brand-accent text-white hover:bg-brand-accentDark transition-colors text-sm font-medium w-full sm:w-auto disabled:opacity-50"
+                                title="Eliminar empresa"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span>Eliminar</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Formulario de creación/edición */}
-        {(viewMode === 'create' || viewMode === 'edit') && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold mb-6">
-              {viewMode === 'create' ? 'Nueva Empresa' : 'Editar Empresa'}
-            </h2>
 
-            <div className="space-y-6">
-              {/* Información básica */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre de la Empresa <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    className={`form-input ${formErrors.name ? 'border-red-500' : ''}`}
-                    placeholder="Ej: Acme Corporation"
-                  />
-                  {formErrors.name && (
-                    <p className="mt-1 text-sm text-red-600">{formErrors.name}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Razón Social
-                  </label>
-                  <input
-                    type="text"
-                    value={form.legal_name}
-                    onChange={(e) => setForm({ ...form, legal_name: e.target.value })}
-                    className="form-input"
-                    placeholder="Ej: Acme Corporation S.A. de C.V."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    RFC / Tax ID
-                  </label>
-                  <input
-                    type="text"
-                    value={form.tax_id}
-                    onChange={(e) => setForm({ ...form, tax_id: e.target.value })}
-                    className={`form-input ${formErrors.tax_id ? 'border-red-500' : ''}`}
-                    placeholder="Ej: ACM123456ABC"
-                  />
-                  {formErrors.tax_id && (
-                    <p className="mt-1 text-sm text-red-600">{formErrors.tax_id}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Industria
-                  </label>
-                  <input
-                    type="text"
-                    value={form.industry}
-                    onChange={(e) => setForm({ ...form, industry: e.target.value })}
-                    className="form-input"
-                    placeholder="Ej: Tecnología, Manufactura, Servicios"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sitio Web
-                  </label>
-                  <input
-                    type="url"
-                    value={form.website}
-                    onChange={(e) => setForm({ ...form, website: e.target.value })}
-                    className="form-input"
-                    placeholder="https://www.ejemplo.com"
-                  />
-                </div>
-              </div>
-
-              {/* Información de contacto */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Información de Contacto</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={form.contact_info.email}
-                      onChange={(e) => setForm({
-                        ...form,
-                        contact_info: { ...form.contact_info, email: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="contacto@empresa.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Teléfono
-                    </label>
-                    <input
-                      type="tel"
-                      value={form.contact_info.phone}
-                      onChange={(e) => setForm({
-                        ...form,
-                        contact_info: { ...form.contact_info, phone: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="+52 55 1234 5678"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Móvil
-                    </label>
-                    <input
-                      type="tel"
-                      value={form.contact_info.mobile}
-                      onChange={(e) => setForm({
-                        ...form,
-                        contact_info: { ...form.contact_info, mobile: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="+52 55 9876 5432"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Dirección */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">Dirección</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Calle
-                    </label>
-                    <input
-                      type="text"
-                      value={form.address.street}
-                      onChange={(e) => setForm({
-                        ...form,
-                        address: { ...form.address, street: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="Calle Principal #123"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ciudad
-                    </label>
-                    <input
-                      type="text"
-                      value={form.address.city}
-                      onChange={(e) => setForm({
-                        ...form,
-                        address: { ...form.address, city: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="Ciudad"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Estado
-                    </label>
-                    <input
-                      type="text"
-                      value={form.address.state}
-                      onChange={(e) => setForm({
-                        ...form,
-                        address: { ...form.address, state: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="Estado"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Código Postal
-                    </label>
-                    <input
-                      type="text"
-                      value={form.address.zip}
-                      onChange={(e) => setForm({
-                        ...form,
-                        address: { ...form.address, zip: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="12345"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      País
-                    </label>
-                    <input
-                      type="text"
-                      value={form.address.country}
-                      onChange={(e) => setForm({
-                        ...form,
-                        address: { ...form.address, country: e.target.value }
-                      })}
-                      className="form-input"
-                      placeholder="México"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Estado */}
-              {viewMode === 'edit' && (
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.is_active}
-                      onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                      className="rounded border-gray-300 text-brand-dark focus:ring-brand-accent"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">Empresa activa</span>
-                  </label>
-                </div>
-              )}
-
-              {/* Botones de acción */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={() => {
-                    setViewMode('list')
-                    resetForm()
-                  }}
-                  disabled={busy}
-                  className="btn-secondary"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={busy}
-                  className="btn-primary"
-                >
-                  {busy ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Vista de detalles */}
         {viewMode === 'view' && selectedCompany && (
