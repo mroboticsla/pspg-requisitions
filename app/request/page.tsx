@@ -397,8 +397,7 @@ export default function RequisitionForm() {
   )
 
   return (
-    <div className="py-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         {/* Header with instructions */}
         <div className="bg-brand-dark text-white p-4">
@@ -939,7 +938,6 @@ export default function RequisitionForm() {
           </div>
         </form>
       </div>
-    </div>
     </div>
   )
 }
