@@ -33,7 +33,7 @@ export const AboutSection: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Acerca de PSPG Requisitions
+            Acerca de PSP Group
           </h2>
           <div className="w-20 h-1 bg-brand-accent mx-auto mb-6"></div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -76,7 +76,7 @@ export const AboutSection: React.FC = () => {
               Nuestra Historia
             </h3>
             <p className="text-gray-600 mb-4">
-              Fundada en 2010, PSPG Requisitions nació con la visión de transformar
+              Fundada en 2010, PSP Group nació con la visión de transformar
               la manera en que las empresas encuentran talento y los profesionales
               descubren oportunidades.
             </p>

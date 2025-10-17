@@ -40,7 +40,7 @@ export default function AboutPage() {
   ];
 
   const milestones = [
-    { year: '2010', event: 'Fundación de PSPG Requisitions' },
+    { year: '2010', event: 'Fundación de PSP Group' },
     { year: '2013', event: 'Expansión a mercados internacionales' },
     { year: '2016', event: 'Alcanzamos 1,000 colocaciones exitosas' },
     { year: '2019', event: 'Lanzamiento de plataforma digital' },

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Building2, Menu, X } from 'lucide-react';
+import Image from 'next/image'; // Import Image from next/image
 
 export const PublicNavbar: React.FC = () => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -20,11 +21,14 @@ export const PublicNavbar: React.FC = () => {
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-2">
-              <Building2 className="h-8 w-8 text-brand-accent" />
-              <span className="text-xl font-bold text-brand-dark">PSPG Requisitions</span>
+          {/* Logo y título */}
+          <div className="flex items-center min-w-0 flex-1">
+            <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+              <Image src="/images/favicon.png" alt="PSP logo" width={40} height={40} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0" priority />
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">PSP Group</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Sistema de Requisiciones</p>
+              </div>
             </Link>
           </div>
 

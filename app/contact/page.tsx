@@ -31,7 +31,7 @@ export default function ContactPage() {
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">Dirección</h3>
                 <p className="text-gray-600 text-sm">
-                  Ciudad de Panamá, Panamá<br />
+                  Ciudad de México, México<br />
                   Edificio Empresarial, Piso 10
                 </p>
               </div>
@@ -42,7 +42,7 @@ export default function ContactPage() {
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">Teléfono</h3>
                 <p className="text-gray-600 text-sm">
-                  +507 6000-0000<br />
+                  +52 55 2662 2966<br />
                   +507 6000-0001
                 </p>
               </div>
@@ -53,7 +53,7 @@ export default function ContactPage() {
                 </div>
                 <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
                 <p className="text-gray-600 text-sm">
-                  info@pspg.com<br />
+                  info@pspgroup.com.mx<br />
                   contact@pspg.com
                 </p>
               </div>

@@ -54,7 +54,7 @@ export const ScheduleSection: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <h4 className="font-semibold text-gray-900 mb-1">Teléfono</h4>
-                    <p className="text-gray-600 text-sm">+507 6000-0000</p>
+                    <p className="text-gray-600 text-sm">+52 55 2662 2966</p>
                     <p className="text-gray-600 text-sm">+507 6000-0001</p>
                   </div>
                 </div>
@@ -67,7 +67,7 @@ export const ScheduleSection: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <h4 className="font-semibold text-gray-900 mb-1">Email</h4>
-                    <p className="text-gray-600 text-sm">info@pspg.com</p>
+                    <p className="text-gray-600 text-sm">info@pspgroup.com.mx</p>
                     <p className="text-gray-600 text-sm">contact@pspg.com</p>
                   </div>
                 </div>

@@ -17,7 +17,7 @@ Esta guía te ayudará a personalizar el portal público con la información rea
 **Buscar y reemplazar:**
 ```typescript
 // CAMBIAR:
-+507 6000-0000
++52 55 2662 2966
 +507 6000-0001
 
 // POR:
@@ -34,7 +34,7 @@ Esta guía te ayudará a personalizar el portal público con la información rea
 **Buscar y reemplazar:**
 ```typescript
 // CAMBIAR:
-info@pspg.com
+info@pspgroup.com.mx
 contact@pspg.com
 
 // POR:
@@ -50,7 +50,7 @@ contacto@tuempresa.com
 **Buscar y reemplazar:**
 ```typescript
 // CAMBIAR:
-Ciudad de Panamá, Panamá
+Ciudad de México, México
 Edificio Empresarial, Piso 10
 
 // POR:
@@ -425,11 +425,11 @@ Luego reemplaza `blue-600` por `brand-primary` en los componentes.
 Agregar o modificar:
 ```typescript
 export const metadata: Metadata = {
-  title: 'PSPG Requisitions | Tu Tagline Aquí',
-  description: 'Descripción de tu empresa para SEO (150-160 caracteres)',
+  title: 'PSP Group | Portal de Empleos y Reclutamiento',
+  description: 'Crea o Aplica a ofertas de trabajo con PSP Group',
   keywords: 'recruitment, headhunting, panama, tu keyword',
   openGraph: {
-    title: 'PSPG Requisitions',
+    title: 'PSP Group',
     description: 'Tu descripción',
     images: ['/images/og-image.jpg'],
   }
