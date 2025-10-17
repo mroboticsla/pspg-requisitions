@@ -44,7 +44,8 @@ export type FieldType =
   | 'checkbox' 
   | 'radio' 
   | 'select' 
-  | 'multi-select';
+  | 'multi-select'
+  | 'currency';
 
 /**
  * Validaciones para campos

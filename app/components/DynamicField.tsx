@@ -6,6 +6,7 @@
 
 import React from 'react';
 import type { FormField, FieldValidation } from '@/lib/types/requisitions';
+import { CurrencyInput, type CurrencyValue } from './CurrencyInput';
 
 interface DynamicFieldProps {
   field: FormField;
@@ -178,6 +179,21 @@ export function DynamicField({
               {field.label}
             </label>
           </div>
+        );
+
+      case 'currency':
+        const currencyValue: CurrencyValue = value || { amount: null, currency: 'USD' };
+        return (
+          <CurrencyInput
+            id={field.name}
+            name={field.name}
+            value={currencyValue}
+            onChange={onChange}
+            disabled={disabled}
+            required={isRequired}
+            placeholder={field.placeholder || '0.00'}
+            error={error}
+          />
         );
 
       default:

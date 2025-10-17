@@ -33,6 +33,7 @@ export default function TemplateSectionsPage() {
   const [showSectionModal, setShowSectionModal] = useState(false);
   const [showFieldModal, setShowFieldModal] = useState(false);
   const [editingSection, setEditingSection] = useState<FormSection | null>(null);
+  const [editingField, setEditingField] = useState<FormField | null>(null);
   const [selectedSection, setSelectedSection] = useState<string>('');
 
   // Formulario de sección
@@ -123,15 +124,31 @@ export default function TemplateSectionsPage() {
     }
   }
 
-  function openFieldModal(sectionId: string) {
+  function openFieldModal(sectionId: string, field?: FormField) {
     setSelectedSection(sectionId);
-    setFieldName('');
-    setFieldLabel('');
-    setFieldType('text');
-    setFieldOptions('');
-    setFieldPlaceholder('');
-    setFieldHelp('');
-    setFieldRequired(false);
+    
+    if (field) {
+      // Modo edición
+      setEditingField(field);
+      setFieldName(field.name);
+      setFieldLabel(field.label);
+      setFieldType(field.field_type);
+      setFieldOptions(field.options?.join('\n') || '');
+      setFieldPlaceholder(field.placeholder || '');
+      setFieldHelp(field.help_text || '');
+      setFieldRequired(field.validation?.required || false);
+    } else {
+      // Modo creación
+      setEditingField(null);
+      setFieldName('');
+      setFieldLabel('');
+      setFieldType('text');
+      setFieldOptions('');
+      setFieldPlaceholder('');
+      setFieldHelp('');
+      setFieldRequired(false);
+    }
+    
     setShowFieldModal(true);
   }
 
@@ -141,7 +158,7 @@ export default function TemplateSectionsPage() {
         ? fieldOptions.split('\n').map((o) => o.trim()).filter(Boolean)
         : undefined;
 
-      await createField({
+      const fieldData = {
         section_id: selectedSection,
         name: fieldName,
         label: fieldLabel,
@@ -150,9 +167,18 @@ export default function TemplateSectionsPage() {
         validation: { required: fieldRequired },
         placeholder: fieldPlaceholder,
         help_text: fieldHelp,
-      });
+      };
+
+      if (editingField) {
+        // Actualizar campo existente
+        await updateField(editingField.id, fieldData);
+      } else {
+        // Crear nuevo campo
+        await createField(fieldData);
+      }
 
       setShowFieldModal(false);
+      setEditingField(null);
       loadTemplate();
     } catch (error) {
       console.error('Error saving field:', error);
@@ -237,7 +263,9 @@ export default function TemplateSectionsPage() {
                         <p className="mt-1 text-sm text-gray-600">{section.description}</p>
                       )}
                       <p className="mt-1 text-xs text-gray-400">
-                        Posición: {section.position} (0 = al final)
+                        {section.position === 0 
+                          ? 'Posición: Al final del formulario' 
+                          : `Posición: ${section.position}`}
                       </p>
                     </div>
 
@@ -288,12 +316,20 @@ export default function TemplateSectionsPage() {
                                 <p className="text-xs text-gray-500 mt-1">{field.help_text}</p>
                               )}
                             </div>
-                            <button
-                              onClick={() => handleDeleteField(field.id)}
-                              className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                            >
-                              Eliminar
-                            </button>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => openFieldModal(section.id, field)}
+                                className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                              >
+                                Editar
+                              </button>
+                              <button
+                                onClick={() => handleDeleteField(field.id)}
+                                className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                              >
+                                Eliminar
+                              </button>
+                            </div>
                           </div>
                         ))}
                     </div>
@@ -348,14 +384,29 @@ export default function TemplateSectionsPage() {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Posición (0 = al final)
+                    Posición en el formulario
                   </label>
-                  <input
-                    type="number"
+                  <select
                     value={sectionPosition}
                     onChange={(e) => setSectionPosition(Number(e.target.value))}
                     className="w-full px-3 py-2 border rounded-md"
-                  />
+                  >
+                    <option value={0}>Al final del formulario (después de todas las secciones estándar)</option>
+                    {template?.sections && template.sections.length > 0 && (
+                      <>
+                        {template.sections
+                          .sort((a, b) => a.position - b.position)
+                          .map((sec, idx) => (
+                            <option key={sec.id} value={idx + 1}>
+                              Después de &quot;{sec.name}&quot;
+                            </option>
+                          ))}
+                      </>
+                    )}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Selecciona dónde se mostrará esta sección en el formulario de requisición
+                  </p>
                 </div>
 
                 <div className="flex items-center">
@@ -392,7 +443,9 @@ export default function TemplateSectionsPage() {
         {showFieldModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
             <div className="bg-white rounded-lg p-8 max-w-lg w-full my-8">
-              <h2 className="text-xl font-bold mb-4">Nuevo Campo</h2>
+              <h2 className="text-xl font-bold mb-4">
+                {editingField ? 'Editar Campo' : 'Nuevo Campo'}
+              </h2>
 
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 <div>
@@ -427,6 +480,7 @@ export default function TemplateSectionsPage() {
                     <option value="text">Texto</option>
                     <option value="textarea">Área de texto</option>
                     <option value="number">Número</option>
+                    <option value="currency">Moneda</option>
                     <option value="date">Fecha</option>
                     <option value="email">Email</option>
                     <option value="phone">Teléfono</option>
@@ -489,10 +543,13 @@ export default function TemplateSectionsPage() {
                   disabled={!fieldName.trim() || !fieldLabel.trim()}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300"
                 >
-                  Crear Campo
+                  {editingField ? 'Actualizar Campo' : 'Crear Campo'}
                 </button>
                 <button
-                  onClick={() => setShowFieldModal(false)}
+                  onClick={() => {
+                    setShowFieldModal(false);
+                    setEditingField(null);
+                  }}
                   className="flex-1 px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300"
                 >
                   Cancelar
