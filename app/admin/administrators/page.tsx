@@ -15,6 +15,7 @@ interface UserRow {
   first_name: string | null
   last_name: string | null
   phone: string | null
+  email?: string | null
   is_active: boolean
   role_id: string | null
   roles?: {
@@ -26,6 +27,37 @@ interface UserRow {
 interface RoleOption {
   id: string
   name: string
+}
+
+// Función para formatear teléfono
+const formatPhoneDisplay = (phone: string | null): string => {
+  if (!phone) return 'Sin teléfono'
+  
+  // Detectar código de país y formatear
+  if (phone.startsWith('+52')) {
+    // México: +52 XXX XXX XXXX
+    const number = phone.slice(3)
+    if (number.length === 10) {
+      return `+52 ${number.slice(0, 3)} ${number.slice(3, 6)} ${number.slice(6)}`
+    }
+  } else if (phone.startsWith('+1')) {
+    // USA/Canadá: +1 (XXX) XXX-XXXX
+    const number = phone.slice(2)
+    if (number.length === 10) {
+      return `+1 (${number.slice(0, 3)}) ${number.slice(3, 6)}-${number.slice(6)}`
+    }
+  } else if (phone.startsWith('+')) {
+    // Otros países: mostrar con espacios
+    const code = phone.match(/^\+\d{1,4}/)?.[0] || ''
+    const number = phone.slice(code.length)
+    if (number.length >= 8) {
+      const parts = number.match(/.{1,4}/g) || []
+      return `${code} ${parts.join(' ')}`
+    }
+  }
+  
+  // Fallback: mostrar tal cual
+  return phone
 }
 
 // Roles de administradores del sistema
@@ -72,7 +104,28 @@ export default function AdministratorsPage() {
         const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : ''
         return ADMIN_ROLES.includes(roleName)
       })
-      setUsers(adminUsers)
+
+      // Cargar emails para cada usuario
+      const usersWithEmails = await Promise.all(
+        adminUsers.map(async (u: UserRow) => {
+          try {
+            const emailRes = await fetch('/api/admin/secure', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ action: 'get-user-email', userId: u.id })
+            })
+            const emailBody = await emailRes.json()
+            return {
+              ...u,
+              email: emailRes.ok && emailBody.data?.email ? emailBody.data.email : null
+            }
+          } catch {
+            return { ...u, email: null }
+          }
+        })
+      )
+      
+      setUsers(usersWithEmails)
 
       // Obtener solo roles de administrador
       const r2 = await fetch('/api/admin/secure', {
@@ -111,8 +164,9 @@ export default function AdministratorsPage() {
     return users.filter(u => {
       const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase()
       const phone = u.phone || ''
+      const email = u.email || ''
       const roleName = typeof u.roles === 'object' && u.roles ? u.roles.name : ''
-      return fullName.includes(s) || phone.includes(s) || roleName.toLowerCase().includes(s)
+      return fullName.includes(s) || phone.includes(s) || email.toLowerCase().includes(s) || roleName.toLowerCase().includes(s)
     })
   }, [users, search])
 
@@ -360,7 +414,7 @@ export default function AdministratorsPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nombre, teléfono o rol..."
+              placeholder="Buscar por nombre, correo, teléfono o rol..."
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm"
             />
           </div>
@@ -381,10 +435,13 @@ export default function AdministratorsPage() {
                   <div className="w-20 flex-shrink-0">
                     <span className="text-xs font-semibold uppercase tracking-wide">Estado</span>
                   </div>
-                  <div className="flex-1 min-w-[200px]">
+                  <div className="flex-1 min-w-[180px]">
                     <span className="text-xs font-semibold uppercase tracking-wide">Administrador</span>
                   </div>
-                  <div className="w-32 flex-shrink-0">
+                  <div className="w-48 flex-shrink-0">
+                    <span className="text-xs font-semibold uppercase tracking-wide">Correo</span>
+                  </div>
+                  <div className="w-36 flex-shrink-0">
                     <span className="text-xs font-semibold uppercase tracking-wide">Teléfono</span>
                   </div>
                   <div className="w-32 flex-shrink-0">
@@ -435,8 +492,11 @@ export default function AdministratorsPage() {
                                   </span>
                                 )}
                               </div>
+                              {admin.email && (
+                                <p className="text-xs text-gray-600 leading-tight mt-0.5">📧 {admin.email}</p>
+                              )}
                               {admin.phone && (
-                                <p className="text-xs text-gray-600 leading-tight mt-0.5">📱 {admin.phone}</p>
+                                <p className="text-xs text-gray-600 leading-tight mt-0.5">📱 {formatPhoneDisplay(admin.phone)}</p>
                               )}
                             </div>
                           </div>
@@ -512,8 +572,8 @@ export default function AdministratorsPage() {
                           </span>
                         </div>
 
-                        {/* Columna 2: Nombre (flex-1, min 200px) */}
-                        <div className="flex-1 min-w-[200px]">
+                        {/* Columna 2: Nombre (flex-1, min 180px) */}
+                        <div className="flex-1 min-w-[180px]">
                           <div className="flex items-center gap-2">
                             <Shield className="w-4 h-4 text-brand-dark flex-shrink-0" />
                             <div className="min-w-0">
@@ -529,14 +589,21 @@ export default function AdministratorsPage() {
                           </div>
                         </div>
 
-                        {/* Columna 3: Teléfono (130px) */}
-                        <div className="w-32 flex-shrink-0">
-                          <p className="text-xs text-gray-600 truncate">
-                            {admin.phone || <span className="text-gray-400">Sin teléfono</span>}
+                        {/* Columna 3: Correo (190px) */}
+                        <div className="w-48 flex-shrink-0">
+                          <p className="text-xs text-gray-600 truncate" title={admin.email || 'Sin correo'}>
+                            {admin.email || <span className="text-gray-400">Sin correo</span>}
                           </p>
                         </div>
 
-                        {/* Columna 4: Rol (130px) */}
+                        {/* Columna 4: Teléfono (145px) */}
+                        <div className="w-36 flex-shrink-0">
+                          <p className="text-xs text-gray-600 truncate" title={formatPhoneDisplay(admin.phone)}>
+                            {formatPhoneDisplay(admin.phone)}
+                          </p>
+                        </div>
+
+                        {/* Columna 5: Rol (130px) */}
                         <div className="w-32 flex-shrink-0">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                             isSuperAdmin
@@ -548,7 +615,7 @@ export default function AdministratorsPage() {
                           </span>
                         </div>
 
-                        {/* Columna 5: Acciones */}
+                        {/* Columna 6: Acciones */}
                         <div className="flex items-center gap-1.5 flex-shrink-0">
                           <button
                             disabled={busy}
