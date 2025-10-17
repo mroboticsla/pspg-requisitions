@@ -10,15 +10,7 @@ import { useToast } from '@/lib/useToast'
 import { Eye, Trash2, Plus, Building2, Users, Edit, UserPlus, UserMinus } from 'lucide-react'
 import { Company, CompanyWithUsers } from '@/lib/types/company'
 
-// Types
-interface UserOption {
-  id: string
-  first_name: string | null
-  last_name: string | null
-  phone: string | null
-}
-
-type ViewMode = 'list' | 'create' | 'edit' | 'view' | 'assign-users'
+type ViewMode = 'list' | 'view'
 
 export default function CompaniesAdminPage() {
   const { user, profile, loading } = useAuth()
@@ -26,15 +18,10 @@ export default function CompaniesAdminPage() {
   const { success, error: showError, info } = useToast()
 
   const [companies, setCompanies] = useState<Company[]>([])
-  const [partners, setPartners] = useState<UserOption[]>([])
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedCompany, setSelectedCompany] = useState<CompanyWithUsers | null>(null)
-  
-  // User assignment state
-  const [selectedUserId, setSelectedUserId] = useState('')
-  const [selectedRoleInCompany, setSelectedRoleInCompany] = useState<'admin' | 'member' | 'viewer'>('member')
   
   const [showDelete, setShowDelete] = useState<{ open: boolean; company?: Company }>({ open: false })
 
@@ -67,23 +54,6 @@ export default function CompaniesAdminPage() {
       const b1 = await r1.json()
       if (!r1.ok) throw new Error(b1.error || 'No se pudo obtener empresas')
       setCompanies(b1.data || [])
-
-      // Obtener usuarios (partners) para asignación
-      const r2 = await fetch('/api/admin/secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'list-users' })
-      })
-      const b2 = await r2.json()
-      if (!r2.ok) throw new Error(b2.error || 'No se pudo obtener usuarios')
-      
-      // Filtrar solo partners activos
-      const allUsers = b2.data || []
-      const partnerUsers = allUsers.filter((u: any) => {
-        const roleName = u.roles?.name || ''
-        return roleName === 'partner' && u.is_active
-      })
-      setPartners(partnerUsers)
     } catch (err: any) {
       showError(err.message || String(err))
     } finally {
@@ -127,26 +97,8 @@ export default function CompaniesAdminPage() {
     }
   }
 
-  const handleAssignUsers = async (company: Company) => {
-    try {
-      setBusy(true)
-      const token = await getToken()
-      const res = await fetch('/api/admin/secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'get-company', companyId: company.id })
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'No se pudo obtener detalles de la empresa')
-      setSelectedCompany(body.data)
-      setSelectedUserId('')
-      setSelectedRoleInCompany('member')
-      setViewMode('assign-users')
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
+  const handleAssignUsers = (company: Company) => {
+    router.push(`/admin/companies/${company.id}/users`)
   }
 
 
@@ -175,61 +127,7 @@ export default function CompaniesAdminPage() {
     }
   }
 
-  const handleAssignUser = async () => {
-    if (!selectedCompany || !selectedUserId) return
 
-    try {
-      setBusy(true)
-      const token = await getToken()
-      const res = await fetch('/api/admin/secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          action: 'assign-user-to-company',
-          companyId: selectedCompany.id,
-          userId: selectedUserId,
-          roleInCompany: selectedRoleInCompany
-        })
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'Error al asignar usuario')
-
-      success('Usuario asignado exitosamente')
-      setSelectedUserId('')
-      // Recargar detalles de la empresa
-      handleAssignUsers(selectedCompany)
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleRemoveUser = async (assignmentId: string) => {
-    if (!confirm('¿Está seguro de que desea remover este usuario de la empresa?')) return
-
-    try {
-      setBusy(true)
-      const token = await getToken()
-      const res = await fetch('/api/admin/secure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ action: 'remove-user-from-company', assignmentId })
-      })
-      const body = await res.json()
-      if (!res.ok) throw new Error(body.error || 'Error al remover usuario')
-
-      success('Usuario removido exitosamente')
-      // Recargar detalles de la empresa
-      if (selectedCompany) {
-        handleAssignUsers(selectedCompany)
-      }
-    } catch (err: any) {
-      showError(err.message || String(err))
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const filteredCompanies = useMemo(() => {
     if (!search.trim()) return companies
@@ -241,11 +139,7 @@ export default function CompaniesAdminPage() {
     )
   }, [companies, search])
 
-  const availablePartners = useMemo(() => {
-    if (!selectedCompany) return partners
-    const assignedUserIds = new Set(selectedCompany.company_users?.map(cu => cu.user_id) || [])
-    return partners.filter(p => !assignedUserIds.has(p.id))
-  }, [partners, selectedCompany])
+
 
   // Estadísticas rápidas
   const stats = useMemo(() => {
@@ -554,124 +448,7 @@ export default function CompaniesAdminPage() {
           </div>
         )}
 
-        {/* Asignación de usuarios */}
-        {viewMode === 'assign-users' && selectedCompany && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-xl font-semibold">Asignar Usuarios</h2>
-                <p className="text-gray-600 mt-1">{selectedCompany.name}</p>
-              </div>
-              <button
-                onClick={() => setViewMode('list')}
-                className="text-brand-dark hover:text-brand-accent transition-colors font-medium"
-              >
-                Volver
-              </button>
-            </div>
 
-            {/* Formulario de asignación */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Asignar Nuevo Usuario</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-                  <select
-                    value={selectedUserId}
-                    onChange={(e) => setSelectedUserId(e.target.value)}
-                    className="form-input"
-                  >
-                    <option value="">Seleccione un usuario</option>
-                    {availablePartners.map((partner) => (
-                      <option key={partner.id} value={partner.id}>
-                        {partner.first_name} {partner.last_name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
-                  <select
-                    value={selectedRoleInCompany}
-                    onChange={(e) => setSelectedRoleInCompany(e.target.value as any)}
-                    className="form-input"
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                    <option value="viewer">Viewer</option>
-                  </select>
-                </div>
-              </div>
-              <div className="mt-4">
-                <button
-                  onClick={handleAssignUser}
-                  disabled={!selectedUserId || busy}
-                  className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Asignar Usuario
-                </button>
-              </div>
-            </div>
-
-            {/* Lista de usuarios asignados */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Usuarios Asignados</h3>
-              {selectedCompany.company_users && selectedCompany.company_users.length > 0 ? (
-                <div className="border rounded-lg overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-brand-dark">
-                      <tr>
-                        <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Usuario</th>
-                        <th className="hidden sm:table-cell px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Teléfono</th>
-                        <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Rol</th>
-                        <th className="px-3 sm:px-4 py-2 text-left text-xs font-medium text-white uppercase">Estado</th>
-                        <th className="px-3 sm:px-4 py-2 text-right text-xs font-medium text-white uppercase">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
-                      {selectedCompany.company_users.map((cu) => (
-                        <tr key={cu.id}>
-                          <td className="px-3 sm:px-4 py-2 text-sm text-gray-900">
-                            <div>
-                              <div>{cu.profiles?.first_name} {cu.profiles?.last_name}</div>
-                              {/* Mostrar teléfono en móviles */}
-                              <div className="sm:hidden text-xs text-gray-500 mt-0.5">
-                                {cu.profiles?.phone || '-'}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="hidden sm:table-cell px-3 sm:px-4 py-2 text-sm text-gray-900">
-                            {cu.profiles?.phone || '-'}
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 text-sm text-gray-900 capitalize">{cu.role_in_company}</td>
-                          <td className="px-3 sm:px-4 py-2 text-sm">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                              cu.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {cu.is_active ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </td>
-                          <td className="px-3 sm:px-4 py-2 text-right">
-                            <button
-                              onClick={() => handleRemoveUser(cu.id)}
-                              className="text-red-600 hover:text-red-800 transition-colors p-1"
-                              title="Remover usuario"
-                            >
-                              <UserMinus className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 py-4">No hay usuarios asignados a esta empresa</p>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Modal de confirmación de eliminación */}
         <ConfirmModal
