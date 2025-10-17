@@ -81,10 +81,13 @@ export const HeroSlider: React.FC = () => {
                 {slide.description}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-delay-3">
-                <button className="bg-brand-accent text-white px-8 py-3 rounded-md text-lg font-medium hover:bg-brand-accentDark transition-colors">
+                <a href="/jobs" className="bg-brand-accent text-white px-8 py-3 rounded-md text-lg font-medium hover:bg-brand-accentDark transition-colors inline-block">
                   Ver Empleos Disponibles
-                </button>
-                <button className="bg-white text-brand-dark px-8 py-3 rounded-md text-lg font-medium hover:bg-gray-100 transition-colors">
+                </a>
+                <button 
+                  onClick={() => window.location.href = '/about'} 
+                  className="bg-white text-brand-dark px-8 py-3 rounded-md text-lg font-medium hover:bg-gray-100 transition-colors"
+                >
                   Conocer Más
                 </button>
               </div>
