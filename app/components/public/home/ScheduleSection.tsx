@@ -78,6 +78,7 @@ export const ScheduleSection: React.FC = () => {
           {/* Right Side - Image or Additional Info */}
           <div className="relative">
             <div className="bg-white rounded-2xl shadow-2xl p-8">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="https://images.unsplash.com/photo-1553877522-43269d4ea984?auto=format&fit=crop&w=800&q=80"
                 alt="Oficina de atención al cliente"

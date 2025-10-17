@@ -27,7 +27,7 @@ export default function RolesAdminPage() {
   const isSuper = (profile as any)?.roles?.name === 'superadmin'
 
   // Roles protegidos que no se pueden eliminar
-  const PROTECTED_ROLES = ['admin', 'superadmin', 'partner', 'candidate']
+  const PROTECTED_ROLES = useMemo(() => ['admin', 'superadmin', 'partner', 'candidate'], [])
 
   useEffect(() => {
     if (!loading && (!user || !profile)) {
@@ -92,7 +92,7 @@ export default function RolesAdminPage() {
     const custom = total - system
     
     return { total, system, custom }
-  }, [roles])
+  }, [roles, PROTECTED_ROLES])
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen">

@@ -110,6 +110,7 @@ const PhoneDisplay = ({ phone }: { phone: string | null }) => {
   return (
     <div className="flex items-center gap-1.5">
       {countryCode && (
+        // eslint-disable-next-line @next/next/no-img-element
         <img 
           src={`https://flagcdn.com/w40/${countryCode}.png`}
           alt={`Bandera`}

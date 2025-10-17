@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/app/providers/AuthProvider'
 import { supabase } from '@/lib/supabaseClient'
@@ -73,7 +73,7 @@ export default function CompanyUsersPage() {
   }
 
   // Load company data and partners
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoadingData(true)
       const token = await getToken()
@@ -109,12 +109,12 @@ export default function CompanyUsersPage() {
     } finally {
       setLoadingData(false)
     }
-  }
+  }, [companyId, showError, router])
 
   useEffect(() => {
     if (!user || !canManage) return
     loadData()
-  }, [user, canManage, companyId])
+  }, [user, canManage, loadData])
 
   // Available partners (not already assigned)
   const availablePartners = useMemo(() => {

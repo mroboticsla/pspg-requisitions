@@ -238,6 +238,7 @@ export default function AboutPage() {
                   className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border border-neutral-100 hover:border-brand-accent/20 hover:-translate-y-2"
                 >
                   <div className="relative overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`https://images.unsplash.com/photo-${
                         member === 1

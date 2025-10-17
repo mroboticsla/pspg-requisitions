@@ -545,7 +545,7 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
               </div>
             </div>
             <p className="text-gray-700">
-              ¿Está seguro de que desea eliminar el rol <strong>"{role?.name}"</strong>?
+              ¿Está seguro de que desea eliminar el rol <strong>&quot;{role?.name}&quot;</strong>?
             </p>
           </div>
         }
