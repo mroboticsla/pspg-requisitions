@@ -24,7 +24,7 @@ export const StatsSection: React.FC = () => {
     },
     {
       icon: Award,
-      value: '15',
+      value: '20+',
       label: 'Años de Experiencia',
       description: 'Liderando el mercado'
     },

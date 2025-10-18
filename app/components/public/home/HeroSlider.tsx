@@ -18,7 +18,7 @@ const slides: Slide[] = [
     image: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&w=1920&q=80'
   },
   {
-    title: '15 Años de Innovación',
+    title: '20+ Años de Innovación',
     subtitle: 'Experiencia que Transforma Carreras',
     description: 'Más de una década construyendo puentes entre profesionales y empresas líderes',
     image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1920&q=80'
