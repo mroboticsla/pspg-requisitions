@@ -15,7 +15,13 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
   - Usuarios no autenticados ven el portal público directamente en `/`
   - Usuarios autenticados son redirigidos automáticamente a `/dashboard`
   - URLs más limpias y mejor SEO
-  - Documentación actualizada en `docs/README-PUBLIC-PORTAL.md` y `docs/README-STRUCTURE.md`
+- **Reorganización de documentación**:
+  - Consolidada documentación en 5 archivos principales (README.md, README-FRONTEND.md, README-BACKEND.md, README-SUPABASE.md, README-PUBLIC-PORTAL.md)
+  - Eliminados archivos transitorios de implementación (FINAL-SUMMARY.md, FIXES-APPLIED.md, IMPLEMENTATION-COMPLETE.md, MIGRATION-ROOT-HOME.md, CUSTOMIZATION-GUIDE.md, QUICKSTART-PUBLIC-PORTAL.md, README-STRUCTURE.md)
+  - Integrada información de personalización y quick start en README-PUBLIC-PORTAL.md
+  - Actualizado README.md principal con índice completo de navegación y guía de documentación
+  - Agregada sección de Stack Tecnológico Completo
+  - Mejorada estructura y organización de todos los README
 
 ### Agregado
 - **Sistema de estilos para pantallas de administración**:

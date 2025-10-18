@@ -8,7 +8,7 @@ El Portal Público es la cara pública de PSPG Requisitions, diseñado para pres
 
 ### Páginas Principales
 
-#### 1. **Inicio** (`/public-home`)
+#### 1. **Inicio** (`/`)
 Página landing principal que incluye:
 - **Hero Slider**: Carrusel rotativo con 3 slides destacando los valores de la empresa
 - **Sección Acerca de**: Presentación breve de la empresa con 4 características clave
@@ -120,7 +120,7 @@ Página de contacto completa:
 ## Rutas del Portal Público
 
 ```
-/public-home      → Página de inicio
+/                 → Página de inicio (landing page)
 /about            → Acerca de nosotros
 /jobs             → Portal de empleos
 /contact          → Contáctenos
@@ -213,6 +213,100 @@ Para preguntas o problemas con el portal público, revisar:
 1. Esta documentación
 2. Documentación de Next.js
 3. Documentación de Tailwind CSS
+
+## Personalización del Portal
+
+### Información de Contacto
+
+**Archivos a modificar:**
+- `app/components/public/layout/PublicFooter.tsx`
+- `app/components/public/home/ScheduleSection.tsx`
+- `app/contact/page.tsx`
+
+**Actualizar:**
+- Teléfonos (actualmente placeholders)
+- Emails (actualmente placeholders)
+- Dirección física
+- Horarios de atención
+
+### Contenido del Hero Slider
+
+**Archivo:** `app/components/public/home/HeroSlider.tsx`
+
+Modificar los slides con información real de la empresa:
+```typescript
+const slides: Slide[] = [
+  {
+    title: 'Tu Título',
+    subtitle: 'Tu Subtítulo',
+    description: 'Tu descripción',
+    image: '/images/slider/hero-1.jpg' // Usar imágenes reales
+  }
+];
+```
+
+**Recomendaciones para imágenes:**
+- Dimensiones: 1920x600px mínimo
+- Formato: JPG optimizado o WebP
+- Peso: < 200KB por imagen
+- Ubicación: `/public/images/slider/`
+
+### Servicios y Características
+
+**Archivo:** `app/components/public/home/ServicesSection.tsx`
+
+Actualizar los 6 servicios con información real. Los iconos disponibles están en [Lucide Icons](https://lucide.dev/icons/).
+
+### Estadísticas
+
+**Archivo:** `app/components/public/home/StatsSection.tsx`
+
+Actualizar con números reales de la empresa (profesionales colocados, empresas atendidas, años de experiencia, tasa de éxito).
+
+### Portal de Empleos
+
+**Archivo:** `app/jobs/page.tsx`
+
+Actualmente usa mock data. Para integrar con base de datos real:
+1. Crear API endpoint para empleos
+2. Conectar con Supabase
+3. Actualizar el componente para consumir la API
+
+### Formulario de Contacto
+
+**Archivo:** `app/components/public/home/ContactForm.tsx`
+
+Integrar con servicio de email (SendGrid, Resend, etc.) para recibir mensajes de contacto.
+
+## Inicio Rápido
+
+### Desarrollo Local
+
+```bash
+npm install
+npm run dev
+```
+
+El portal estará disponible en `http://localhost:3000`
+
+### Rutas del Portal
+
+- **`/`** - Landing page (portal público)
+- **`/about`** - Acerca de nosotros
+- **`/jobs`** - Portal de empleos
+- **`/contact`** - Página de contacto
+
+### Acceso al Sistema Administrativo
+
+Usuarios autenticados son redirigidos automáticamente a `/dashboard`. El botón "Consola de Administración" en el navbar público permite acceso rápido.
+
+## Testing del Portal
+
+1. **Redirección automática**: Usuarios no autenticados ven el portal público, autenticados van a dashboard
+2. **Navegación**: Verificar que todos los enlaces funcionen
+3. **Formulario de contacto**: Probar validación y envío
+4. **Responsive**: Verificar en mobile, tablet y desktop
+5. **Slider**: Confirmar auto-play y navegación manual
 
 ## Licencia
 
