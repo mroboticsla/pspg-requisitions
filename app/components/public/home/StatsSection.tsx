@@ -1,9 +1,14 @@
 'use client';
 
-import React from 'react';
-import { Users, Building, Award, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Users, Building, Award, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const StatsSection: React.FC = () => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
   const stats = [
     {
       icon: Users,
@@ -31,6 +36,66 @@ export const StatsSection: React.FC = () => {
     }
   ];
 
+  const nextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % stats.length);
+  }, [stats.length]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + stats.length) % stats.length);
+  }, [stats.length]);
+
+  const goToSlide = useCallback((index: number) => {
+    setCurrentSlide(index);
+    setIsAutoPlaying(false);
+  }, []);
+
+  // Auto-play functionality
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+
+    const interval = setInterval(nextSlide, 4000);
+    return () => clearInterval(interval);
+  }, [isAutoPlaying, nextSlide]);
+
+  // Touch handlers for swipe gestures
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    setIsAutoPlaying(false);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeThreshold = 50;
+    const diff = touchStartX.current - touchEndX.current;
+
+    if (Math.abs(diff) > swipeThreshold) {
+      if (diff > 0) {
+        nextSlide();
+      } else {
+        prevSlide();
+      }
+    }
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        prevSlide();
+        setIsAutoPlaying(false);
+      } else if (e.key === 'ArrowRight') {
+        nextSlide();
+        setIsAutoPlaying(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nextSlide, prevSlide]);
+
   return (
     <section className="py-20 bg-gradient-to-br from-brand-dark via-brand-dark to-[#003558] text-white relative overflow-hidden">
       {/* Decorative Elements */}
@@ -49,8 +114,8 @@ export const StatsSection: React.FC = () => {
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        {/* Stats Grid - Desktop */}
+        <div className="hidden md:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {stats.map((stat, index) => (
             <div
               key={index}
@@ -86,6 +151,97 @@ export const StatsSection: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Stats Carousel - Mobile */}
+        <div className="md:hidden relative">
+          {/* Carousel Container */}
+          <div 
+            className="relative overflow-hidden"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            role="region"
+            aria-label="Carrusel de estadísticas"
+          >
+            <div 
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+            >
+              {stats.map((stat, index) => (
+                <div
+                  key={index}
+                  className="w-full flex-shrink-0 px-4"
+                  aria-hidden={currentSlide !== index}
+                >
+                  {/* Card */}
+                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 text-center border border-white/20 shadow-2xl">
+                    {/* Icon Container */}
+                    <div className="relative mb-6">
+                      <div className="absolute inset-0 bg-brand-accent opacity-20 rounded-xl blur-xl"></div>
+                      <div className="relative bg-gradient-to-br from-brand-accent to-brand-accentDark w-20 h-20 rounded-xl flex items-center justify-center mx-auto shadow-lg">
+                        <stat.icon className="h-10 w-10 text-white" strokeWidth={2.5} />
+                      </div>
+                    </div>
+
+                    {/* Value */}
+                    <div className="text-6xl font-bold mb-3 bg-gradient-to-br from-white to-gray-200 bg-clip-text text-transparent">
+                      {stat.value}
+                    </div>
+
+                    {/* Label */}
+                    <div className="text-white text-xl font-semibold mb-2">
+                      {stat.label}
+                    </div>
+
+                    {/* Description */}
+                    <div className="text-gray-300">
+                      {stat.description}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Navigation Arrows */}
+          <button
+            onClick={() => {
+              prevSlide();
+              setIsAutoPlaying(false);
+            }}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 p-2 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+            aria-label="Estadística anterior"
+          >
+            <ChevronLeft className="h-6 w-6 text-white" />
+          </button>
+          <button
+            onClick={() => {
+              nextSlide();
+              setIsAutoPlaying(false);
+            }}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 p-2 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+            aria-label="Siguiente estadística"
+          >
+            <ChevronRight className="h-6 w-6 text-white" />
+          </button>
+
+          {/* Dot Indicators */}
+          <div className="flex justify-center gap-2 mt-8">
+            {stats.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`transition-all duration-300 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-accent ${
+                  currentSlide === index
+                    ? 'w-8 h-2 bg-brand-accent'
+                    : 'w-2 h-2 bg-white/40 hover:bg-white/60'
+                }`}
+                aria-label={`Ir a estadística ${index + 1}`}
+                aria-current={currentSlide === index}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Bottom CTA */}
