@@ -24,10 +24,17 @@ export const PublicNavbar: React.FC = () => {
           {/* Logo y título */}
           <div className="flex items-center min-w-0 flex-1">
             <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-              <Image src="/images/favicon.png" alt="PSP logo" width={40} height={40} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover flex-shrink-0" priority />
-              <div className="min-w-0">
-                <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">PSP Group</h1>
-                <p className="text-xs text-gray-500 hidden sm:block">Sistema de Requisiciones</p>
+              <div className="relative h-8 sm:h-10 flex-shrink-0">
+              <Image 
+              src="/images/logo-web-dark.png" 
+              alt="PSP logo" 
+              width={240} 
+              height={80} 
+              className="h-8 sm:h-10 w-auto object-contain" 
+              priority
+              quality={100}
+              unoptimized
+              />
               </div>
             </Link>
           </div>
