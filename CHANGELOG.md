@@ -7,6 +7,16 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No Publicado]
 
+### Cambiado
+- **Portal público ahora en la raíz del sitio (`/`)**:
+  - La landing page del portal público se movió de `/public-home` a `/`
+  - Eliminada la carpeta `app/public-home/`
+  - El contenido de la landing page ahora está integrado directamente en `app/page.tsx`
+  - Usuarios no autenticados ven el portal público directamente en `/`
+  - Usuarios autenticados son redirigidos automáticamente a `/dashboard`
+  - URLs más limpias y mejor SEO
+  - Documentación actualizada en `docs/README-PUBLIC-PORTAL.md` y `docs/README-STRUCTURE.md`
+
 ### Agregado
 - **Sistema de estilos para pantallas de administración**:
   - Paleta de colores `admin-*` en `tailwind.config.js`:
