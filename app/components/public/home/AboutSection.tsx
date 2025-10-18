@@ -138,35 +138,35 @@ export const AboutSection: React.FC = () => {
         </div>
 
         {/* Propuesta de Valor Section */}
-        <div className="bg-gray-50 rounded-3xl p-10 md:p-16">
+        <div className="bg-gray-100 rounded-2xl md:rounded-3xl p-6 md:p-16">
           <div
             data-animate="value-header"
-            className={`text-center mb-14 transition-all duration-1000 ${
+            className={`text-center mb-8 md:mb-14 transition-all duration-1000 ${
               isVisible("value-header") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Nuestra Propuesta de Valor</h3>
-            <div className="w-20 h-1 bg-brand-accent mx-auto"></div>
+            <h3 className="text-2xl md:text-4xl font-bold text-gray-900 mb-3 md:mb-4">Nuestra Propuesta de Valor</h3>
+            <div className="w-16 md:w-20 h-1 bg-brand-accent mx-auto"></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-12">
             {valueProps.map((prop, index) => (
               <div
                 key={index}
                 data-animate={`value-${index}`}
-                className={`bg-white p-8 rounded-2xl hover:shadow-xl transition-all duration-700 group border border-gray-100 ${
+                className={`bg-white p-5 md:p-8 rounded-xl md:rounded-2xl hover:shadow-xl transition-all duration-700 group border border-gray-100 ${
                   isVisible(`value-${index}`)
                     ? "opacity-100 translate-y-0"
                     : "opacity-0 translate-y-10"
                 }`}
                 style={{ transitionDelay: `${index * 150}ms` }}
               >
-                <div className="flex items-start gap-5">
-                  <div className="bg-brand-dark w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                    <prop.icon className="h-8 w-8 text-white" strokeWidth={2} />
+                <div className="flex items-start gap-4 md:gap-5">
+                  <div className="bg-brand-dark w-12 h-12 md:w-16 md:h-16 rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <prop.icon className="h-6 w-6 md:h-8 md:w-8 text-white" strokeWidth={2} />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">
+                    <h4 className="text-base md:text-xl font-bold text-gray-900 mb-1.5 md:mb-2 leading-snug">
                       {prop.title.split(prop.highlight).map((part, i, arr) => (
                         <React.Fragment key={i}>
                           {part}
@@ -176,7 +176,7 @@ export const AboutSection: React.FC = () => {
                         </React.Fragment>
                       ))}
                     </h4>
-                    <p className="text-gray-600 leading-relaxed">{prop.description}</p>
+                    <p className="text-sm md:text-base text-gray-600 leading-relaxed">{prop.description}</p>
                   </div>
                 </div>
               </div>
@@ -189,7 +189,7 @@ export const AboutSection: React.FC = () => {
               isVisible("cta-button") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <button className="bg-brand-accent text-white px-10 py-4 rounded-xl font-semibold hover:bg-brand-accentDark hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+            <button className="bg-brand-accent text-white px-8 md:px-10 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-brand-accentDark hover:shadow-lg transition-all duration-300 transform hover:scale-105">
               Conocer Más Sobre Nosotros
             </button>
           </div>
