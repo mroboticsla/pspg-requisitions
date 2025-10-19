@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Building2, Mail, Phone, MapPin, Facebook, Linkedin, Twitter } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import { Building2, Mail, Phone, MapPin, Facebook, Linkedin, Twitter } from "lucide-react";
 
 export const PublicFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -18,7 +18,8 @@ export const PublicFooter: React.FC = () => {
               <span className="text-xl font-bold text-white">PSP Group</span>
             </div>
             <p className="text-sm mb-4">
-              Head Hunters profesionales con más de 15 años de experiencia conectando talento con oportunidades excepcionales.
+              Empresa con capital intelectual con más de 20 años de experiencia en asesoría fiscal con vocación de asesoría
+              integral a nuestros clientes.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="hover:text-brand-accent transition-colors" aria-label="Facebook">
@@ -70,11 +71,19 @@ export const PublicFooter: React.FC = () => {
               </li>
               <li className="flex items-center space-x-2">
                 <Phone className="h-5 w-5 text-brand-accent flex-shrink-0" />
-                <span className="text-sm">+52 56 1089 2760<br />+52 56 1059 7290</span>
+                <span className="text-sm">
+                  +52 56 1089 2760
+                  <br />
+                  +52 56 1059 7290
+                </span>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-brand-accent flex-shrink-0" />
-                <span className="text-sm">recepcion@pspgroup.com.mx<br />reclutamientopsp@pspgroup.com.mx</span>
+                <span className="text-sm">
+                  recepcion@pspgroup.com.mx
+                  <br />
+                  reclutamientopsp@pspgroup.com.mx
+                </span>
               </li>
             </ul>
           </div>
@@ -83,9 +92,7 @@ export const PublicFooter: React.FC = () => {
         {/* Línea divisoria y copyright */}
         <div className="border-t border-gray-700 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-sm">
-              © {currentYear} PSPG Group. Todos los derechos reservados.
-            </p>
+            <p className="text-sm">© {currentYear} PSPG Group. Todos los derechos reservados.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               <Link href="/privacy" className="text-sm hover:text-brand-accent transition-colors">
                 Política de Privacidad
