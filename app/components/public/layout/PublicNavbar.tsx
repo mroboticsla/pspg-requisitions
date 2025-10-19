@@ -51,7 +51,7 @@ export const PublicNavbar: React.FC = () => {
               </Link>
             ))}
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/auth')}
               className="bg-brand-accent text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-accentDark transition-colors"
             >
               Consola de Administración
