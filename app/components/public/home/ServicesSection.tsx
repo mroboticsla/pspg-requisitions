@@ -68,22 +68,6 @@ export const ServicesSection: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 {service.description}
               </p>
-              <button className="text-brand-accent font-medium hover:text-brand-accentDark flex items-center group-hover:translate-x-2 transition-transform">
-                Saber más
-                <svg
-                  className="w-4 h-4 ml-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </button>
             </div>
           ))}
         </div>
