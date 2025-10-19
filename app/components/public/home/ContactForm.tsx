@@ -127,7 +127,7 @@ export const ContactForm: React.FC = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:ring-brand-accent focus:border-brand-accent"
-                      placeholder="+52 55 2662 2966"
+                      placeholder="+52 56 1089 2760"
                     />
                   </div>
                 </div>
@@ -229,6 +229,17 @@ export const ContactForm: React.FC = () => {
 
           {/* Contact Info and Map */}
           <div className="space-y-8">
+            {/* Imagen Ciudad de México desde Unsplash */}
+            <div className="bg-gray-200 rounded-2xl overflow-hidden shadow-lg h-64">
+              <img
+              src="https://images.unsplash.com/photo-1585464231875-d9ef1f5ad396?auto=format&fit=crop&w=1600&q=80"
+              alt="Ciudad de México — vista panorámica"
+              className="w-full h-full object-cover"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              />
+            </div>
+
             {/* Contact Cards */}
             <div className="bg-gradient-to-br from-brand-dark/90 to-brand-dark rounded-2xl p-8 text-white">
               <h3 className="text-2xl font-bold mb-6">Información de Contacto</h3>
@@ -239,7 +250,8 @@ export const ContactForm: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <h4 className="font-semibold mb-1">Teléfonos</h4>
-                    <p className="text-gray-100">+52 55 2662 2966</p>
+                    <p className="text-gray-100">+52 56 1089 2760</p>
+                    <p className="text-gray-100">+52 56 1059 7290</p>
                   </div>
                 </div>
 
@@ -249,39 +261,11 @@ export const ContactForm: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <h4 className="font-semibold mb-1">Emails</h4>
-                    <p className="text-gray-100">info@pspgroup.com.mx</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="bg-white bg-opacity-20 p-3 rounded-lg">
-                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-semibold mb-1">Dirección</h4>
-                    <p className="text-gray-100">
-                      Ciudad de México, México<br />
-                      Edificio Empresarial, Piso 10
-                    </p>
+                    <p className="text-gray-100">recepcion@pspgroup.com.mx</p>
+                    <p className="text-gray-100">reclutamientopsp@pspgroup.com.mx</p>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Map Placeholder */}
-            <div className="bg-gray-200 rounded-2xl overflow-hidden shadow-lg h-64">
-              <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d240840.1802268492!2d-99.28324849999999!3d19.42847!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x85ce0026db097507%3A0x54061076265ee841!2sCiudad%20de%20M%C3%A9xico%2C%20CDMX%2C%20M%C3%A9xico!5e0!3m2!1ses!2smx!4v1697582400000!5m2!1ses!2smx"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
             </div>
           </div>
         </div>

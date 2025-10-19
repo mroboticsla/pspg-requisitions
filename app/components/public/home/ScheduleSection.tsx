@@ -6,8 +6,7 @@ import { Clock, Calendar, Phone, Mail } from "lucide-react";
 export const ScheduleSection: React.FC = () => {
   const scheduleItems = [
     { day: "Lunes - Viernes", hours: "8:00 AM - 6:00 PM" },
-    { day: "Sábados", hours: "9:00 AM - 1:00 PM" },
-    { day: "Domingos y Feriados", hours: "Cerrado" },
+    { day: "Fines de Semana y Feriados", hours: "Cerrado" },
   ];
 
   return (
@@ -38,35 +37,6 @@ export const ScheduleSection: React.FC = () => {
                   <span className="text-gray-600">{item.hours}</span>
                 </div>
               ))}
-            </div>
-
-            {/* Contact Info Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-start">
-                  <div className="bg-red-50 p-3 rounded-lg">
-                    <Phone className="h-6 w-6 text-brand-accent" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-semibold text-gray-900 mb-1">Teléfono</h4>
-                    <p className="text-gray-600 text-sm">+52 55 2662 2966</p>
-                    <p className="text-gray-600 text-sm">+507 6000-0001</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-                <div className="flex items-start">
-                  <div className="bg-red-50 p-3 rounded-lg">
-                    <Mail className="h-6 w-6 text-brand-accent" />
-                  </div>
-                  <div className="ml-4">
-                    <h4 className="font-semibold text-gray-900 mb-1">Email</h4>
-                    <p className="text-gray-600 text-sm">info@pspgroup.com.mx</p>
-                    <p className="text-gray-600 text-sm">contact@pspg.com</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 

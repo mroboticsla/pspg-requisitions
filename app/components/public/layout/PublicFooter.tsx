@@ -70,11 +70,11 @@ export const PublicFooter: React.FC = () => {
               </li>
               <li className="flex items-center space-x-2">
                 <Phone className="h-5 w-5 text-brand-accent flex-shrink-0" />
-                <span className="text-sm">+52 55 2662 2966</span>
+                <span className="text-sm">+52 56 1089 2760<br />+52 56 1059 7290</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-brand-accent flex-shrink-0" />
-                <span className="text-sm">info@pspgroup.com.mx</span>
+                <span className="text-sm">recepcion@pspgroup.com.mx<br />reclutamientopsp@pspgroup.com.mx</span>
               </li>
             </ul>
           </div>

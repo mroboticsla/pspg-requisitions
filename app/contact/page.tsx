@@ -66,21 +66,7 @@ export default function ContactPage() {
               <div className="w-24 h-1 bg-gradient-to-r from-brand-accent to-brand-accentDark mx-auto rounded-full"></div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="group bg-brand-dark rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 text-center border-2 border-brand-dark hover:border-brand-accent transform hover:-translate-y-2">
-                <div className="relative mb-6">
-                  <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl group-hover:shadow-2xl group-hover:shadow-brand-accent/50 transition-all duration-300 group-hover:scale-110">
-                    <MapPin className="h-10 w-10 text-white" strokeWidth={2.5} />
-                  </div>
-                  <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-brand-accent rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"></div>
-                </div>
-                <h3 className="font-bold text-xl text-white mb-3">Dirección</h3>
-                <p className="text-gray-200 leading-relaxed font-medium">
-                  Ciudad de México, México<br />
-                  <span className="text-gray-300">Edificio Empresarial, Piso 10</span>
-                </p>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="group bg-brand-dark rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 text-center border-2 border-brand-dark hover:border-brand-accent transform hover:-translate-y-2">
                 <div className="relative mb-6">
                   <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl group-hover:shadow-2xl group-hover:shadow-brand-accent/50 transition-all duration-300 group-hover:scale-110">
@@ -90,7 +76,8 @@ export default function ContactPage() {
                 </div>
                 <h3 className="font-bold text-xl text-white mb-3">Teléfono</h3>
                 <a href="tel:+525526622966" className="text-gray-200 hover:text-brand-accent transition-colors font-semibold text-base">
-                  +52 55 2662 2966
+                  +52 56 1089 2760<br />
+                  +52 56 1059 7290
                 </a>
               </div>
 
@@ -102,8 +89,11 @@ export default function ContactPage() {
                   <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-brand-accent rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"></div>
                 </div>
                 <h3 className="font-bold text-xl text-white mb-3">Email</h3>
-                <a href="mailto:info@pspgroup.com.mx" className="text-gray-200 hover:text-brand-accent transition-colors font-semibold text-base break-all">
-                  info@pspgroup.com.mx
+                <a href="mailto:recepcion@pspgroup.com.mx" className="text-gray-200 hover:text-brand-accent transition-colors font-semibold text-base break-all">
+                  recepcion@pspgroup.com.mx
+                </a><br />
+                <a href="mailto:reclutamientopsp@pspgroup.com.mx" className="text-gray-200 hover:text-brand-accent transition-colors font-semibold text-base break-all">
+                  reclutamientopsp@pspgroup.com.mx
                 </a>
               </div>
 
@@ -117,7 +107,6 @@ export default function ContactPage() {
                 <h3 className="font-bold text-xl text-white mb-3">Horario</h3>
                 <p className="text-gray-200 leading-relaxed font-medium">
                   Lun - Vie: <span className="font-semibold text-white">8AM - 6PM</span><br />
-                  Sábados: <span className="font-semibold text-white">9AM - 1PM</span>
                 </p>
               </div>
             </div>
