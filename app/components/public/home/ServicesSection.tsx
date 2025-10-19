@@ -25,16 +25,6 @@ export const ServicesSection: React.FC = () => {
       title: 'Consultoría de RRHH',
       description: 'Asesoría estratégica en gestión de talento y optimización de procesos de reclutamiento'
     },
-    {
-      icon: Building,
-      title: 'Outsourcing de Personal',
-      description: 'Gestión integral de personal temporal y permanente para tu organización'
-    },
-    {
-      icon: Lightbulb,
-      title: 'Capacitación Empresarial',
-      description: 'Programas de formación y desarrollo para potenciar el talento de tu equipo'
-    }
   ];
 
   return (
@@ -53,7 +43,7 @@ export const ServicesSection: React.FC = () => {
         </div>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
           {services.map((service, index) => (
             <div
               key={index}
@@ -75,15 +65,14 @@ export const ServicesSection: React.FC = () => {
         {/* CTA Section */}
         <div className="mt-16 bg-gradient-to-r from-brand-dark to-brand-dark/90 rounded-2xl p-12 text-center">
           <h3 className="text-3xl font-bold text-white mb-4">
-            ¿Necesitas una solución personalizada?
+            ¿Necesitas atención inmediata?
           </h3>
-          <p className="text-gray-200 text-lg mb-8 max-w-2xl mx-auto">
-            Nuestro equipo de expertos está listo para ayudarte a encontrar
-            la solución perfecta para tus necesidades de reclutamiento
+          <p className="text-gray-200 text-lg mb-8 mx-auto">
+            Nuestro equipo de expertos está listo para atenderte. Agenda una cita para recibir asesoría personalizada.
           </p>
-          <button className="bg-brand-accent text-white px-8 py-3 rounded-md font-semibold hover:bg-brand-accentDark transition-colors">
+            <a href="/contact" className="bg-brand-accent text-white px-8 py-3 rounded-md font-semibold hover:bg-brand-accentDark transition-colors">
             Solicitar Consulta Gratuita
-          </button>
+            </a>
         </div>
       </div>
     </section>
