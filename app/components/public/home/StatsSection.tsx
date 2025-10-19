@@ -249,7 +249,14 @@ export const StatsSection: React.FC = () => {
           <p className="text-gray-300 text-lg mb-6">
             ¿Listo para formar parte de estas estadísticas?
           </p>
-          <button className="bg-brand-accent text-white px-8 py-3 rounded-md font-semibold hover:bg-brand-accentDark transition-all duration-300 hover:shadow-lg hover:scale-105">
+          <button
+            onClick={() => {
+              setIsAutoPlaying(false);
+              window.location.href = '/jobs';
+            }}
+            className="bg-brand-accent text-white px-8 py-3 rounded-md font-semibold hover:bg-brand-accentDark transition-all duration-300 hover:shadow-lg hover:scale-105"
+            aria-label="Ir a la página de empleos"
+          >
             Únete a Nosotros
           </button>
         </div>
