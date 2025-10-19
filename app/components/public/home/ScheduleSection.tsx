@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Clock, Calendar, Phone, Mail } from 'lucide-react';
+import React from "react";
+import { Clock, Calendar, Phone, Mail } from "lucide-react";
 
 export const ScheduleSection: React.FC = () => {
   const scheduleItems = [
-    { day: 'Lunes - Viernes', hours: '8:00 AM - 6:00 PM' },
-    { day: 'Sábados', hours: '9:00 AM - 1:00 PM' },
-    { day: 'Domingos y Feriados', hours: 'Cerrado' },
+    { day: "Lunes - Viernes", hours: "8:00 AM - 6:00 PM" },
+    { day: "Sábados", hours: "9:00 AM - 1:00 PM" },
+    { day: "Domingos y Feriados", hours: "Cerrado" },
   ];
 
   return (
@@ -19,23 +19,18 @@ export const ScheduleSection: React.FC = () => {
             <div className="flex items-center mb-6">
               <Clock className="h-12 w-12 text-brand-accent mr-4" />
               <div>
-                <h2 className="text-4xl font-bold text-gray-900">
-                  Horario de Atención
-                </h2>
-                <p className="text-gray-600 mt-2">
-                  Estamos disponibles para atenderte
-                </p>
+                <h2 className="text-4xl font-bold text-gray-900">Horario de Atención</h2>
+                <p className="text-gray-600 mt-2">Estamos disponibles para atenderte</p>
               </div>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
               {scheduleItems.map((item, index) => (
                 <div
                   key={index}
                   className={`flex justify-between items-center py-4 ${
-                    index !== scheduleItems.length - 1 ? 'border-b border-gray-200' : ''
-                  }`}
-                >
+                    index !== scheduleItems.length - 1 ? "border-b border-gray-200" : ""
+                  }`}>
                   <div className="flex items-center">
                     <Calendar className="h-5 w-5 text-brand-accent mr-3" />
                     <span className="font-semibold text-gray-900">{item.day}</span>
@@ -84,19 +79,17 @@ export const ScheduleSection: React.FC = () => {
                 alt="Oficina de atención al cliente"
                 className="rounded-lg mb-6"
               />
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                ¿Necesitas atención inmediata?
-              </h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">¿Necesitas atención inmediata?</h3>
               <p className="text-gray-600 mb-6">
-                Nuestro equipo de expertos está listo para atenderte. Agenda una cita
-                o visítanos en nuestras oficinas para recibir asesoría personalizada.
+                Nuestro equipo de expertos está listo para atenderte. Agenda una cita para recibir asesoría personalizada.
               </p>
               <div className="space-y-3">
-                <button className="w-full bg-brand-accent text-white px-6 py-3 rounded-md font-medium hover:bg-brand-accentDark transition-colors">
+                <button
+                  type="button"
+                  onClick={() => (window.location.href = "/contact")}
+                  className="w-full bg-brand-accent text-white px-6 py-3 rounded-md font-medium hover:bg-brand-accentDark transition-colors"
+                >
                   Agendar Cita
-                </button>
-                <button className="w-full bg-white text-brand-dark border-2 border-brand-dark px-6 py-3 rounded-md font-medium hover:bg-gray-50 transition-colors">
-                  Ver Ubicación
                 </button>
               </div>
             </div>
