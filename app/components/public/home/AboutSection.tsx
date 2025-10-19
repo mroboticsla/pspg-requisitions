@@ -189,9 +189,12 @@ export const AboutSection: React.FC = () => {
               isVisible("cta-button") ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
             }`}
           >
-            <button className="bg-brand-accent text-white px-8 md:px-10 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-brand-accentDark hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+            <a
+              href="/about"
+              className="bg-brand-accent text-white px-8 md:px-10 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-brand-accentDark hover:shadow-lg transition-all duration-300 transform hover:scale-105"
+            >
               Conocer Más Sobre Nosotros
-            </button>
+            </a>
           </div>
         </div>
       </div>
