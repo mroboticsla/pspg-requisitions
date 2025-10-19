@@ -65,14 +65,18 @@ export const ServicesSection: React.FC = () => {
         {/* CTA Section */}
         <div className="mt-16 bg-gradient-to-r from-brand-dark to-brand-dark/90 rounded-2xl p-12 text-center">
           <h3 className="text-3xl font-bold text-white mb-4">
-            ¿Necesitas atención inmediata?
+            ¿Necesitas una solución personalizada?
           </h3>
-          <p className="text-gray-200 text-lg mb-8 mx-auto">
-            Nuestro equipo de expertos está listo para atenderte. Agenda una cita para recibir asesoría personalizada.
+          <p className="text-gray-200 text-lg mb-8 max-w-2xl mx-auto">
+            Nuestro equipo de expertos está listo para ayudarte a encontrar
+            la solución perfecta para tus necesidades de reclutamiento
           </p>
-            <a href="/contact" className="bg-brand-accent text-white px-8 py-3 rounded-md font-semibold hover:bg-brand-accentDark transition-colors">
+            <button 
+            onClick={() => window.location.href = '/contact'}
+            className="bg-brand-accent text-white px-8 py-3 rounded-md font-semibold hover:bg-brand-accentDark transition-colors"
+            >
             Solicitar Consulta Gratuita
-            </a>
+            </button>
         </div>
       </div>
     </section>
