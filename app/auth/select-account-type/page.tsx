@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Briefcase, ArrowRight, Check, ChevronRight } from "lucide-react";
 
@@ -20,27 +20,6 @@ interface AccountType {
 export default function SelectAccountTypePage() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<"partner" | "candidate" | null>(null);
-  const [showButton, setShowButton] = useState(false);
-
-  // Mostrar botón sticky después de hacer scroll en móvil
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerWidth < 768) {
-        setShowButton(window.scrollY > 100);
-      } else {
-        setShowButton(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
-    handleScroll(); // Check inicial
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, []);
 
   const accountTypes: AccountType[] = [
     {
@@ -219,19 +198,6 @@ export default function SelectAccountTypePage() {
             <ArrowRight className="h-5 w-5" />
           </button>
         </div>
-
-        {/* Sticky Continue Button - Mobile */}
-        {showButton && selectedType && (
-          <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-neutral-200 shadow-2xl z-50 animate-slide-in-up">
-            <button
-              onClick={handleContinue}
-              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-semibold text-lg bg-brand-accent text-white hover:bg-brand-accentDark active:scale-95 shadow-lg transition-all"
-            >
-              Continuar con {accountTypes.find(acc => acc.id === selectedType)?.title}
-              <ArrowRight className="h-5 w-5" />
-            </button>
-          </div>
-        )}
 
         {/* Back to login */}
         <div className="text-center">
