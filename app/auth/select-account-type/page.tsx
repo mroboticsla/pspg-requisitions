@@ -77,15 +77,6 @@ export default function SelectAccountTypePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="flex justify-center mb-6">
-            <Image
-              src="/logo.svg"
-              alt="PSP Group Logo"
-              width={80}
-              height={80}
-              className="h-16 w-auto"
-            />
-          </div>
           <h1 className="text-4xl font-bold text-brand-dark mb-4">
             Elige el tipo de cuenta
           </h1>
