@@ -4,6 +4,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Phone, ChevronDown, Search, X } from "lucide-react";
 
+
 interface PhoneInputProps {
   // El valor combina ISO y código (ISO|+código). Los códigos simples siguen siendo aceptados para compatibilidad.
   phoneCountry: string;

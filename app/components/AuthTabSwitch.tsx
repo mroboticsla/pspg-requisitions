@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
+import { LogIn, UserPlus } from "lucide-react";
 
 interface AuthTabSwitchProps {
   activeTab: "login" | "register";
@@ -8,36 +10,44 @@ interface AuthTabSwitchProps {
 }
 
 export default function AuthTabSwitch({ activeTab, onTabChange }: AuthTabSwitchProps) {
+  const router = useRouter();
+
+  const handleRegisterClick = () => {
+    // Redirigir a la página de selección de tipo de cuenta
+    router.push("/auth/select-account-type");
+  };
+
   return (
     <div className="flex items-center justify-center mb-8">
-      <div className="inline-flex bg-surface-secondary rounded-full p-1 shadow-sm border border-neutral-200">
+      <div className="flex gap-3 p-1 bg-neutral-100 rounded-lg w-full max-w-md">
         <button
           onClick={() => onTabChange("login")}
           className={`
-            px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ease-in-out
+            flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-200
             ${
               activeTab === "login"
-                ? "bg-brand-dark text-white shadow-md transform scale-105"
-                : "text-neutral-600 hover:text-brand-dark hover:bg-surface-primary"
+                ? "bg-white text-brand-dark shadow-md"
+                : "text-neutral-600 hover:text-brand-dark"
             }
           `}
           aria-pressed={activeTab === "login"}
         >
-          Iniciar sesión
+          <LogIn className="h-4 w-4" />
+          <span>Iniciar Sesión</span>
         </button>
         <button
-          onClick={() => onTabChange("register")}
+          onClick={handleRegisterClick}
           className={`
-            px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ease-in-out
+            flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-all duration-200
             ${
               activeTab === "register"
-                ? "bg-brand-accent text-white shadow-md transform scale-105"
-                : "text-neutral-600 hover:text-brand-accent hover:bg-surface-primary"
+                ? "bg-white text-brand-accent shadow-md"
+                : "text-neutral-600 hover:text-brand-accent"
             }
           `}
-          aria-pressed={activeTab === "register"}
         >
-          Registrarse
+          <UserPlus className="h-4 w-4" />
+          <span>Crear Cuenta</span>
         </button>
       </div>
     </div>
