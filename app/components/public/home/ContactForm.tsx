@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Mail, User, Phone, MessageSquare, Send, CheckCircle } from 'lucide-react';
 
 export const ContactForm: React.FC = () => {
@@ -230,13 +231,13 @@ export const ContactForm: React.FC = () => {
           {/* Contact Info and Map */}
           <div className="space-y-8">
             {/* Imagen Ciudad de México desde Unsplash */}
-            <div className="bg-gray-200 rounded-2xl overflow-hidden shadow-lg h-64">
-              <img
-              src="https://images.unsplash.com/photo-1585464231875-d9ef1f5ad396?auto=format&fit=crop&w=1600&q=80"
-              alt="Ciudad de México — vista panorámica"
-              className="w-full h-full object-cover"
-              loading="lazy"
-              referrerPolicy="no-referrer"
+            <div className="bg-gray-200 rounded-2xl overflow-hidden shadow-lg h-64 relative">
+              <Image
+                src="https://images.unsplash.com/photo-1585464231875-d9ef1f5ad396?auto=format&fit=crop&w=1600&q=80"
+                alt="Ciudad de México — vista panorámica"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
               />
             </div>
 
