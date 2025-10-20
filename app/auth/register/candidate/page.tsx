@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Eye, EyeOff, Briefcase, CheckCircle2, ArrowLeft } from "lucide-react";
-import Image from "next/image";
 import PhoneInput, { composePhoneCountryValue } from "@/app/components/PhoneInput";
 
 export default function RegisterCandidatePage() {
@@ -83,179 +82,193 @@ export default function RegisterCandidatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-secondary via-white to-surface-secondary">
-      <div className="grid lg:grid-cols-2 min-h-screen">
+    <div className="min-h-screen bg-surface-secondary py-6 sm:py-12">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Panel izquierdo - Imagen hero */}
-        <div className="hidden lg:flex lg:flex-col lg:justify-center lg:items-center bg-green-600 p-12 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-600/90 to-green-800/80 z-10"></div>
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-green-700 to-green-900"></div>
-
-          <div className="relative z-20 text-white max-w-lg">
-            <div className="mb-8">
-              <Briefcase className="h-16 w-16 mb-4" />
+        {/* Beneficios en móvil - Versión compacta */}
+        <div className="lg:hidden mb-4 sm:mb-6 bg-surface-primary rounded-xl p-4 sm:p-6 shadow-sm border border-neutral-200">
+          <div className="flex items-center gap-3 mb-4">
+            <Briefcase className="h-8 w-8 text-brand-dark flex-shrink-0" />
+            <div>
+              <h1 className="text-xl font-bold text-brand-dark">Bolsa de Empleo</h1>
+              <p className="text-xs text-neutral-600">Accede a oportunidades laborales</p>
             </div>
-            
-            <h1 className="text-4xl font-bold mb-4">
-              Bolsa de Empleo
-            </h1>
-            <p className="text-lg text-green-100 mb-8">
-              Crea tu perfil profesional y accede a oportunidades laborales exclusivas en empresas líderes.
-            </p>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="bg-white/20 p-2 rounded-lg flex-shrink-0">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Ofertas exclusivas</h3>
-                  <p className="text-sm text-green-100">Accede a vacantes de empresas verificadas</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <div className="bg-white/20 p-2 rounded-lg flex-shrink-0">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Aplicación rápida</h3>
-                  <p className="text-sm text-green-100">Aplica a múltiples vacantes con un solo perfil</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="bg-white/20 p-2 rounded-lg flex-shrink-0">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Seguimiento completo</h3>
-                  <p className="text-sm text-green-100">Monitorea el estado de tus aplicaciones</p>
-                </div>
-              </div>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-brand-dark flex-shrink-0" />
+              <p className="text-xs text-neutral-700">Ofertas laborales exclusivas</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-brand-dark flex-shrink-0" />
+              <p className="text-xs text-neutral-700">Aplicación rápida a vacantes</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-brand-dark flex-shrink-0" />
+              <p className="text-xs text-neutral-700">Seguimiento de aplicaciones</p>
             </div>
           </div>
         </div>
 
-        {/* Panel derecho - Formulario */}
-        <div className="flex items-center justify-center p-8 lg:p-12">
-          <div className="w-full max-w-md space-y-6">
-            
-            {/* Logo móvil */}
-            <div className="lg:hidden flex justify-center mb-8">
-              <Image
-                src="/logo.svg"
-                alt="PSP Group Logo"
-                width={80}
-                height={80}
-                className="h-16 w-auto"
-              />
-            </div>
-
-            {/* Botón regresar */}
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-2 text-neutral-600 hover:text-brand-dark transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Regresar</span>
-            </button>
-
-            {/* Título */}
-            <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold text-brand-dark mb-2">
-                Crear Cuenta de Candidato
+        <div className="grid lg:grid-cols-5 gap-6 lg:gap-12">
+          
+          {/* Panel izquierdo - Beneficios (visible en desktop) */}
+          <div className="hidden lg:block lg:col-span-2">
+            <div className="sticky top-24">
+              <div className="mb-6">
+                <Briefcase className="h-12 w-12 text-brand-dark mb-4" />
+              </div>
+              
+              <h1 className="text-3xl font-bold text-brand-dark mb-3">
+                Bolsa de Empleo
               </h1>
-              <p className="text-neutral-600">
-                Completa tu perfil para acceder a la bolsa de empleo
+              <p className="text-neutral-600 mb-8">
+                Accede a oportunidades laborales exclusivas y crea tu perfil profesional.
               </p>
-            </div>
 
-            {/* Formulario */}
-            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-neutral-200">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-brand-dark/10 p-2 rounded-lg flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-brand-dark" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-brand-dark">Ofertas exclusivas</h3>
+                    <p className="text-sm text-neutral-600">Accede a vacantes de empresas verificadas</p>
+                  </div>
+                </div>
                 
-                {/* Información Personal */}
-                <div className="border-b pb-4 mb-4">
-                  <h3 className="font-semibold text-brand-dark mb-3">Información Personal*</h3>
+                <div className="flex items-start gap-3">
+                  <div className="bg-brand-dark/10 p-2 rounded-lg flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-brand-dark" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-brand-dark">Aplicación rápida</h3>
+                    <p className="text-sm text-neutral-600">Aplica a múltiples vacantes con un solo perfil</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="bg-brand-dark/10 p-2 rounded-lg flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-brand-dark" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-brand-dark">Seguimiento completo</h3>
+                    <p className="text-sm text-neutral-600">Monitorea el estado de tus aplicaciones</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Panel derecho - Formulario */}
+          <div className="lg:col-span-3 min-w-0">
+            <div className="w-full space-y-3 sm:space-y-4">
+              
+              {/* Botón regresar */}
+              <button
+                onClick={() => router.back()}
+                className="flex items-center gap-2 text-neutral-600 hover:text-brand-dark transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium">Regresar</span>
+              </button>
+
+              {/* Título */}
+              <div className="text-center mb-3 sm:mb-4">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-brand-dark mb-1">
+                  Crear Cuenta de Candidato
+                </h2>
+                <p className="text-xs sm:text-sm text-neutral-600">
+                  Completa tu información para acceder a la bolsa de empleo
+                </p>
+              </div>
+
+              {/* Formulario */}
+              <div className="bg-surface-primary p-4 sm:p-6 lg:p-8 rounded-lg sm:rounded-xl shadow-lg border border-neutral-200">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                   
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
+                  {/* Información Personal */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="min-w-0">
                       <label htmlFor="firstName" className="block text-sm font-semibold text-neutral-700 mb-2">
-                        Nombre
+                        Nombre*
                       </label>
                       <input
                         type="text"
                         id="firstName"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                         required
                       />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="lastName" className="block text-sm font-semibold text-neutral-700 mb-2">
-                        Apellido
+                        Apellido*
                       </label>
                       <input
                         type="text"
                         id="lastName"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="min-w-0">
                     <label htmlFor="email" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Correo Electrónico
+                      Correo Electrónico*
                     </label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Mail className="h-5 w-5 text-neutral-400" />
+                        <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-neutral-400" />
                       </span>
                       <input
                         type="email"
                         id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                        className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                         placeholder="tu@email.com"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="min-w-0">
                     <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Teléfono
+                      Teléfono*
                     </label>
-                    <PhoneInput
-                      phoneCountry={phoneCountry}
-                      phoneNumber={phoneNumber}
-                      onCountryChange={setPhoneCountry}
-                      onNumberChange={setPhoneNumber}
-                      required
-                    />
+                    <div className="w-full">
+                      <PhoneInput
+                        phoneCountry={phoneCountry}
+                        phoneNumber={phoneNumber}
+                        onCountryChange={setPhoneCountry}
+                        onNumberChange={setPhoneNumber}
+                        required
+                        className="border-neutral-300 bg-surface-secondary w-full"
+                      />
+                    </div>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="min-w-0">
                     <label htmlFor="password" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Contraseña
+                      Contraseña*
                     </label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-neutral-400" />
+                        <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-neutral-400" />
                       </span>
                       <input
                         type={showPassword ? "text" : "password"}
                         id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                        className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                         placeholder="Mínimo 8 caracteres"
                         required
                       />
@@ -264,112 +277,114 @@ export default function RegisterCandidatePage() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700"
                       >
-                        {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                        {showPassword ? <Eye className="h-4 w-4 sm:h-5 sm:w-5" /> : <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />}
                       </button>
                     </div>
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <label htmlFor="confirmPassword" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Confirmar Contraseña
+                      Confirmar Contraseña*
                     </label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-neutral-400" />
+                        <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-neutral-400" />
                       </span>
                       <input
                         type={showPassword ? "text" : "password"}
                         id="confirmPassword"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
+                        className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                         required
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Información Profesional (Opcional) */}
-                <div>
-                  <h3 className="font-semibold text-brand-dark mb-3">
-                    Información Profesional <span className="text-sm text-neutral-500 font-normal">(Opcional)</span>
-                  </h3>
+                  {/* Separador */}
+                  <div className="border-t border-neutral-200 pt-3 sm:pt-4 mt-3 sm:mt-4">
+                    <h3 className="font-semibold text-brand-dark mb-3 text-sm sm:text-base">
+                      Información Profesional <span className="text-xs sm:text-sm text-neutral-500 font-normal">(Opcional)</span>
+                    </h3>
                   
-                  <div className="mb-4">
-                    <label htmlFor="jobTitle" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Título/Profesión Actual
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Briefcase className="h-5 w-5 text-neutral-400" />
-                      </span>
-                      <input
-                        type="text"
-                        id="jobTitle"
-                        value={jobTitle}
-                        onChange={(e) => setJobTitle(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                        placeholder="Ej: Desarrollador Full Stack"
-                      />
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="min-w-0">
+                        <label htmlFor="jobTitle" className="block text-sm font-semibold text-neutral-700 mb-2">
+                          Título/Profesión Actual
+                        </label>
+                        <div className="relative">
+                          <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Briefcase className="h-4 w-4 sm:h-5 sm:w-5 text-neutral-400" />
+                          </span>
+                          <input
+                            type="text"
+                            id="jobTitle"
+                            value={jobTitle}
+                            onChange={(e) => setJobTitle(e.target.value)}
+                            className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
+                            placeholder="Ej: Desarrollador Full Stack"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="min-w-0">
+                        <label htmlFor="experienceLevel" className="block text-sm font-semibold text-neutral-700 mb-2">
+                          Nivel de Experiencia
+                        </label>
+                        <select
+                          id="experienceLevel"
+                          value={experienceLevel}
+                          onChange={(e) => setExperienceLevel(e.target.value)}
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
+                        >
+                          <option value="">Selecciona un nivel</option>
+                          {experienceLevels.map((level) => (
+                            <option key={level.value} value={level.value}>{level.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="min-w-0">
+                        <label htmlFor="linkedinUrl" className="block text-sm font-semibold text-neutral-700 mb-2">
+                          LinkedIn
+                        </label>
+                        <input
+                          type="url"
+                          id="linkedinUrl"
+                          value={linkedinUrl}
+                          onChange={(e) => setLinkedinUrl(e.target.value)}
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-dark focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
+                          placeholder="https://www.linkedin.com/in/tu-perfil"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="mb-4">
-                    <label htmlFor="experienceLevel" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Nivel de Experiencia
-                    </label>
-                    <select
-                      id="experienceLevel"
-                      value={experienceLevel}
-                      onChange={(e) => setExperienceLevel(e.target.value)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                    >
-                      <option value="">Selecciona un nivel</option>
-                      {experienceLevels.map((level) => (
-                        <option key={level.value} value={level.value}>{level.label}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {errorMsg && (
+                    <div className="p-3 rounded-lg bg-red-50 border border-red-300">
+                      <p className="text-sm text-red-800">{errorMsg}</p>
+                    </div>
+                  )}
 
-                  <div>
-                    <label htmlFor="linkedinUrl" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      LinkedIn
-                    </label>
-                    <input
-                      type="url"
-                      id="linkedinUrl"
-                      value={linkedinUrl}
-                      onChange={(e) => setLinkedinUrl(e.target.value)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-all"
-                      placeholder="https://www.linkedin.com/in/tu-perfil"
-                    />
-                  </div>
-                </div>
+                  <button
+                    type="submit"
+                    disabled={formLoading}
+                    className="w-full py-3 px-4 bg-brand-dark hover:bg-brand-dark/90 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {formLoading ? "Creando cuenta..." : "Crear Cuenta"}
+                  </button>
+                </form>
+              </div>
 
-                {errorMsg && (
-                  <div className="p-3 rounded-lg bg-red-50 border border-red-300">
-                    <p className="text-sm text-red-800">{errorMsg}</p>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={formLoading}
-                  className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {formLoading ? "Creando cuenta..." : "Crear Cuenta"}
-                </button>
-              </form>
-            </div>
-
-            {/* Info adicional */}
-            <div className="text-center">
-              <p className="text-sm text-neutral-600">
-                ¿Ya tienes una cuenta?{" "}
-                <a href="/auth" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
-                  Inicia sesión
-                </a>
-              </p>
+              {/* Info adicional */}
+              <div className="text-center pt-4">
+                <p className="text-sm text-neutral-600">
+                  ¿Ya tienes una cuenta?{" "}
+                  <a href="/auth" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
+                    Inicia sesión
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
         </div>

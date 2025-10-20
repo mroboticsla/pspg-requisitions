@@ -34,9 +34,9 @@ export default function SelectAccountTypePage() {
         "Acceso a base de datos de candidatos",
         "Reportes y análisis",
       ],
-      color: "brand-dark",
-      bgGradient: "from-brand-dark/10 via-brand-dark/5 to-transparent",
-      iconBg: "bg-brand-dark/10",
+      color: "brand-accent",
+      bgGradient: "from-brand-accent/10 via-brand-accent/5 to-transparent",
+      iconBg: "bg-brand-accent/10",
       route: "/auth/register/partner"
     },
     {
@@ -51,9 +51,9 @@ export default function SelectAccountTypePage() {
         "Aplicación rápida a vacantes",
         "Seguimiento de aplicaciones",
       ],
-      color: "brand-accent",
-      bgGradient: "from-brand-accent/10 via-brand-accent/5 to-transparent",
-      iconBg: "bg-brand-accent/10",
+      color: "brand-dark",
+      bgGradient: "from-brand-dark/10 via-brand-dark/5 to-transparent",
+      iconBg: "bg-brand-dark/10",
       route: "/auth/register/candidate"
     }
   ];
