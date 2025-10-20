@@ -87,8 +87,7 @@ export default function AboutPage() {
                   <h2 className="text-3xl font-bold text-brand-dark mb-4">Nuestra Misión</h2>
                   <div className="w-16 h-1 bg-brand-accent mb-6"></div>
                   <p className="text-gray-700 text-lg leading-relaxed">
-                    Conectar talento excepcional con oportunidades transformadoras mediante procesos de reclutamiento innovadores
-                    y personalizados, generando valor sostenible para nuestros clientes, candidatos y la sociedad.
+                    Brindar siempre un servicio de calidad, rapidez, eficacia, excelencia y perfeccionismo para nuestros clientes.
                   </p>
                 </div>
               </div>
@@ -103,8 +102,7 @@ export default function AboutPage() {
                   <h2 className="text-3xl font-bold text-brand-dark mb-4">Nuestra Visión</h2>
                   <div className="w-16 h-1 bg-brand-accent mb-6"></div>
                   <p className="text-gray-700 text-lg leading-relaxed">
-                    Ser la firma de reclutamiento ejecutivo líder en la región, reconocida por nuestra excelencia, innovación y
-                    compromiso con el desarrollo del talento humano y el crecimiento empresarial.
+                    Seguir siendo reconocidos como una firma de servicios profesionales integra y de excelencia en su ramo, siempre innovando a los cambios y necesidades que se presentan.
                   </p>
                 </div>
               </div>
