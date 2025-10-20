@@ -101,11 +101,11 @@ export default function RegisterPartnerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-secondary py-8 sm:py-12 px-4">
-      <div className="w-full max-w-5xl mx-auto">
+    <div className="min-h-screen bg-surface-secondary py-6 sm:py-12">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Beneficios en móvil - Versión compacta */}
-        <div className="lg:hidden mb-6 bg-surface-primary rounded-xl p-6 shadow-sm border border-neutral-200">
+        <div className="lg:hidden mb-4 sm:mb-6 bg-surface-primary rounded-xl p-4 sm:p-6 shadow-sm border border-neutral-200">
           <div className="flex items-center gap-3 mb-4">
             <Building2 className="h-8 w-8 text-brand-accent flex-shrink-0" />
             <div>
@@ -130,7 +130,7 @@ export default function RegisterPartnerPage() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-8 lg:gap-12">
+        <div className="grid lg:grid-cols-5 gap-6 lg:gap-12">
           
           {/* Panel izquierdo - Beneficios (visible en desktop) */}
           <div className="hidden lg:block lg:col-span-2">
@@ -181,8 +181,8 @@ export default function RegisterPartnerPage() {
           </div>
 
           {/* Panel derecho - Formulario */}
-          <div className="lg:col-span-3">
-            <div className="w-full space-y-4">
+          <div className="lg:col-span-3 min-w-0">
+            <div className="w-full space-y-3 sm:space-y-4">
               
               {/* Botón regresar */}
               <button
@@ -194,13 +194,13 @@ export default function RegisterPartnerPage() {
               </button>
 
               {/* Progress indicator */}
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className={`h-2 flex-1 max-w-[80px] rounded-full transition-colors duration-300 ${step >= 1 ? 'bg-brand-accent' : 'bg-neutral-300'}`} />
-                <div className={`h-2 flex-1 max-w-[80px] rounded-full transition-colors duration-300 ${step >= 2 ? 'bg-brand-accent' : 'bg-neutral-300'}`} />
+              <div className="flex items-center justify-center gap-2 mb-1 sm:mb-2">
+                <div className={`h-2 w-16 sm:w-20 rounded-full transition-colors duration-300 ${step >= 1 ? 'bg-brand-accent' : 'bg-neutral-300'}`} />
+                <div className={`h-2 w-16 sm:w-20 rounded-full transition-colors duration-300 ${step >= 2 ? 'bg-brand-accent' : 'bg-neutral-300'}`} />
               </div>
 
               {/* Título */}
-              <div className="text-center mb-4">
+              <div className="text-center mb-3 sm:mb-4">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-brand-dark mb-1">
                   {step === 1 ? "Información Personal" : "Información de Empresa"}
                 </h2>
@@ -210,13 +210,13 @@ export default function RegisterPartnerPage() {
               </div>
 
               {/* Formulario */}
-              <div className="bg-surface-primary p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg border border-neutral-200">
+              <div className="bg-surface-primary p-4 sm:p-6 lg:p-8 rounded-lg sm:rounded-xl shadow-lg border border-neutral-200">
                 
                 {/* Paso 1: Información Personal */}
                 {step === 1 && (
-                  <form onSubmit={handleStep1Continue} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
+                  <form onSubmit={handleStep1Continue} className="space-y-3 sm:space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      <div className="min-w-0">
                         <label htmlFor="firstName" className="block text-sm font-semibold text-neutral-700 mb-2">
                           Nombre*
                         </label>
@@ -225,12 +225,12 @@ export default function RegisterPartnerPage() {
                           id="firstName"
                           value={firstName}
                           onChange={(e) => setFirstName(e.target.value)}
-                          className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                           required
                         />
                       </div>
 
-                      <div>
+                      <div className="min-w-0">
                         <label htmlFor="lastName" className="block text-sm font-semibold text-neutral-700 mb-2">
                           Apellido*
                         </label>
@@ -239,60 +239,62 @@ export default function RegisterPartnerPage() {
                           id="lastName"
                           value={lastName}
                           onChange={(e) => setLastName(e.target.value)}
-                          className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                           required
                         />
                       </div>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="email" className="block text-sm font-semibold text-neutral-700 mb-2">
                         Correo Electrónico*
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Mail className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                          <Mail className="h-4 sm:h-5 w-4 sm:w-5 text-neutral-400" aria-hidden="true" />
                         </span>
                         <input
                           type="email"
                           id="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                           placeholder="tu@empresa.com"
                           required
                         />
                       </div>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label className="block text-sm font-semibold text-neutral-700 mb-2">
                         Teléfono*
                       </label>
-                      <PhoneInput
-                        phoneCountry={phoneCountry}
-                        phoneNumber={phoneNumber}
-                        onCountryChange={setPhoneCountry}
-                        onNumberChange={setPhoneNumber}
-                        required
-                        className="border-neutral-300 bg-surface-secondary"
-                      />
+                      <div className="w-full">
+                        <PhoneInput
+                          phoneCountry={phoneCountry}
+                          phoneNumber={phoneNumber}
+                          onCountryChange={setPhoneCountry}
+                          onNumberChange={setPhoneNumber}
+                          required
+                          className="border-neutral-300 bg-surface-secondary w-full"
+                        />
+                      </div>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="password" className="block text-sm font-semibold text-neutral-700 mb-2">
                         Contraseña*
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                          <Lock className="h-4 sm:h-5 w-4 sm:w-5 text-neutral-400" aria-hidden="true" />
                         </span>
                         <input
                           type={showPassword ? "text" : "password"}
                           id="password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          className="w-full pl-9 sm:pl-10 pr-9 sm:pr-10 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                           placeholder="Mínimo 8 caracteres"
                           required
                         />
@@ -302,25 +304,25 @@ export default function RegisterPartnerPage() {
                           aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                           className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
                         >
-                          {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                          {showPassword ? <Eye className="h-4 sm:h-5 w-4 sm:w-5" /> : <EyeOff className="h-4 sm:h-5 w-4 sm:w-5" />}
                         </button>
                       </div>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="confirmPassword" className="block text-sm font-semibold text-neutral-700 mb-2">
                         Confirmar Contraseña*
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Lock className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                          <Lock className="h-4 sm:h-5 w-4 sm:w-5 text-neutral-400" aria-hidden="true" />
                         </span>
                         <input
                           type={showPassword ? "text" : "password"}
                           id="confirmPassword"
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                           required
                         />
                       </div>
@@ -343,27 +345,27 @@ export default function RegisterPartnerPage() {
 
                 {/* Paso 2: Información de Empresa */}
                 {step === 2 && (
-                  <form onSubmit={handleFinalSubmit} className="space-y-4">
-                    <div>
+                  <form onSubmit={handleFinalSubmit} className="space-y-3 sm:space-y-4">
+                    <div className="min-w-0">
                       <label htmlFor="companyName" className="block text-sm font-semibold text-neutral-700 mb-2">
                         Nombre de la Empresa
                       </label>
                       <div className="relative">
                         <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Building2 className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                          <Building2 className="h-4 sm:h-5 w-4 sm:w-5 text-neutral-400" aria-hidden="true" />
                         </span>
                         <input
                           type="text"
                           id="companyName"
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
-                          className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                           placeholder="Mi Empresa S.A."
                         />
                       </div>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="companyLegalName" className="block text-sm font-semibold text-neutral-700 mb-2">
                         Razón Social
                       </label>
@@ -372,11 +374,11 @@ export default function RegisterPartnerPage() {
                         id="companyLegalName"
                         value={companyLegalName}
                         onChange={(e) => setCompanyLegalName(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                       />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="companyTaxId" className="block text-sm font-semibold text-neutral-700 mb-2">
                         RFC
                       </label>
@@ -385,13 +387,13 @@ export default function RegisterPartnerPage() {
                         id="companyTaxId"
                         value={companyTaxId}
                         onChange={(e) => setCompanyTaxId(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                         placeholder="ABC123456XYZ"
                         maxLength={13}
                       />
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="companyIndustry" className="block text-sm font-semibold text-neutral-700 mb-2">
                         Industria
                       </label>
@@ -399,7 +401,7 @@ export default function RegisterPartnerPage() {
                         id="companyIndustry"
                         value={companyIndustry}
                         onChange={(e) => setCompanyIndustry(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                       >
                         <option value="">Selecciona una industria</option>
                         {industries.map((industry) => (
@@ -408,7 +410,7 @@ export default function RegisterPartnerPage() {
                       </select>
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="companyWebsite" className="block text-sm font-semibold text-neutral-700 mb-2">
                         Sitio Web
                       </label>
@@ -417,7 +419,7 @@ export default function RegisterPartnerPage() {
                         id="companyWebsite"
                         value={companyWebsite}
                         onChange={(e) => setCompanyWebsite(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark text-sm sm:text-base"
                         placeholder="https://www.miempresa.com"
                       />
                     </div>

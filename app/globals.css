@@ -36,6 +36,16 @@ body {
   overflow-x: hidden;
 }
 
+/* Prevenir desbordamiento horizontal en todos los elementos */
+* {
+  max-width: 100%;
+}
+
+/* Permitir que ciertos elementos excedan si es necesario */
+html, body, #__next {
+  max-width: none;
+}
+
 /* Custom styles for the form */
 .form-section {
   @apply bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden;
