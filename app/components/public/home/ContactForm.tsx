@@ -233,11 +233,11 @@ export const ContactForm: React.FC = () => {
             {/* Imagen Ciudad de México desde Unsplash */}
             <div className="bg-gray-200 rounded-2xl overflow-hidden shadow-lg h-64 relative">
               <Image
-                src="https://images.unsplash.com/photo-1585464231875-d9ef1f5ad396?auto=format&fit=crop&w=1600&q=80"
-                alt="Ciudad de México — vista panorámica"
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
+              src="/images/mexico-city.avif"
+              alt="Ciudad de México — vista panorámica"
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
               />
             </div>
 
