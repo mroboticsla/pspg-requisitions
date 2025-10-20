@@ -225,20 +225,6 @@ function AuthPageContent() {
   return (
     <div className="min-h-[calc(100vh-16rem)] bg-surface-secondary flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md sm:max-w-lg space-y-6">
-        {/* Logo y título */}
-        <div className="text-center">
-          <div className="h-20 flex items-center justify-center mx-auto mb-4">
-            <Image 
-              src="/images/logo-web-dark.png" 
-              alt="PSP logo" 
-              width={200} 
-              height={80} 
-              className="h-16 w-auto object-contain" 
-              priority 
-              quality={100}
-            />
-          </div>
-        </div>
 
         {/* Control de pestañas flotante */}
         <AuthTabSwitch activeTab={activeTab} onTabChange={setActiveTab} />
@@ -454,18 +440,13 @@ function AuthPageContent() {
               </button>
             </form>
           )}
-
-          {/* Footer del formulario */}
-          <div className="mt-6 text-center">
-            <p className="text-xs text-neutral-500">© 2025 PSP Group. Todos los derechos reservados.</p>
-          </div>
         </div>
 
         {/* Información adicional */}
         <div className="text-center">
           <p className="text-sm text-neutral-600">
             ¿Necesitas ayuda?{" "}
-            <a href="#" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
+            <a href="/contact" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
               Contacta soporte técnico
             </a>
           </p>
