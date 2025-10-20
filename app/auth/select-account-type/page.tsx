@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Briefcase, ArrowRight, Check } from "lucide-react";
-import Image from "next/image";
+import { Building2, Briefcase, ArrowRight, Check, ChevronRight } from "lucide-react";
 
 interface AccountType {
   id: "partner" | "candidate";
@@ -13,15 +12,35 @@ interface AccountType {
   icon: any;
   features: string[];
   color: string;
-  hoverColor: string;
-  borderColor: string;
-  textColor: string;
+  bgGradient: string;
+  iconBg: string;
   route: string;
 }
 
 export default function SelectAccountTypePage() {
   const router = useRouter();
   const [selectedType, setSelectedType] = useState<"partner" | "candidate" | null>(null);
+  const [showButton, setShowButton] = useState(false);
+
+  // Mostrar botón sticky después de hacer scroll en móvil
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerWidth < 768) {
+        setShowButton(window.scrollY > 100);
+      } else {
+        setShowButton(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleScroll);
+    handleScroll(); // Check inicial
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
 
   const accountTypes: AccountType[] = [
     {
@@ -34,13 +53,11 @@ export default function SelectAccountTypePage() {
         "Publicación ilimitada de vacantes",
         "Panel de gestión de requisiciones",
         "Acceso a base de datos de candidatos",
-        "Reportes y análisis de contratación",
-        "Gestión de múltiples empresas"
+        "Reportes y análisis",
       ],
-      color: "bg-blue-600",
-      hoverColor: "hover:bg-blue-50",
-      borderColor: "border-blue-500",
-      textColor: "text-blue-600",
+      color: "brand-dark",
+      bgGradient: "from-brand-dark/10 via-brand-dark/5 to-transparent",
+      iconBg: "bg-brand-dark/10",
       route: "/auth/register/partner"
     },
     {
@@ -53,13 +70,11 @@ export default function SelectAccountTypePage() {
         "Acceso a bolsa de trabajo exclusiva",
         "Perfil profesional personalizado",
         "Aplicación rápida a vacantes",
-        "Notificaciones de nuevas oportunidades",
-        "Seguimiento de aplicaciones"
+        "Seguimiento de aplicaciones",
       ],
-      color: "bg-green-600",
-      hoverColor: "hover:bg-green-50",
-      borderColor: "border-green-500",
-      textColor: "text-green-600",
+      color: "brand-accent",
+      bgGradient: "from-brand-accent/10 via-brand-accent/5 to-transparent",
+      iconBg: "bg-brand-accent/10",
       route: "/auth/register/candidate"
     }
   ];
@@ -72,87 +87,131 @@ export default function SelectAccountTypePage() {
     }
   };
 
+  const handleCardClick = (type: "partner" | "candidate") => {
+    // En móvil: solo expandir/colapsar la tarjeta
+    if (window.innerWidth < 768) {
+      setSelectedType(selectedType === type ? null : type);
+    } else {
+      // En desktop: seleccionar directamente
+      setSelectedType(type);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-secondary via-white to-surface-secondary">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-surface-secondary">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-brand-dark mb-4">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl font-bold text-brand-dark mb-3 sm:mb-4">
             Elige el tipo de cuenta
           </h1>
-          <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-            Selecciona la opción que mejor se adapte a tus necesidades. Podrás gestionar tu perfil completo después del registro.
+          <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto mb-4">
+            Selecciona la opción que mejor se adapte a tus necesidades.
           </p>
+          
+          {/* Indicador de flujo en móvil */}
+          <div className="md:hidden bg-brand-accent/10 border border-brand-accent/20 rounded-lg p-3 max-w-sm mx-auto">
+            <div className="flex items-center justify-center gap-2 text-sm text-brand-dark">
+              <div className="bg-brand-accent text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
+              <span className="font-medium">Toca una tarjeta para continuar</span>
+            </div>
+          </div>
         </div>
 
         {/* Account Type Cards */}
-        <div className="grid md:grid-cols-2 gap-8 mb-8">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {accountTypes.map((account) => {
             const Icon = account.icon;
             const isSelected = selectedType === account.id;
 
             return (
-              <button
+              <div
                 key={account.id}
-                onClick={() => setSelectedType(account.id)}
-                className={`relative group text-left p-8 rounded-2xl border-2 transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl ${
+                className={`relative group rounded-xl sm:rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
                   isSelected
-                    ? `${account.borderColor} bg-white shadow-xl ring-4 ring-opacity-50`
-                    : `border-neutral-200 bg-white ${account.hoverColor}`
+                    ? `border-${account.color} shadow-xl`
+                    : `border-neutral-200 hover:border-${account.color}/30 hover:shadow-lg`
                 }`}
               >
-                {/* Selected indicator */}
+                {/* Fondo con gradiente de color */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${account.bgGradient} ${isSelected ? 'opacity-100' : 'opacity-60 group-hover:opacity-80'} transition-opacity duration-300`} />
+                
+                {/* Contenido de la tarjeta */}
+                <button
+                  onClick={() => handleCardClick(account.id)}
+                  className="relative w-full text-left p-5 sm:p-8 transition-transform duration-200 active:scale-[0.98]"
+                >
+                  {/* Selected indicator */}
+                  {isSelected && (
+                    <div className={`absolute top-3 right-3 sm:top-4 sm:right-4 bg-${account.color} text-white rounded-full p-1.5 sm:p-2 shadow-lg z-10`}>
+                      <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </div>
+                  )}
+
+                  {/* Icon */}
+                  <div className={`inline-flex p-3 sm:p-4 rounded-lg sm:rounded-xl mb-4 sm:mb-6 ${account.iconBg} backdrop-blur-sm`}>
+                    <Icon className={`h-8 w-8 sm:h-10 sm:w-10 text-${account.color}`} />
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-xl sm:text-2xl font-bold text-brand-dark mb-1 sm:mb-2">
+                    {account.title}
+                  </h3>
+                  <p className={`text-xs sm:text-sm font-medium mb-3 sm:mb-4 text-${account.color}`}>
+                    {account.subtitle}
+                  </p>
+
+                  {/* Description - Visible en desktop siempre, en móvil solo cuando está seleccionada */}
+                  <p className={`text-sm sm:text-base text-neutral-700 mb-4 sm:mb-6 leading-relaxed ${!isSelected && 'hidden md:block'}`}>
+                    {account.description}
+                  </p>
+
+                  {/* Features - Visible en desktop siempre, en móvil solo cuando está seleccionada */}
+                  <div className={`space-y-2 sm:space-y-3 ${!isSelected && 'hidden md:block'}`}>
+                    {account.features.map((feature, index) => (
+                      <div key={index} className="flex items-start gap-2 sm:gap-3">
+                        <div className={`mt-0.5 flex-shrink-0 ${account.iconBg} rounded-full p-1 backdrop-blur-sm`}>
+                          <Check className={`h-3 w-3 sm:h-4 sm:w-4 text-${account.color}`} />
+                        </div>
+                        <span className="text-xs sm:text-sm text-neutral-700">{feature}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mobile: Show arrow when not selected */}
+                  {!isSelected && (
+                    <div className="md:hidden absolute right-4 top-1/2 -translate-y-1/2">
+                      <ChevronRight className={`h-6 w-6 text-${account.color}`} />
+                    </div>
+                  )}
+                </button>
+
+                {/* Botón Continuar - Solo visible en móvil cuando está seleccionada */}
                 {isSelected && (
-                  <div className={`absolute top-4 right-4 ${account.color} text-white rounded-full p-2`}>
-                    <Check className="h-5 w-5" />
+                  <div className="md:hidden relative px-5 pb-5">
+                    <button
+                      onClick={handleContinue}
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold text-white bg-${account.color} hover:opacity-90 active:scale-95 transition-all shadow-md`}
+                    >
+                      Continuar
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
                   </div>
                 )}
-
-                {/* Icon */}
-                <div className={`inline-flex p-4 rounded-xl mb-6 ${account.color} bg-opacity-10`}>
-                  <Icon className={`h-10 w-10 ${account.textColor}`} />
-                </div>
-
-                {/* Title */}
-                <h3 className="text-2xl font-bold text-brand-dark mb-2">
-                  {account.title}
-                </h3>
-                <p className={`text-sm font-medium mb-4 ${account.textColor}`}>
-                  {account.subtitle}
-                </p>
-
-                {/* Description */}
-                <p className="text-neutral-600 mb-6 leading-relaxed">
-                  {account.description}
-                </p>
-
-                {/* Features */}
-                <div className="space-y-3">
-                  {account.features.map((feature, index) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <div className={`mt-0.5 flex-shrink-0 ${account.color} bg-opacity-10 rounded-full p-1`}>
-                        <Check className={`h-4 w-4 ${account.textColor}`} />
-                      </div>
-                      <span className="text-sm text-neutral-700">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Hover effect overlay */}
-                <div className={`absolute inset-0 rounded-2xl ${account.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-              </button>
+              </div>
             );
           })}
         </div>
 
-        {/* Continue Button */}
-        <div className="flex justify-center">
+        {/* Continue Button - Desktop */}
+        <div className="hidden md:flex justify-center mb-8">
           <button
             onClick={handleContinue}
             disabled={!selectedType}
             className={`flex items-center gap-3 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 transform ${
               selectedType
-                ? "bg-brand-accent text-white hover:bg-brand-dark hover:scale-[1.05] shadow-lg hover:shadow-xl"
+                ? "bg-brand-accent text-white hover:bg-brand-accentDark hover:scale-[1.05] shadow-lg hover:shadow-xl"
                 : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
             }`}
           >
@@ -161,8 +220,21 @@ export default function SelectAccountTypePage() {
           </button>
         </div>
 
+        {/* Sticky Continue Button - Mobile */}
+        {showButton && selectedType && (
+          <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-neutral-200 shadow-2xl z-50 animate-slide-in-up">
+            <button
+              onClick={handleContinue}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl font-semibold text-lg bg-brand-accent text-white hover:bg-brand-accentDark active:scale-95 shadow-lg transition-all"
+            >
+              Continuar con {accountTypes.find(acc => acc.id === selectedType)?.title}
+              <ArrowRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+
         {/* Back to login */}
-        <div className="text-center mt-8">
+        <div className="text-center">
           <p className="text-sm text-neutral-600">
             ¿Ya tienes una cuenta?{" "}
             <a
