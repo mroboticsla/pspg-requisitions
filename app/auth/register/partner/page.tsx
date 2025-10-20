@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, User, Building2, CheckCircle2, ArrowLeft } from "lucide-react";
-import Image from "next/image";
+import { Mail, Lock, Eye, EyeOff, Building2, CheckCircle2, ArrowLeft } from "lucide-react";
 import PhoneInput, { composePhoneCountryValue } from "@/app/components/PhoneInput";
 
 export default function RegisterPartnerPage() {
@@ -102,349 +101,365 @@ export default function RegisterPartnerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-surface-secondary via-white to-surface-secondary">
-      <div className="grid lg:grid-cols-2 min-h-screen">
+    <div className="min-h-screen bg-surface-secondary py-8 sm:py-12 px-4">
+      <div className="w-full max-w-5xl mx-auto">
         
-        {/* Panel izquierdo - Imagen hero */}
-        <div className="hidden lg:flex lg:flex-col lg:justify-center lg:items-center bg-blue-600 p-12 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-blue-800/80 z-10"></div>
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-700 to-blue-900"></div>
-
-          <div className="relative z-20 text-white max-w-lg">
-            <div className="mb-8">
-              <Building2 className="h-16 w-16 mb-4" />
+        {/* Beneficios en móvil - Versión compacta */}
+        <div className="lg:hidden mb-6 bg-surface-primary rounded-xl p-6 shadow-sm border border-neutral-200">
+          <div className="flex items-center gap-3 mb-4">
+            <Building2 className="h-8 w-8 text-brand-accent flex-shrink-0" />
+            <div>
+              <h1 className="text-xl font-bold text-brand-dark">Cuenta Empresarial</h1>
+              <p className="text-xs text-neutral-600">Gestiona tus requisiciones</p>
             </div>
-            
-            <h1 className="text-4xl font-bold mb-4">
-              Cuenta Empresarial
-            </h1>
-            <p className="text-lg text-blue-100 mb-8">
-              Crea tu cuenta empresarial y comienza a gestionar tus requisiciones de personal de manera eficiente.
-            </p>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="bg-white/20 p-2 rounded-lg flex-shrink-0">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Publicación ilimitada</h3>
-                  <p className="text-sm text-blue-100">Publica todas las vacantes que necesites sin restricciones</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3">
-                <div className="bg-white/20 p-2 rounded-lg flex-shrink-0">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Panel de gestión completo</h3>
-                  <p className="text-sm text-blue-100">Administra requisiciones, candidatos y procesos de contratación</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="bg-white/20 p-2 rounded-lg flex-shrink-0">
-                  <CheckCircle2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Base de datos de talento</h3>
-                  <p className="text-sm text-blue-100">Acceso a nuestra base de candidatos cualificados</p>
-                </div>
-              </div>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-brand-accent flex-shrink-0" />
+              <p className="text-xs text-neutral-700">Publicación ilimitada de vacantes</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-brand-accent flex-shrink-0" />
+              <p className="text-xs text-neutral-700">Panel de gestión completo</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-brand-accent flex-shrink-0" />
+              <p className="text-xs text-neutral-700">Acceso a base de talento</p>
             </div>
           </div>
         </div>
 
-        {/* Panel derecho - Formulario */}
-        <div className="flex items-center justify-center p-8 lg:p-12">
-          <div className="w-full max-w-md space-y-6">
-            
-            {/* Logo móvil */}
-            <div className="lg:hidden flex justify-center mb-8">
-              <Image
-                src="/logo.svg"
-                alt="PSP Group Logo"
-                width={80}
-                height={80}
-                className="h-16 w-auto"
-              />
-            </div>
-
-            {/* Botón regresar */}
-            <button
-              onClick={() => step === 1 ? router.back() : setStep(1)}
-              className="flex items-center gap-2 text-neutral-600 hover:text-brand-dark transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Regresar</span>
-            </button>
-
-            {/* Progress indicator */}
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <div className={`h-2 w-20 rounded-full transition-colors ${step >= 1 ? 'bg-blue-600' : 'bg-neutral-300'}`} />
-              <div className={`h-2 w-20 rounded-full transition-colors ${step >= 2 ? 'bg-blue-600' : 'bg-neutral-300'}`} />
-            </div>
-
-            {/* Título */}
-            <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold text-brand-dark mb-2">
-                {step === 1 ? "Información Personal" : "Información de Empresa (Opcional)"}
-              </h1>
-              <p className="text-neutral-600">
-                {step === 1 ? "Paso 1 de 2" : "Paso 2 de 2 - Puedes omitir este paso"}
-              </p>
-            </div>
-
-            {/* Formulario */}
-            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-lg border border-neutral-200">
+        <div className="grid lg:grid-cols-5 gap-8 lg:gap-12">
+          
+          {/* Panel izquierdo - Beneficios (visible en desktop) */}
+          <div className="hidden lg:block lg:col-span-2">
+            <div className="sticky top-24">
+              <div className="mb-6">
+                <Building2 className="h-12 w-12 text-brand-accent mb-4" />
+              </div>
               
-              {/* Paso 1: Información Personal */}
-              {step === 1 && (
-                <form onSubmit={handleStep1Continue} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="firstName" className="block text-sm font-semibold text-neutral-700 mb-2">
-                        Nombre*
-                      </label>
-                      <input
-                        type="text"
-                        id="firstName"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        required
-                      />
+              <h1 className="text-3xl font-bold text-brand-dark mb-3">
+                Cuenta Empresarial
+              </h1>
+              <p className="text-neutral-600 mb-8">
+                Gestiona tus requisiciones de personal de manera eficiente.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="bg-brand-accent/10 p-2 rounded-lg flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-brand-accent" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-brand-dark">Publicación ilimitada</h3>
+                    <p className="text-sm text-neutral-600">Publica todas las vacantes que necesites</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3">
+                  <div className="bg-brand-accent/10 p-2 rounded-lg flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-brand-accent" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-brand-dark">Panel de gestión</h3>
+                    <p className="text-sm text-neutral-600">Administra candidatos y procesos</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="bg-brand-accent/10 p-2 rounded-lg flex-shrink-0">
+                    <CheckCircle2 className="h-5 w-5 text-brand-accent" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-brand-dark">Base de talento</h3>
+                    <p className="text-sm text-neutral-600">Acceso a candidatos cualificados</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Panel derecho - Formulario */}
+          <div className="lg:col-span-3">
+            <div className="w-full space-y-4">
+              
+              {/* Botón regresar */}
+              <button
+                onClick={() => step === 1 ? router.back() : setStep(1)}
+                className="flex items-center gap-2 text-neutral-600 hover:text-brand-dark transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium">Regresar</span>
+              </button>
+
+              {/* Progress indicator */}
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className={`h-2 flex-1 max-w-[80px] rounded-full transition-colors duration-300 ${step >= 1 ? 'bg-brand-accent' : 'bg-neutral-300'}`} />
+                <div className={`h-2 flex-1 max-w-[80px] rounded-full transition-colors duration-300 ${step >= 2 ? 'bg-brand-accent' : 'bg-neutral-300'}`} />
+              </div>
+
+              {/* Título */}
+              <div className="text-center mb-4">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-brand-dark mb-1">
+                  {step === 1 ? "Información Personal" : "Información de Empresa"}
+                </h2>
+                <p className="text-xs sm:text-sm text-neutral-600">
+                  {step === 1 ? "Paso 1 de 2" : "Paso 2 de 2 (Opcional)"}
+                </p>
+              </div>
+
+              {/* Formulario */}
+              <div className="bg-surface-primary p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg border border-neutral-200">
+                
+                {/* Paso 1: Información Personal */}
+                {step === 1 && (
+                  <form onSubmit={handleStep1Continue} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="firstName" className="block text-sm font-semibold text-neutral-700 mb-2">
+                          Nombre*
+                        </label>
+                        <input
+                          type="text"
+                          id="firstName"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="lastName" className="block text-sm font-semibold text-neutral-700 mb-2">
+                          Apellido*
+                        </label>
+                        <input
+                          type="text"
+                          id="lastName"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          required
+                        />
+                      </div>
                     </div>
 
                     <div>
-                      <label htmlFor="lastName" className="block text-sm font-semibold text-neutral-700 mb-2">
-                        Apellido*
+                      <label htmlFor="email" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Correo Electrónico*
                       </label>
-                      <input
-                        type="text"
-                        id="lastName"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Mail className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </span>
+                        <input
+                          type="email"
+                          id="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          placeholder="tu@empresa.com"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Teléfono*
+                      </label>
+                      <PhoneInput
+                        phoneCountry={phoneCountry}
+                        phoneNumber={phoneNumber}
+                        onCountryChange={setPhoneCountry}
+                        onNumberChange={setPhoneNumber}
                         required
+                        className="border-neutral-300 bg-surface-secondary"
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Correo Electrónico*
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Mail className="h-5 w-5 text-neutral-400" />
-                      </span>
-                      <input
-                        type="email"
-                        id="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        placeholder="tu@empresa.com"
-                        required
-                      />
+                    <div>
+                      <label htmlFor="password" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Contraseña*
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Lock className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </span>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          id="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          placeholder="Mínimo 8 caracteres"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none"
+                        >
+                          {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Teléfono*
-                    </label>
-                    <PhoneInput
-                      phoneCountry={phoneCountry}
-                      phoneNumber={phoneNumber}
-                      onCountryChange={setPhoneCountry}
-                      onNumberChange={setPhoneNumber}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="password" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Contraseña*
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-neutral-400" />
-                      </span>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        id="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        placeholder="Mínimo 8 caracteres"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700"
-                      >
-                        {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-                      </button>
+                    <div>
+                      <label htmlFor="confirmPassword" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Confirmar Contraseña*
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Lock className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </span>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          id="confirmPassword"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Confirmar Contraseña*
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Lock className="h-5 w-5 text-neutral-400" />
-                      </span>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        id="confirmPassword"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        required
-                      />
-                    </div>
-                  </div>
+                    {errorMsg && (
+                      <div className="p-3 rounded-lg bg-red-50 border border-red-300">
+                        <p className="text-sm text-red-800">{errorMsg}</p>
+                      </div>
+                    )}
 
-                  {errorMsg && (
-                    <div className="p-3 rounded-lg bg-red-50 border border-red-300">
-                      <p className="text-sm text-red-800">{errorMsg}</p>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02]"
-                  >
-                    Continuar
-                  </button>
-                </form>
-              )}
-
-              {/* Paso 2: Información de Empresa */}
-              {step === 2 && (
-                <form onSubmit={handleFinalSubmit} className="space-y-4">
-                  <div>
-                    <label htmlFor="companyName" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Nombre de la Empresa
-                    </label>
-                    <div className="relative">
-                      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Building2 className="h-5 w-5 text-neutral-400" />
-                      </span>
-                      <input
-                        type="text"
-                        id="companyName"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                        placeholder="Mi Empresa S.A."
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="companyLegalName" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Razón Social
-                    </label>
-                    <input
-                      type="text"
-                      id="companyLegalName"
-                      value={companyLegalName}
-                      onChange={(e) => setCompanyLegalName(e.target.value)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="companyTaxId" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      RFC
-                    </label>
-                    <input
-                      type="text"
-                      id="companyTaxId"
-                      value={companyTaxId}
-                      onChange={(e) => setCompanyTaxId(e.target.value)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                      placeholder="ABC123456XYZ"
-                      maxLength={13}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="companyIndustry" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Industria
-                    </label>
-                    <select
-                      id="companyIndustry"
-                      value={companyIndustry}
-                      onChange={(e) => setCompanyIndustry(e.target.value)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    >
-                      <option value="">Selecciona una industria</option>
-                      {industries.map((industry) => (
-                        <option key={industry} value={industry}>{industry}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label htmlFor="companyWebsite" className="block text-sm font-semibold text-neutral-700 mb-2">
-                      Sitio Web
-                    </label>
-                    <input
-                      type="url"
-                      id="companyWebsite"
-                      value={companyWebsite}
-                      onChange={(e) => setCompanyWebsite(e.target.value)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                      placeholder="https://www.miempresa.com"
-                    />
-                  </div>
-
-                  {errorMsg && (
-                    <div className="p-3 rounded-lg bg-red-50 border border-red-300">
-                      <p className="text-sm text-red-800">{errorMsg}</p>
-                    </div>
-                  )}
-
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        // Omitir datos de empresa y crear cuenta directamente
-                        await handleFinalSubmit(new Event('submit') as any);
-                      }}
-                      disabled={formLoading}
-                      className="flex-1 py-3 px-4 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-semibold rounded-lg transition-all"
-                    >
-                      Omitir
-                    </button>
                     <button
                       type="submit"
-                      disabled={formLoading}
-                      className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      className="w-full py-3 px-4 bg-brand-accent hover:bg-brand-accentDark text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-sm"
                     >
-                      {formLoading ? "Creando cuenta..." : "Crear Cuenta"}
+                      Continuar
                     </button>
-                  </div>
-                </form>
-              )}
-            </div>
+                  </form>
+                )}
 
-            {/* Info adicional */}
-            <div className="text-center">
-              <p className="text-sm text-neutral-600">
-                ¿Ya tienes una cuenta?{" "}
-                <a href="/auth" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
-                  Inicia sesión
-                </a>
-              </p>
+                {/* Paso 2: Información de Empresa */}
+                {step === 2 && (
+                  <form onSubmit={handleFinalSubmit} className="space-y-4">
+                    <div>
+                      <label htmlFor="companyName" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Nombre de la Empresa
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Building2 className="h-5 w-5 text-neutral-400" aria-hidden="true" />
+                        </span>
+                        <input
+                          type="text"
+                          id="companyName"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                          placeholder="Mi Empresa S.A."
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="companyLegalName" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Razón Social
+                      </label>
+                      <input
+                        type="text"
+                        id="companyLegalName"
+                        value={companyLegalName}
+                        onChange={(e) => setCompanyLegalName(e.target.value)}
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="companyTaxId" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        RFC
+                      </label>
+                      <input
+                        type="text"
+                        id="companyTaxId"
+                        value={companyTaxId}
+                        onChange={(e) => setCompanyTaxId(e.target.value)}
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                        placeholder="ABC123456XYZ"
+                        maxLength={13}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="companyIndustry" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Industria
+                      </label>
+                      <select
+                        id="companyIndustry"
+                        value={companyIndustry}
+                        onChange={(e) => setCompanyIndustry(e.target.value)}
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                      >
+                        <option value="">Selecciona una industria</option>
+                        {industries.map((industry) => (
+                          <option key={industry} value={industry}>{industry}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="companyWebsite" className="block text-sm font-semibold text-neutral-700 mb-2">
+                        Sitio Web
+                      </label>
+                      <input
+                        type="url"
+                        id="companyWebsite"
+                        value={companyWebsite}
+                        onChange={(e) => setCompanyWebsite(e.target.value)}
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
+                        placeholder="https://www.miempresa.com"
+                      />
+                    </div>
+
+                    {errorMsg && (
+                      <div className="p-3 rounded-lg bg-red-50 border border-red-300">
+                        <p className="text-sm text-red-800">{errorMsg}</p>
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await handleFinalSubmit(new Event('submit') as any);
+                        }}
+                        disabled={formLoading}
+                        className="flex-1 py-3 px-4 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 font-semibold rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Omitir
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={formLoading}
+                        className="flex-1 py-3 px-4 bg-brand-accent hover:bg-brand-accentDark text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        {formLoading ? "Creando cuenta..." : "Crear Cuenta"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {/* Info adicional */}
+              <div className="text-center pt-4">
+                <p className="text-sm text-neutral-600">
+                  ¿Ya tienes una cuenta?{" "}
+                  <a href="/auth" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
+                    Inicia sesión
+                  </a>
+                </p>
+              </div>
             </div>
           </div>
         </div>
