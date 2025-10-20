@@ -88,14 +88,6 @@ export default function SelectAccountTypePage() {
           <p className="text-base sm:text-lg text-neutral-600 max-w-2xl mx-auto mb-4">
             Selecciona la opción que mejor se adapte a tus necesidades.
           </p>
-          
-          {/* Indicador de flujo en móvil */}
-          <div className="md:hidden bg-brand-accent/10 border border-brand-accent/20 rounded-lg p-3 max-w-sm mx-auto">
-            <div className="flex items-center justify-center gap-2 text-sm text-brand-dark">
-              <div className="bg-brand-accent text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0">1</div>
-              <span className="font-medium">Toca una tarjeta para continuar</span>
-            </div>
-          </div>
         </div>
 
         {/* Account Type Cards */}
