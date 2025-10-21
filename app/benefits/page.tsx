@@ -458,6 +458,103 @@ export default function BenefitsPage() {
           </div>
         </section>
 
+        {/* PSP NomiCash and BX+ Section */}
+        <section className="py-20 bg-gradient-to-b from-neutral-50 to-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {/* PSP NomiCash Section */}
+              <div className="group relative bg-gradient-to-br from-white to-neutral-50 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-neutral-100 hover:border-brand-accent/20 overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-colors"></div>
+                
+                <div className="relative">
+                  <div className="inline-block mb-4 px-4 py-2 bg-blue-100 border border-blue-300 rounded-full text-xs font-bold text-blue-900 uppercase">
+                    Aplicación PSP NomiCash
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-brand-dark mb-2">Prestaciones para el Empleado con Descuento</h3>
+                  <p className="text-sm text-gray-600 mb-6 italic">Vía Nómina</p>
+                  
+                  <div className="space-y-3 mb-8">
+                    {[
+                      'Salud (Asesoría médica telefónica 24/7 extensivas para la familia)',
+                      'Envío de medicamentos',
+                      'Recargas',
+                      'Pago de servicios (luz, agua, teléfono, cable entre otros)',
+                      'Adelantos de nómina (Dispersión al instante a cualquier cuenta bancaria, 10% de comisión)'
+                    ].map((feature, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                          <CheckCircle2 className="h-3 w-3 text-white" />
+                        </div>
+                        <span className="text-gray-700 text-sm">
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-gray-600 italic">
+                    * Se activa 3 meses después de estar dados de alta con nosotros
+                  </p>
+                  
+                </div>
+              </div>
+
+              {/* Seguros BX+ Section */}
+              <div className="group relative bg-gradient-to-br from-white to-neutral-50 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-neutral-100 hover:border-brand-accent/20 overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-500/5 rounded-full blur-3xl group-hover:bg-yellow-500/10 transition-colors"></div>
+                
+                <div className="relative">
+                  <div className="inline-block mb-4 px-4 py-2 bg-yellow-100 border border-yellow-300 rounded-full text-xs font-bold text-yellow-900 uppercase">
+                    Seguros BX+
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-brand-dark mb-2">Seguro de Gastos Médicos Mayores</h3>
+                  <p className="text-sm text-gray-600 mb-6">Incluimos seguro de gastos médicos mayores para empleados que ganen más de $15,000.00 pesos mensuales.</p>
+                  
+                  <div className="space-y-4 mb-8">
+                    <div>
+                      <h4 className="font-bold text-brand-dark mb-3">Coberturas</h4>
+                      <div className="space-y-2">
+                        {[
+                          { label: 'Suma Asegurada', value: '20,000,000' },
+                          { label: 'Deducible', value: '12,000' }
+                        ].map((item, index) => (
+                          <div key={index} className="flex justify-between items-center py-1 border-b border-gray-200">
+                            <span className="text-gray-700 text-sm">{item.label}</span>
+                            <span className="font-semibold text-brand-dark">{item.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-brand-dark mb-3">Beneficios Incluidos</h4>
+                      <div className="space-y-2 text-sm">
+                        {[
+                          { label: 'Coaseguro', value: '10% Tope de $30,000' },
+                          { label: 'Nivel Hospitalario', value: 'Alto' },
+                          { label: 'Honorarios Quirúrgicos', value: '$35,000' },
+                          { label: 'Maternidad', value: '$30,000' },
+                          { label: 'Reconocimiento de Antigüedad', value: 'Amparada' },
+                          { label: 'Emergencia en el Extranjero', value: '50,000 Dlls Ded 50 Dlls' },
+                          { label: 'Pago de complemento', value: 'Amparada' },
+                          { label: 'Complicaciones del embarazo y/o puerperio', value: '$40,000' }
+                        ].map((benefit, index) => (
+                          <div key={index} className="flex justify-between items-start gap-2 py-1.5 border-b border-gray-100">
+                            <span className="text-gray-600">{benefit.label}</span>
+                            <span className="font-semibold text-brand-dark text-right whitespace-nowrap">{benefit.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA Section */}
         <section className="relative py-24 bg-gradient-to-br from-brand-dark via-brand-dark to-[#003d5c] text-white overflow-hidden">
           {/* Decorative Elements */}
