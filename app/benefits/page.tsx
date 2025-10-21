@@ -243,7 +243,7 @@ export default function BenefitsPage() {
         </section>
 
         {/* KLU Card Section */}
-        <section className="py-20 bg-gradient-to-b from-white to-neutral-50">
+        <section className="py-20 bg-gradient-to-b from-neutral-50 to-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               {/* Left side - Text Content */}
@@ -342,6 +342,118 @@ export default function BenefitsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        
+        {/* Employee Benefits Section */}
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-bold text-brand-dark mb-4">Beneficios para Colaboradores</h2>
+              <div className="flex justify-center items-center gap-2 mb-4">
+                <div className="w-12 h-1 bg-brand-accent"></div>
+                <div className="w-3 h-3 bg-brand-accent rounded-full"></div>
+                <div className="w-12 h-1 bg-brand-accent"></div>
+              </div>
+              <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+                Contamos con beneficios exclusivos para nuestros colaboradores y sus familias
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+              {/* CADI Card Benefits */}
+              <div className="group relative bg-gradient-to-br from-white to-neutral-50 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-neutral-100 hover:border-brand-accent/20 overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/5 rounded-full blur-3xl group-hover:bg-red-500/10 transition-colors"></div>
+                
+                <div className="relative">
+                  <div className="inline-block mb-4 px-4 py-2 bg-red-100 border border-red-300 rounded-full text-xs font-bold text-red-900 uppercase">
+                    Tarjeta CADI (Desclub)
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-brand-dark mb-6">Descuentos y Beneficios Exclusivos</h3>
+                  
+                  <div className="space-y-3 mb-8">
+                    {[
+                      'Envío de ambulancia',
+                      'Envío de médico a domicilio',
+                      'Descuentos en laboratorios',
+                      'Descuento en hospitales a nivel nacional',
+                      'Telemédica',
+                      'Descuentos comerciales (Red Desclub)',
+                      'Estudio en laboratorio',
+                      'Cine 2x1',
+                      'Limpieza dental'
+                    ].map((benefit, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className="flex-shrink-0 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center mt-0.5">
+                          <CheckCircle2 className="h-3 w-3 text-white" />
+                        </div>
+                        <span className="text-gray-700 font-medium">
+                          {benefit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-gray-600 italic">
+                    * Se entrega 3 meses después de estar dados de alta con nosotros
+                  </p>
+                </div>
+              </div>
+
+              {/* Bipromedic Card Benefits */}
+              <div className="group relative bg-gradient-to-br from-white to-neutral-50 rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 border border-neutral-100 hover:border-brand-accent/20 overflow-hidden">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-green-500/5 rounded-full blur-3xl group-hover:bg-green-500/10 transition-colors"></div>
+                
+                <div className="relative">
+                  <div className="inline-block mb-4 px-4 py-2 bg-green-100 border border-green-300 rounded-full text-xs font-bold text-green-900 uppercase">
+                    Tarjeta Electrónica Bipromedic
+                  </div>
+                  
+                  <h3 className="text-2xl font-bold text-brand-dark mb-6">Cobertura Médica Integral</h3>
+                  
+                  <div className="mb-6">
+                    <h4 className="font-bold text-brand-dark mb-4 flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-green-600" />
+                      Cobertura
+                    </h4>
+                    <div className="space-y-2">
+                      {[
+                        'Indemnización por fallecimiento accidental: $200,000.00',
+                        'Reembolso de gastos médicos por accidente: $25,000.00',
+                        'Invalidez por accidente total: $200,000.00',
+                        'Pérdidas orgánicas escala "B": $200,000.00',
+                        'Indemnización diaria por hospitalización por accidente: $300.00 (hasta 90 días)',
+                        'Muerte por asalto: $20,000.00 en exceso de la suma por muerte accidental',
+                        'Quemaduras graves: $3,000.00',
+                        'Fractura de hueso por accidente: $3,000.00'
+                      ].map((coverage, index) => (
+                        <div key={index} className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mt-0.5">
+                            <CheckCircle2 className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="text-gray-700 text-sm">
+                            {coverage}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-600">
+                    Certificado: 173093710 | Vigencia: 17-07-2023 a 17-07-2024
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional note */}
+            <div className="mt-12 p-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-xl border border-blue-200">
+              <p className="text-gray-700 text-center">
+                <span className="font-bold text-brand-dark">Estos beneficios</span> están diseñados para garantizar la tranquilidad y bienestar de nuestros colaboradores y sus familias, brindando acceso a servicios de salud, descuentos en comercios y protección en caso de accidentes.
+              </p>
             </div>
           </div>
         </section>
