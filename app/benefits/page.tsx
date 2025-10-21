@@ -242,6 +242,110 @@ export default function BenefitsPage() {
           </div>
         </section>
 
+        {/* KLU Card Section */}
+        <section className="py-20 bg-gradient-to-b from-white to-neutral-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              {/* Left side - Text Content */}
+              <div>
+                <div className="inline-block mb-6">
+                  <span className="inline-block px-4 py-2 bg-blue-100 border border-blue-300 rounded-full text-sm font-semibold text-blue-900">
+                    TARJETA EMPRESARIAL KLU
+                  </span>
+                </div>
+                <h2 className="text-4xl md:text-5xl font-bold text-brand-dark mb-6 leading-tight">
+                  Beneficios: Tarjeta Empresarial (KLU)
+                </h2>
+                <p className="text-gray-700 text-lg mb-6 leading-relaxed">
+                  Como parte de nuestra cartera de servicios decidimos añadir una nueva herramienta que está aquí para apoyarnos a revolucionar las ideas convencionales que tenemos de los bancos.
+                </p>
+                <p className="text-gray-700 text-lg mb-8 leading-relaxed">
+                  Es una plataforma diseñada para tus necesidades y soluciones empresariales desde una cuenta corporativa contando con una interfaz amigable que te permite navegar en tu cuenta.
+                </p>
+                <p className="text-gray-700 text-lg mb-8 leading-relaxed">
+                  Esta nueva herramienta nos permite generar un mejor control con los gastos corrientes que generamos empresarialmente mediante un plástico master card internacional facilitándonos el pago de los gastos corrientes como:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                  {[
+                    'Viáticos',
+                    'Hoteles',
+                    'Restaurantes',
+                    'Tiendas departamentales',
+                    'Tiendas de autoservicio',
+                    'Insumos',
+                    'Transporte',
+                    'Pagos en plataformas',
+                    'Gasolina',
+                    'Gastos generales',
+                    'Disposición de efectivo'
+                  ].map((item, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-5 h-5 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-gray-700 font-medium">
+                        {item}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-sm text-gray-600 italic">
+                  * aplica comisión del banco
+                </p>
+              </div>
+
+              {/* Right side - Images and Logo */}
+              <div className="relative">
+                <div className="relative flex flex-col items-center justify-center space-y-8">
+                  {/* KLU Cards Visual */}
+                  <div className="relative w-full max-w-sm h-96 perspective">
+                    {/* Background glow */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-blue-600/10 rounded-3xl blur-3xl"></div>
+                    
+                    {/* Card stack effect */}
+                    <div className="absolute top-12 left-1/2 transform -translate-x-1/2 w-64 h-40 bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl shadow-2xl border border-blue-700 transform -rotate-12 opacity-80">
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <div className="text-4xl font-bold text-white mb-2">klu.</div>
+                          <div className="flex gap-2 justify-center">
+                            <div className="w-8 h-5 bg-red-500 rounded"></div>
+                            <div className="w-8 h-5 bg-yellow-500 rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="absolute top-6 left-1/2 transform -translate-x-1/2 w-64 h-40 bg-gradient-to-br from-blue-800 to-blue-700 rounded-2xl shadow-2xl border border-blue-600 transform rotate-0 z-10">
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <div className="text-4xl font-bold text-white mb-2">klu.</div>
+                          <div className="flex gap-2 justify-center">
+                            <div className="w-8 h-5 bg-red-500 rounded"></div>
+                            <div className="w-8 h-5 bg-yellow-500 rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Phone Visual */}
+                  <div className="relative w-32 h-64 mx-auto">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-900 to-blue-950 rounded-3xl shadow-2xl border-2 border-blue-700 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-white mb-4">klu.</div>
+                        <div className="w-12 h-8 bg-yellow-500 rounded-lg mx-auto mb-4"></div>
+                        <p className="text-xs text-blue-200">Mobile App</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA Section */}
         <section className="relative py-24 bg-gradient-to-br from-brand-dark via-brand-dark to-[#003d5c] text-white overflow-hidden">
           {/* Decorative Elements */}
