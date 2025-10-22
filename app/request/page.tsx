@@ -3,22 +3,27 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { UserCompany } from '@/lib/types/company'
-import { createRequisition, updateRequisition } from '@/lib/requisitions'
+import { createRequisition, updateRequisition, getRequisitionById } from '@/lib/requisitions'
 import { getCompanyActiveTemplate } from '@/lib/templates'
 import { DynamicSection } from '../components/DynamicField'
-import type { FormTemplateComplete } from '@/lib/types/requisitions'
+import type { FormTemplateComplete, RequisitionComplete } from '@/lib/types/requisitions'
 
 export default function RequisitionForm() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
+  const searchParams = useSearchParams()
+  const editRequisitionId = searchParams.get('edit')
+  
   const [userCompanies, setUserCompanies] = useState<UserCompany[]>([])
   const [loadingCompanies, setLoadingCompanies] = useState(false)
   const [template, setTemplate] = useState<FormTemplateComplete | null>(null)
   const [loadingTemplate, setLoadingTemplate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [customResponses, setCustomResponses] = useState<Record<string, Record<string, any>>>({})
+  const [loadingRequisition, setLoadingRequisition] = useState(false)
 
   // Obtener rol del usuario desde el profile
   const userRole = (profile as any)?.roles?.name || null
@@ -187,6 +192,146 @@ export default function RequisitionForm() {
     loadTemplate()
   }, [formData.companyId])
 
+  // Cargar requisición existente si está en modo edición
+  useEffect(() => {
+    const loadExistingRequisition = async () => {
+      if (!editRequisitionId) return
+      if (loadingRequisition) return // Evitar múltiples cargas simultáneas
+
+      try {
+        setLoadingRequisition(true)
+        console.log('Cargando requisición para editar:', editRequisitionId)
+        
+        const requisition = await getRequisitionById(editRequisitionId) as RequisitionComplete
+        console.log('Requisición cargada:', requisition)
+
+        if (!requisition) {
+          console.error('Requisición no encontrada')
+          alert('No se encontró la requisición')
+          router.push('/requisitions')
+          return
+        }
+
+        // Verificar que sea editable (solo drafts)
+        if (requisition.status !== 'draft') {
+          console.warn('Requisición no editable, estado:', requisition.status)
+          alert('Solo se pueden editar requisiciones en estado borrador')
+          router.push(`/requisitions/${editRequisitionId}`)
+          return
+        }
+
+        // Cargar template snapshot
+        if (requisition.template_snapshot) {
+          console.log('Cargando template snapshot')
+          setTemplate(requisition.template_snapshot)
+        }
+
+        // Mapear los datos de la requisición al formulario
+        console.log('Mapeando datos al formulario...')
+        setFormData({
+          companyId: requisition.company_id,
+          puestoRequerido: requisition.puesto_requerido || '',
+          departamento: requisition.departamento || '',
+          numeroVacantes: String(requisition.numero_vacantes || 1),
+          
+          nuevaCreacion: (requisition.tipo_puesto as any)?.nuevaCreacion || false,
+          reemplazoTemporal: (requisition.tipo_puesto as any)?.reemplazoTemporal || false,
+          reestructuracionPuesto: (requisition.tipo_puesto as any)?.reestructuracionPuesto || false,
+          reemplazoDefinitivo: (requisition.tipo_puesto as any)?.reemplazoDefinitivo || false,
+          renunciaVoluntaria: (requisition.tipo_puesto as any)?.renunciaVoluntaria || false,
+          promocion: (requisition.tipo_puesto as any)?.promocion || false,
+          incapacidad: (requisition.tipo_puesto as any)?.incapacidad || false,
+          cancelacionContrato: (requisition.tipo_puesto as any)?.cancelacionContrato || false,
+          licencia: (requisition.tipo_puesto as any)?.licencia || false,
+          vacaciones: (requisition.tipo_puesto as any)?.vacaciones || false,
+          incrementoLabores: (requisition.tipo_puesto as any)?.incrementoLabores || false,
+          licenciaMaternidad: (requisition.tipo_puesto as any)?.licenciaMaternidad || false,
+          
+          motivoPuesto: requisition.motivo_puesto || '',
+          nombreEmpleadoReemplaza: requisition.nombre_empleado_reemplaza || '',
+          
+          funcion1: requisition.funciones_principales?.[0] || '',
+          funcion2: requisition.funciones_principales?.[1] || '',
+          funcion3: requisition.funciones_principales?.[2] || '',
+          funcion4: requisition.funciones_principales?.[3] || '',
+          funcion5: requisition.funciones_principales?.[4] || '',
+          
+          bachiller: (requisition.formacion_academica as any)?.bachiller || false,
+          tecnico: (requisition.formacion_academica as any)?.tecnico || false,
+          profesional: (requisition.formacion_academica as any)?.profesional || false,
+          especializacion: (requisition.formacion_academica as any)?.especializacion || false,
+          estudianteUniversitario: (requisition.formacion_academica as any)?.estudianteUniversitario || false,
+          idiomaIngles: requisition.idioma_ingles || false,
+          otrosEstudios: requisition.otros_estudios || '',
+          
+          sistemaOperativo: { 
+            windows: false, 
+            otros: false 
+          },
+          wordExcelPowerPoint: { 
+            basico: requisition.habilidad_informatica?.word === 'basico',
+            intermedio: requisition.habilidad_informatica?.word === 'intermedio',
+            avanzado: requisition.habilidad_informatica?.word === 'avanzado'
+          },
+          baseDatos: { 
+            basico: false, 
+            intermedio: false, 
+            avanzado: false 
+          },
+          internet: { 
+            basico: requisition.habilidad_informatica?.internet === 'basico',
+            intermedio: requisition.habilidad_informatica?.internet === 'intermedio',
+            avanzado: requisition.habilidad_informatica?.internet === 'avanzado'
+          },
+          correoElectronico: { 
+            basico: requisition.habilidad_informatica?.outlook === 'basico',
+            intermedio: requisition.habilidad_informatica?.outlook === 'intermedio',
+            avanzado: requisition.habilidad_informatica?.outlook === 'avanzado'
+          },
+          otroEspecifique: requisition.habilidad_informatica?.software_especifico?.[0]?.nombre || '',
+          
+          informacion: (requisition.habilidades_tecnicas as any)?.informacion || false,
+          maquinariaEquipos: (requisition.habilidades_tecnicas as any)?.maquinariaEquipos || false,
+          decisiones: (requisition.habilidades_tecnicas as any)?.decisiones || false,
+          supervisionPersonal: (requisition.habilidades_tecnicas as any)?.supervisionPersonal || false,
+          responsabilidades: (requisition.habilidades_tecnicas as any)?.responsabilidades || { confidencial: false, restringida: false },
+          supervision: (requisition.habilidades_tecnicas as any)?.supervision || { directa: false, indirecta: false }
+        })
+
+        // Cargar custom responses
+        if (requisition.custom_responses && requisition.custom_responses.length > 0) {
+          console.log('Cargando respuestas personalizadas:', requisition.custom_responses.length)
+          const responses: Record<string, Record<string, any>> = {}
+          requisition.custom_responses.forEach((response) => {
+            responses[response.section_id] = response.responses
+          })
+          setCustomResponses(responses)
+        }
+
+        console.log('Requisición cargada exitosamente')
+      } catch (error: any) {
+        console.error('Error loading requisition:', error)
+        console.error('Error type:', typeof error)
+        console.error('Error keys:', error ? Object.keys(error) : 'null')
+        console.error('Error message:', error?.message)
+        console.error('Error toString:', error?.toString())
+        console.error('Error JSON:', JSON.stringify(error, null, 2))
+        
+        // No mostrar alert si no hay un mensaje de error claro
+        if (error?.message) {
+          alert(`Error al cargar la requisición: ${error.message}`)
+        }
+        // No redirigir, permitir que el usuario vea qué pasó
+        // router.push('/requisitions')
+      } finally {
+        setLoadingRequisition(false)
+      }
+    }
+
+    loadExistingRequisition()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editRequisitionId]) // Solo depende de editRequisitionId, no de router
+
   const handleCustomResponse = (sectionId: string, fieldName: string, value: any) => {
     setCustomResponses(prev => ({
       ...prev,
@@ -257,8 +402,17 @@ export default function RequisitionForm() {
         custom_responses: customResponses,
       }
 
-      const requisition = await createRequisition(requisitionData)
-      alert('Borrador guardado exitosamente')
+      let requisition
+      if (editRequisitionId) {
+        // Actualizar requisición existente
+        requisition = await updateRequisition(editRequisitionId, requisitionData)
+        alert('Borrador actualizado exitosamente')
+      } else {
+        // Crear nueva requisición
+        requisition = await createRequisition(requisitionData)
+        alert('Borrador guardado exitosamente')
+      }
+      
       router.push(`/requisitions/${requisition.id}`)
     } catch (error) {
       console.error('Error saving draft:', error)
@@ -340,9 +494,16 @@ export default function RequisitionForm() {
         custom_responses: customResponses,
       }
 
-      // Crear y enviar la requisición
-      const requisition = await createRequisition(requisitionData)
-      await updateRequisition(requisition.id, { status: 'submitted' })
+      let requisition
+      if (editRequisitionId) {
+        // Actualizar requisición existente y cambiar estado
+        await updateRequisition(editRequisitionId, requisitionData)
+        requisition = await updateRequisition(editRequisitionId, { status: 'submitted' })
+      } else {
+        // Crear y enviar la requisición
+        requisition = await createRequisition(requisitionData)
+        await updateRequisition(requisition.id, { status: 'submitted' })
+      }
       
       alert('Requisición enviada exitosamente')
       router.push(`/requisitions/${requisition.id}`)
@@ -354,13 +515,15 @@ export default function RequisitionForm() {
     }
   }
 
-  // Mostrar loading mientras se verifica la sesión
-  if (loading) {
+  // Mostrar loading mientras se verifica la sesión o se carga la requisición
+  if (loading || loadingRequisition) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verificando sesión...</p>
+          <p className="text-gray-600">
+            {loadingRequisition ? 'Cargando requisición...' : 'Verificando sesión...'}
+          </p>
         </div>
       </div>
     )
@@ -383,13 +546,31 @@ export default function RequisitionForm() {
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
         {/* Header with instructions */}
         <div className="bg-brand-dark text-white p-4">
-          <h2 className="text-lg font-bold text-center">INSTRUCCIONES</h2>
+          <h2 className="text-lg font-bold text-center">
+            {editRequisitionId ? 'EDITAR REQUISICIÓN' : 'NUEVA REQUISICIÓN'}
+          </h2>
           <p className="text-sm text-center mt-1">
             Recuerde realizar su requisición de personal con <strong>mínimo 15 días hábiles de ANTICIPACIÓN</strong> a la fecha de inicio de labores solicitadas.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 p-6">
+          {/* Botón volver si está editando */}
+          {editRequisitionId && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => router.push(`/requisitions/${editRequisitionId}`)}
+                className="flex items-center gap-2 text-brand-dark hover:text-brand-accent font-medium transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Volver a detalles
+              </button>
+            </div>
+          )}
+
           {/* Datos Generales */}
           <div className="form-section">
             <div className="form-section-header">
@@ -418,6 +599,7 @@ export default function RequisitionForm() {
                         onChange={handleInputChange}
                         className="form-input"
                         required
+                        disabled={!!editRequisitionId}
                       >
                         <option value="">Seleccione una empresa</option>
                         {userCompanies.map((company) => (
@@ -426,7 +608,12 @@ export default function RequisitionForm() {
                           </option>
                         ))}
                       </select>
-                      {(userRole === 'admin' || userRole === 'superadmin') && (
+                      {editRequisitionId && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          No se puede cambiar la empresa al editar una requisición
+                        </p>
+                      )}
+                      {!editRequisitionId && (userRole === 'admin' || userRole === 'superadmin') && (
                         <p className="mt-1 text-xs text-brand-accent">
                           <span className="font-semibold">Admin:</span> Puede ver todas las empresas activas
                         </p>
@@ -908,14 +1095,14 @@ export default function RequisitionForm() {
               disabled={saving}
               className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
-              {saving ? 'Guardando...' : 'Guardar como Borrador'}
+              {saving ? 'Guardando...' : editRequisitionId ? 'Actualizar Borrador' : 'Guardar como Borrador'}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="px-6 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              {saving ? 'Enviando...' : 'Enviar Requisición'}
+              {saving ? 'Enviando...' : editRequisitionId ? 'Actualizar y Enviar' : 'Enviar Requisición'}
             </button>
           </div>
         </form>
