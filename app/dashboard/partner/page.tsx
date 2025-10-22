@@ -22,10 +22,11 @@ import {
   AlertCircle,
   Briefcase
 } from 'lucide-react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { format as formatDate, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es } from 'date-fns/locale/es'
 import { useToast } from '@/lib/useToast'
+import { PieChartComponent } from '@/app/components/charts/PieChartComponent'
+import { BarChartComponent } from '@/app/components/charts/BarChartComponent'
 
 type DashboardStats = {
   total: number
@@ -186,18 +187,24 @@ export default function PartnerDashboardPage() {
       { name: 'Canceladas', value: stats.cancelled, color: statusColors.cancelled },
       { name: 'Cubiertas', value: stats.filled, color: statusColors.filled },
     ]
-    return data.filter(item => item.value > 0)
+    const filtered = data.filter(item => item.value > 0)
+    console.log('📊 Datos del gráfico de distribución:', filtered)
+    return filtered
   }, [stats])
 
   // Datos para gráfico de tendencia (requisiciones por día)
   const requisitionTrendData = useMemo(() => {
-    if (requisitions.length === 0) return []
+    if (!requisitions || requisitions.length === 0) {
+      console.log('📈 No hay requisiciones para el gráfico de tendencia')
+      return []
+    }
 
     const days = dateRange === '7days' ? 7 : dateRange === '30days' ? 30 : 90
     const data = []
+    const now = new Date()
 
     for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i)
+      const date = subDays(now, i)
       const dateStr = formatDate(date, 'dd/MMM', { locale: es })
       
       const reqsOnDay = requisitions.filter(req => {
@@ -205,7 +212,8 @@ export default function PartnerDashboardPage() {
         try {
           const reqDate = parseISO(req.created_at)
           return formatDate(reqDate, 'yyyy-MM-dd') === formatDate(date, 'yyyy-MM-dd')
-        } catch {
+        } catch (error) {
+          console.error('Error parsing date:', req.created_at, error)
           return false
         }
       }).length
@@ -216,6 +224,7 @@ export default function PartnerDashboardPage() {
       })
     }
 
+    console.log('📈 Datos del gráfico de tendencia:', data.slice(0, 5), '... (total:', data.length, 'puntos)')
     return data
   }, [requisitions, dateRange])
 
@@ -406,34 +415,14 @@ export default function PartnerDashboardPage() {
             <Activity className="w-5 h-5 mr-2 text-brand-accent" />
             Distribución por Estado
           </h2>
-          {loadingData ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            </div>
-          ) : statusDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={statusDistribution}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => `${entry.name}: ${entry.value}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {statusDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          {statusDistribution.length > 0 ? (
+            <PieChartComponent data={statusDistribution} loading={loadingData} />
           ) : (
-            <p className="text-gray-500 text-center py-16">No hay datos disponibles</p>
+            <div className="text-center py-16">
+              <Activity className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500">No hay datos disponibles</p>
+              <p className="text-sm text-gray-400 mt-1">Crea tu primera requisición para ver estadísticas</p>
+            </div>
           )}
         </div>
 
@@ -443,25 +432,14 @@ export default function PartnerDashboardPage() {
             <TrendingUp className="w-5 h-5 mr-2 text-brand-accent" />
             Tendencia de Creación
           </h2>
-          {loadingData ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            </div>
-          ) : requisitionTrendData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={requisitionTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#6b7280" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                  labelStyle={{ color: '#374151', fontWeight: 'bold' }}
-                />
-                <Bar dataKey="requisiciones" fill="#FF1556" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          {requisitionTrendData.length > 0 ? (
+            <BarChartComponent data={requisitionTrendData} loading={loadingData} />
           ) : (
-            <p className="text-gray-500 text-center py-16">No hay datos suficientes para el período seleccionado</p>
+            <div className="text-center py-16">
+              <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500">No hay datos suficientes para el período seleccionado</p>
+              <p className="text-sm text-gray-400 mt-1">Crea más requisiciones para ver tendencias</p>
+            </div>
           )}
         </div>
       </div>
