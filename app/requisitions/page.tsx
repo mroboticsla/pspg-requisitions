@@ -103,6 +103,8 @@ export default function MyRequisitionsPage() {
           ].map(({ status, label, icon: Icon, color, lightColor, textColor }, index, array) => {
             const count = requisitions.filter(r => r.status === status).length;
             const isActive = count > 0;
+            const nextStatus = array[index + 1]?.status;
+            const hasNextItems = nextStatus ? requisitions.filter(r => r.status === nextStatus).length > 0 : false;
             
             return (
               <div key={status} className="flex items-center" style={{ minWidth: '200px' }}>
@@ -138,11 +140,21 @@ export default function MyRequisitionsPage() {
                 {/* Línea conectora */}
                 {index < array.length - 1 && (
                   <div className="flex-1 flex items-center px-4" style={{ minWidth: '80px' }}>
-                    <div
-                      className={`h-1 w-full rounded transition-all duration-300 ${
-                        isActive ? color : 'bg-gray-200'
-                      }`}
-                    />
+                    <div className="relative h-1 w-full rounded bg-gray-200 overflow-hidden">
+                      {/* Línea de fondo estática cuando está activo */}
+                      {isActive && (
+                        <div className={`absolute inset-0 rounded ${color} opacity-30`} />
+                      )}
+                      {/* Línea animada cuando el paso actual tiene items */}
+                      {isActive && (
+                        <div
+                          className={`absolute inset-0 rounded ${color}`}
+                          style={{
+                            animation: 'fillLine 2s ease-in-out infinite',
+                          }}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
