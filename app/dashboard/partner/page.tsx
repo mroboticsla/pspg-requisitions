@@ -154,7 +154,7 @@ export default function PartnerDashboardPage() {
     } finally {
       setLoadingData(false)
     }
-  }, [profile?.id, dateRange])
+  }, [profile?.id, dateRange, toastError])
 
   // Función para filtrar requisiciones por rango de fechas
   const filterRequisitionsByDateRange = (reqs: Requisition[], range: '7days' | '30days' | 'all'): Requisition[] => {

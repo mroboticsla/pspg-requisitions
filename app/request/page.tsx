@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
 import { useSearchParams } from 'next/navigation'
@@ -12,7 +12,7 @@ import { DynamicSection } from '../components/DynamicField'
 import type { FormTemplateComplete, RequisitionComplete } from '@/lib/types/requisitions'
 import { useToast } from '@/lib/useToast'
 
-export default function RequisitionForm() {
+function RequisitionFormContent() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
   const searchParams = useSearchParams()
@@ -1112,5 +1112,20 @@ export default function RequisitionForm() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function RequisitionForm() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando formulario...</p>
+        </div>
+      </div>
+    }>
+      <RequisitionFormContent />
+    </Suspense>
   )
 }
