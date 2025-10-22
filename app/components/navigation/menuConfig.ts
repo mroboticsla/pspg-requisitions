@@ -17,9 +17,7 @@ export const MENU: MenuItem[] = [
   {
     id: 'requisitions', label: 'Requisiciones', roles: ['superadmin', 'admin', 'partner'], children: [
       { id: 'req-new', label: 'Crear Requisición', path: '/request', roles: ['superadmin', 'admin', 'partner'], icon: FilePlus2 },
-      { id: 'req-list', label: 'Gestión de Requisiciones', path: '/requisitions', roles: ['superadmin', 'admin', 'partner'], icon: ListChecks },
-      { id: 'req-approve', label: 'Aprobar', path: '/requisitions/approve', roles: ['superadmin', 'admin'], icon: CheckSquare },
-      { id: 'req-mine', label: 'Mis requisiciones', path: '/requisitions/mine', roles: ['partner', 'candidate'], icon: ListChecks },
+      { id: 'req-mine', label: 'Mis Requisiciones', path: '/requisitions', roles: ['superadmin', 'admin', 'partner'], icon: ListChecks },
     ]
   },
   { id: 'reports', label: 'Reportes', path: '/reports', roles: ['superadmin','admin'], icon: BarChart3 },
@@ -30,6 +28,7 @@ export const MENU: MenuItem[] = [
     { id: 'users', label: 'Usuarios', path: '/admin/users', roles: ['superadmin', 'admin'], icon: Users },
     { id: 'roles', label: 'Roles', path: '/admin/roles', roles: ['superadmin'], icon: Shield },
     { id: 'templates', label: 'Plantillas de Requisiciones', path: '/admin/templates', roles: ['superadmin', 'admin'], icon: FileText },
+    { id: 'req-admin', label: 'Gestión de Requisiciones', path: '/admin/requisitions', roles: ['superadmin', 'admin'], icon: FileText },
   ]},
   { id: 'profile', label: 'Mi perfil', path: '/profile', icon: UserIcon },
 ]
