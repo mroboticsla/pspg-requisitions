@@ -12,6 +12,7 @@ import { listRequisitions, getRequisitionStats } from '@/lib/requisitions';
 import type { Requisition, RequisitionStatus, RequisitionStats } from '@/lib/types/requisitions';
 import { FileText, Eye, Users, Calendar, Briefcase, Download, Filter, Edit } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { useToast } from '@/lib/useToast';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -36,6 +37,7 @@ const statusColors: Record<RequisitionStatus, string> = {
 export default function AdminRequisitionsPage() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { error } = useToast();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [stats, setStats] = useState<RequisitionStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,12 +68,13 @@ export default function AdminRequisitionsPage() {
 
       setRequisitions(requisitionsData);
       setStats(statsData);
-    } catch (error) {
-      console.error('Error loading data:', error);
+    } catch (err: any) {
+      console.error('Error loading data:', err);
+      error(err?.message || 'Error al cargar los datos de requisiciones');
     } finally {
       setLoading(false);
     }
-  }, [profile?.id]);
+  }, [profile?.id, error]);
 
   useEffect(() => {
     loadData();

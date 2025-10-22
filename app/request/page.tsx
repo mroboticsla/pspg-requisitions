@@ -10,12 +10,14 @@ import { createRequisition, updateRequisition, getRequisitionById } from '@/lib/
 import { getCompanyActiveTemplate } from '@/lib/templates'
 import { DynamicSection } from '../components/DynamicField'
 import type { FormTemplateComplete, RequisitionComplete } from '@/lib/types/requisitions'
+import { useToast } from '@/lib/useToast'
 
 export default function RequisitionForm() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
   const searchParams = useSearchParams()
   const editRequisitionId = searchParams.get('edit')
+  const { success, error, warning, info } = useToast()
   
   const [userCompanies, setUserCompanies] = useState<UserCompany[]>([])
   const [loadingCompanies, setLoadingCompanies] = useState(false)
@@ -207,7 +209,7 @@ export default function RequisitionForm() {
 
         if (!requisition) {
           console.error('Requisición no encontrada')
-          alert('No se encontró la requisición')
+          error('No se encontró la requisición')
           router.push('/requisitions')
           return
         }
@@ -215,7 +217,7 @@ export default function RequisitionForm() {
         // Verificar que sea editable (solo drafts)
         if (requisition.status !== 'draft') {
           console.warn('Requisición no editable, estado:', requisition.status)
-          alert('Solo se pueden editar requisiciones en estado borrador')
+          warning('Solo se pueden editar requisiciones en estado borrador')
           router.push(`/requisitions/${editRequisitionId}`)
           return
         }
@@ -309,17 +311,19 @@ export default function RequisitionForm() {
         }
 
         console.log('Requisición cargada exitosamente')
-      } catch (error: any) {
-        console.error('Error loading requisition:', error)
-        console.error('Error type:', typeof error)
-        console.error('Error keys:', error ? Object.keys(error) : 'null')
-        console.error('Error message:', error?.message)
-        console.error('Error toString:', error?.toString())
-        console.error('Error JSON:', JSON.stringify(error, null, 2))
+      } catch (err: any) {
+        console.error('Error loading requisition:', err)
+        console.error('Error type:', typeof err)
+        console.error('Error keys:', err ? Object.keys(err) : 'null')
+        console.error('Error message:', err?.message)
+        console.error('Error toString:', err?.toString())
+        console.error('Error JSON:', JSON.stringify(err, null, 2))
         
-        // No mostrar alert si no hay un mensaje de error claro
-        if (error?.message) {
-          alert(`Error al cargar la requisición: ${error.message}`)
+        // Mostrar notificación de error
+        if (err?.message) {
+          error(`Error al cargar la requisición: ${err.message}`)
+        } else {
+          error('Error inesperado al cargar la requisición')
         }
         // No redirigir, permitir que el usuario vea qué pasó
         // router.push('/requisitions')
@@ -406,17 +410,17 @@ export default function RequisitionForm() {
       if (editRequisitionId) {
         // Actualizar requisición existente
         requisition = await updateRequisition(editRequisitionId, requisitionData)
-        alert('Borrador actualizado exitosamente')
+        success('¡Borrador actualizado exitosamente!')
       } else {
         // Crear nueva requisición
         requisition = await createRequisition(requisitionData)
-        alert('Borrador guardado exitosamente')
+        success('¡Borrador guardado exitosamente!')
       }
       
       router.push(`/requisitions/${requisition.id}`)
-    } catch (error) {
-      console.error('Error saving draft:', error)
-      alert('Error al guardar el borrador')
+    } catch (err: any) {
+      console.error('Error saving draft:', err)
+      error(err?.message || 'Error al guardar el borrador')
     } finally {
       setSaving(false)
     }
@@ -426,12 +430,12 @@ export default function RequisitionForm() {
     e.preventDefault()
     
     if (!formData.companyId) {
-      alert('Por favor seleccione una empresa')
+      warning('Por favor seleccione una empresa')
       return
     }
 
     if (!formData.puestoRequerido) {
-      alert('Por favor especifique el puesto requerido')
+      warning('Por favor especifique el puesto requerido')
       return
     }
 
@@ -505,11 +509,11 @@ export default function RequisitionForm() {
         await updateRequisition(requisition.id, { status: 'submitted' })
       }
       
-      alert('Requisición enviada exitosamente')
+      success('¡Requisición enviada exitosamente!')
       router.push(`/requisitions/${requisition.id}`)
-    } catch (error) {
-      console.error('Error submitting requisition:', error)
-      alert('Error al enviar la requisición')
+    } catch (err: any) {
+      console.error('Error submitting requisition:', err)
+      error(err?.message || 'Error al enviar la requisición')
     } finally {
       setSaving(false)
     }

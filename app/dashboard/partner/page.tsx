@@ -25,6 +25,7 @@ import {
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { format as formatDate, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { useToast } from '@/lib/useToast'
 
 type DashboardStats = {
   total: number
@@ -61,6 +62,7 @@ const statusColors: Record<RequisitionStatus, string> = {
 export default function PartnerDashboardPage() {
   const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
+  const { error: toastError } = useToast()
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     draft: 0,
@@ -144,7 +146,9 @@ export default function PartnerDashboardPage() {
         recentRequisitions
       })
     } catch (err: any) {
-      setError(err.message || String(err))
+      const errorMsg = err.message || String(err)
+      setError(errorMsg)
+      toastError(err?.message || 'Error al cargar las estadísticas del dashboard')
       console.error('Error fetching requisitions:', err)
     } finally {
       setLoadingData(false)

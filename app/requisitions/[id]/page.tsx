@@ -13,6 +13,7 @@ import {
 } from '@/lib/requisitions';
 import type { RequisitionComplete, RequisitionStatus } from '@/lib/types/requisitions';
 import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle } from 'lucide-react';
+import { useToast } from '@/lib/useToast';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -38,6 +39,7 @@ export default function RequisitionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const requisitionId = params.id as string;
+  const { success, error, warning, info } = useToast();
 
   const [requisition, setRequisition] = useState<RequisitionComplete | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,12 +49,13 @@ export default function RequisitionDetailPage() {
       setLoading(true);
       const data = await getRequisitionById(requisitionId);
       setRequisition(data);
-    } catch (error) {
-      console.error('Error loading requisition:', error);
+    } catch (err: any) {
+      console.error('Error loading requisition:', err);
+      error(err?.message || 'Error al cargar la requisición');
     } finally {
       setLoading(false);
     }
-  }, [requisitionId]);
+  }, [requisitionId, error]);
 
   useEffect(() => {
     loadRequisition();
@@ -61,24 +64,36 @@ export default function RequisitionDetailPage() {
   async function handleStatusChange(newStatus: RequisitionStatus) {
     if (!requisition) return;
 
+    const statusMessages: Record<RequisitionStatus, string> = {
+      draft: 'movida a borrador',
+      submitted: 'enviada',
+      in_review: 'marcada en revisión',
+      approved: 'aprobada',
+      rejected: 'rechazada',
+      cancelled: 'cancelada',
+      filled: 'marcada como cubierta',
+    };
+
     try {
       await updateRequisitionStatus(requisitionId, newStatus);
+      success(`¡Requisición ${statusMessages[newStatus]} exitosamente!`);
       loadRequisition();
-    } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Error al cambiar el estado');
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      error(err?.message || 'Error al cambiar el estado de la requisición');
     }
   }
 
   async function handleDelete() {
-    if (!confirm('¿Está seguro de eliminar esta requisición?')) return;
+    if (!confirm('¿Está seguro de eliminar esta requisición? Esta acción no se puede deshacer.')) return;
 
     try {
       await deleteRequisition(requisitionId);
+      success('¡Requisición eliminada exitosamente!');
       router.push('/requisitions');
-    } catch (error: any) {
-      console.error('Error deleting requisition:', error);
-      alert(error.message || 'Error al eliminar');
+    } catch (err: any) {
+      console.error('Error deleting requisition:', err);
+      error(err?.message || 'Error al eliminar la requisición');
     }
   }
 
