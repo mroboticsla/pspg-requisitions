@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { listRequisitions, getRequisitionStats } from '@/lib/requisitions';
 import type { Requisition, RequisitionStatus, RequisitionStats } from '@/lib/types/requisitions';
 import { FileText, Plus, Eye, Edit, Users, Calendar, Briefcase } from 'lucide-react';
+import { useAuth } from '@/app/providers/AuthProvider';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -32,6 +33,7 @@ const statusColors: Record<RequisitionStatus, string> = {
 
 export default function RequisitionsPage() {
   const router = useRouter();
+  const { profile } = useAuth();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [stats, setStats] = useState<RequisitionStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,12 +51,18 @@ export default function RequisitionsPage() {
   }, [requisitions, statusFilter, searchTerm]);
 
   const loadData = useCallback(async () => {
+    if (!profile?.id) return;
+
     try {
       setLoading(true);
 
+      // Determinar si el usuario es partner (debe ver solo sus requisiciones)
+      const isPartner = profile.roles?.name === 'partner';
+      const filterUserId = isPartner ? profile.id : undefined;
+
       const [requisitionsData, statsData] = await Promise.all([
-        listRequisitions(),
-        getRequisitionStats(),
+        listRequisitions(filterUserId ? { created_by: filterUserId } : {}), // Pasar objeto RequisitionFilters
+        getRequisitionStats(undefined, filterUserId), // Pasar userId como segundo parámetro
       ]);
 
       setRequisitions(requisitionsData);
@@ -64,7 +72,7 @@ export default function RequisitionsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [profile?.id, profile?.roles?.name]);
 
   useEffect(() => {
     loadData();

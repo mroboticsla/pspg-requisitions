@@ -478,9 +478,12 @@ export async function deleteRequisition(requisitionId: string): Promise<void> {
 
 /**
  * Obtiene estadísticas de requisiciones
+ * @param companyId - ID de la empresa para filtrar (opcional)
+ * @param userId - ID del usuario para filtrar (opcional). Si se proporciona, solo cuenta requisiciones creadas por ese usuario.
  */
 export async function getRequisitionStats(
-  companyId?: string
+  companyId?: string,
+  userId?: string
 ): Promise<RequisitionStats> {
   try {
     // Intentar usar la función RPC si existe
@@ -488,17 +491,23 @@ export async function getRequisitionStats(
       p_company_id: companyId || null,
     });
 
-    if (!rpcError && rpcData) {
+    if (!rpcError && rpcData && !userId) {
+      // Solo usar RPC si no hay filtro de usuario
       return rpcData as RequisitionStats;
     }
 
     // Fallback: calcular estadísticas manualmente
     let query = supabase
       .from('requisitions')
-      .select('status, company_id, created_at, updated_at');
+      .select('status, company_id, created_at, updated_at, created_by');
 
     if (companyId) {
       query = query.eq('company_id', companyId);
+    }
+
+    // Si se proporciona userId, filtrar por created_by (para partners)
+    if (userId) {
+      query = query.eq('created_by', userId);
     }
 
     const { data: requisitions, error } = await query;
