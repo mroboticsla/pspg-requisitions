@@ -1,58 +1,35 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
 import { supabase } from '@/lib/supabaseClient'
 import { UserCompany } from '@/lib/types/company'
-import getCurrentUserRole from '@/lib/getCurrentUserRole'
 import { createRequisition, updateRequisition } from '@/lib/requisitions'
 import { getCompanyActiveTemplate } from '@/lib/templates'
 import { DynamicSection } from '../components/DynamicField'
 import type { FormTemplateComplete } from '@/lib/types/requisitions'
 
 export default function RequisitionForm() {
-  const { user, loading } = useAuth()
+  const { user, profile, loading } = useAuth()
   const router = useSafeRouter()
   const [userCompanies, setUserCompanies] = useState<UserCompany[]>([])
   const [loadingCompanies, setLoadingCompanies] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
   const [template, setTemplate] = useState<FormTemplateComplete | null>(null)
   const [loadingTemplate, setLoadingTemplate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [customResponses, setCustomResponses] = useState<Record<string, Record<string, any>>>({})
 
+  // Obtener rol del usuario desde el profile
+  const userRole = (profile as any)?.roles?.name || null
+
   // Redirigir al login si no hay usuario autenticado
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && (!user || !profile)) {
+      console.debug('RequisitionForm: No hay usuario autenticado, redirigiendo al login')
       router.replace('/auth')
     }
-  }, [loading, user, router])
-
-  // Timeout de seguridad: Si loading se queda en true por más de 25 segundos, redirigir al login
-  useEffect(() => {
-    if (!loading) return
-
-    const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn('Timeout de verificación de sesión alcanzado (25s), redirigiendo al login')
-        router.replace('/auth')
-      }
-    }, 25000) // 25 segundos - debe ser mayor que el maxLoadingTimeout del AuthProvider
-
-    return () => clearTimeout(timeoutId)
-  }, [loading, router])
-
-  // Cargar rol del usuario
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      if (!user) return
-      const role = await getCurrentUserRole()
-      setUserRole(role)
-    }
-    
-    fetchUserRole()
-  }, [user])
+  }, [loading, user, profile, router])
 
   // Cargar empresas según el rol del usuario
   useEffect(() => {
@@ -378,23 +355,28 @@ export default function RequisitionForm() {
   }
 
   // Mostrar loading mientras se verifica la sesión
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-        <p className="text-gray-600">Verificando sesión...</p>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verificando sesión...</p>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
-  // Solo mostrar "No autorizado" si ya terminó de cargar y no hay usuario
-  if (!user) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <p className="text-red-600">No autorizado. Por favor, inicie sesión.</p>
+  // Si no hay usuario, mostrar loading mientras redirige
+  if (!user || !profile) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirigiendo...</p>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="max-w-5xl mx-auto">
