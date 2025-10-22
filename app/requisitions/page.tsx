@@ -92,21 +92,63 @@ export default function MyRequisitionsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { status: 'draft', label: 'Borradores', color: 'bg-gray-100 text-gray-800' },
-          { status: 'submitted', label: 'Enviadas', color: 'bg-blue-100 text-blue-800' },
-          { status: 'in_review', label: 'En Revisión', color: 'bg-yellow-100 text-yellow-800' },
-          { status: 'approved', label: 'Aprobadas', color: 'bg-green-100 text-green-800' },
-        ].map(({ status, label, color }) => {
-          const count = requisitions.filter(r => r.status === status).length;
-          return (
-            <div key={status} className={`rounded-lg p-4 ${color}`}>
-              <p className="text-xs font-medium">{label}</p>
-              <p className="text-2xl font-bold mt-1">{count}</p>
-            </div>
-          );
-        })}
+      {/* Timeline de Estados */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-x-auto">
+        <div className="flex items-center justify-between min-w-max">
+          {[
+            { status: 'draft', label: 'Borradores', icon: FileText, color: 'bg-gray-500', lightColor: 'bg-gray-100', textColor: 'text-gray-800' },
+            { status: 'submitted', label: 'Enviadas', icon: Users, color: 'bg-blue-500', lightColor: 'bg-blue-100', textColor: 'text-blue-800' },
+            { status: 'in_review', label: 'En Revisión', icon: Eye, color: 'bg-yellow-500', lightColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
+            { status: 'approved', label: 'Aprobadas', icon: Briefcase, color: 'bg-green-500', lightColor: 'bg-green-100', textColor: 'text-green-800' },
+          ].map(({ status, label, icon: Icon, color, lightColor, textColor }, index, array) => {
+            const count = requisitions.filter(r => r.status === status).length;
+            const isActive = count > 0;
+            
+            return (
+              <div key={status} className="flex items-center" style={{ minWidth: '200px' }}>
+                {/* Timeline Item */}
+                <div className="flex flex-col items-center">
+                  {/* Círculo con ícono */}
+                  <div
+                    className={`relative z-10 flex items-center justify-center w-16 h-16 rounded-full transition-all duration-300 ${
+                      isActive ? `${color} shadow-lg` : 'bg-gray-200'
+                    }`}
+                  >
+                    <Icon className={`w-7 h-7 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                    
+                    {/* Contador Badge */}
+                    {isActive && (
+                      <div className={`absolute -top-1 -right-1 flex items-center justify-center w-7 h-7 rounded-full ${lightColor} ${textColor} border-2 border-white font-bold text-xs shadow-md`}>
+                        {count}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Label */}
+                  <div className="mt-3 text-center">
+                    <p className={`text-sm font-semibold ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+                      {label}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>
+                      {count} {count === 1 ? 'solicitud' : 'solicitudes'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Línea conectora */}
+                {index < array.length - 1 && (
+                  <div className="flex-1 flex items-center px-4" style={{ minWidth: '80px' }}>
+                    <div
+                      className={`h-1 w-full rounded transition-all duration-300 ${
+                        isActive ? color : 'bg-gray-200'
+                      }`}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
