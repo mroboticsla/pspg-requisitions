@@ -53,6 +53,15 @@ export default function DashboardPage() {
     return (profile as any)?.roles?.name === 'superadmin'
   }, [profile])
 
+  // Redirigir a partners si el usuario es partner
+  useEffect(() => {
+    if (loading || !profile) return
+    const roleName = (profile as any)?.roles?.name
+    if (roleName === 'partner') {
+      router.replace('/dashboard/partner')
+    }
+  }, [loading, profile, router])
+
   // Cerrar menú de exportación al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

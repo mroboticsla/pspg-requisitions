@@ -13,7 +13,7 @@ export type MenuItem = {
 }
 
 export const MENU: MenuItem[] = [
-  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', roles: ['superadmin', 'admin'], icon: LayoutDashboard },
+  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', roles: ['superadmin', 'admin', 'partner'], icon: LayoutDashboard },
   {
     id: 'requisitions', 
     label: 'Requisiciones', 

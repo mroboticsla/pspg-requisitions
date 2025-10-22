@@ -7,6 +7,24 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No Publicado]
 
+### Agregado
+- **Dashboard independiente para usuarios Partner**:
+  - Nuevo componente en `/app/dashboard/partner/page.tsx` con métricas específicas de requisiciones
+  - KPIs principales: Total, En Proceso, Aprobadas, Borradores
+  - Gráfico de pastel para distribución por estado de requisiciones
+  - Gráfico de barras para tendencia de creación
+  - Resumen visual de estados con contadores individuales
+  - Lista de requisiciones recientes con acceso rápido
+  - Filtros temporales (7 días, 30 días, todo)
+  - Banner de acción rápida para crear nueva requisición
+  - Alertas inteligentes para borradores pendientes
+  - Diseño responsivo optimizado para móviles y escritorio
+  - Documentación completa en `docs/DASHBOARD-PARTNER.md`
+- **Redirección automática por rol en Dashboard**:
+  - Partners son redirigidos automáticamente a `/dashboard/partner`
+  - Admins y SuperAdmins mantienen acceso al dashboard administrativo
+  - Menú actualizado para mostrar Dashboard a usuarios Partner
+
 ### Cambiado
 - **Portal público ahora en la raíz del sitio (`/`)**:
   - La landing page del portal público se movió de `/public-home` a `/`
