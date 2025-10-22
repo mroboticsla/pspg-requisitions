@@ -4,6 +4,7 @@
 
 import { supabase } from './supabaseClient';
 import { createTemplateSnapshot } from './templates';
+import { getCurrentUserRole } from './getCurrentUserRole';
 import type {
   Requisition,
   RequisitionComplete,
@@ -162,8 +163,13 @@ export async function updateRequisition(
       throw new Error('La requisición no existe o fue eliminada.');
     }
 
-    // Verificar permisos: solo el creador puede actualizar requisiciones en draft
-    if (existingReq.created_by !== userData.user.id && existingReq.status === 'draft') {
+    // Verificar permisos: el creador puede actualizar siempre
+    // Admin y superadmin pueden editar cualquier requisición
+    const userRole = await getCurrentUserRole();
+    const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
+    const isOwner = existingReq.created_by === userData.user.id;
+
+    if (!isOwner && !isAdminRole) {
       throw new Error('Solo puede actualizar sus propias requisiciones.');
     }
 
@@ -354,7 +360,13 @@ export async function submitRequisition(
       throw new Error('La requisición no existe o fue eliminada.');
     }
 
-    if (existingReq.created_by !== userData.user.id) {
+    // Verificar permisos: el creador puede enviar siempre
+    // Admin y superadmin pueden enviar cualquier requisición
+    const userRole = await getCurrentUserRole();
+    const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
+    const isOwner = existingReq.created_by === userData.user.id;
+
+    if (!isOwner && !isAdminRole) {
       throw new Error('Solo puede enviar sus propias requisiciones.');
     }
 
@@ -448,7 +460,13 @@ export async function deleteRequisition(requisitionId: string): Promise<void> {
       throw new Error('La requisición no existe o fue eliminada.');
     }
 
-    if (requisition.created_by !== userData.user.id) {
+    // Verificar permisos: el creador puede eliminar siempre
+    // Admin y superadmin pueden eliminar cualquier requisición en borrador
+    const userRole = await getCurrentUserRole();
+    const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
+    const isOwner = requisition.created_by === userData.user.id;
+
+    if (!isOwner && !isAdminRole) {
       throw new Error('Solo puede eliminar sus propias requisiciones.');
     }
 
