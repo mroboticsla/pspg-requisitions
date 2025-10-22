@@ -96,11 +96,43 @@ export default function MyRequisitionsPage() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 overflow-x-auto">
         <div className="flex items-center justify-between min-w-max">
           {[
-            { status: 'draft', label: 'Borradores', icon: FileText, color: 'bg-gray-500', lightColor: 'bg-gray-100', textColor: 'text-gray-800' },
-            { status: 'submitted', label: 'Enviadas', icon: Users, color: 'bg-blue-500', lightColor: 'bg-blue-100', textColor: 'text-blue-800' },
-            { status: 'in_review', label: 'En Revisión', icon: Eye, color: 'bg-yellow-500', lightColor: 'bg-yellow-100', textColor: 'text-yellow-800' },
-            { status: 'approved', label: 'Aprobadas', icon: Briefcase, color: 'bg-green-500', lightColor: 'bg-green-100', textColor: 'text-green-800' },
-          ].map(({ status, label, icon: Icon, color, lightColor, textColor }, index, array) => {
+            { 
+              status: 'draft', 
+              label: 'Borradores', 
+              icon: FileText, 
+              bgColor: 'bg-neutral-400', 
+              lightBg: 'bg-neutral-100', 
+              textColor: 'text-neutral-800',
+              borderColor: 'border-neutral-400'
+            },
+            { 
+              status: 'submitted', 
+              label: 'Enviadas', 
+              icon: Users, 
+              bgColor: 'bg-admin-info', 
+              lightBg: 'bg-blue-100', 
+              textColor: 'text-blue-800',
+              borderColor: 'border-admin-info'
+            },
+            { 
+              status: 'in_review', 
+              label: 'En Revisión', 
+              icon: Eye, 
+              bgColor: 'bg-admin-warning', 
+              lightBg: 'bg-yellow-100', 
+              textColor: 'text-yellow-800',
+              borderColor: 'border-admin-warning'
+            },
+            { 
+              status: 'approved', 
+              label: 'Aprobadas', 
+              icon: Briefcase, 
+              bgColor: 'bg-admin-success', 
+              lightBg: 'bg-green-100', 
+              textColor: 'text-green-800',
+              borderColor: 'border-admin-success'
+            },
+          ].map(({ status, label, icon: Icon, bgColor, lightBg, textColor, borderColor }, index, array) => {
             const count = requisitions.filter(r => r.status === status).length;
             const isActive = count > 0;
             const nextStatus = array[index + 1]?.status;
@@ -113,14 +145,14 @@ export default function MyRequisitionsPage() {
                   {/* Círculo con ícono */}
                   <div
                     className={`relative z-10 flex items-center justify-center w-16 h-16 rounded-full transition-all duration-300 ${
-                      isActive ? `${color} shadow-lg` : 'bg-gray-200'
+                      isActive ? `${bgColor} shadow-lg` : 'bg-neutral-200'
                     }`}
                   >
-                    <Icon className={`w-7 h-7 ${isActive ? 'text-white' : 'text-gray-400'}`} />
+                    <Icon className={`w-7 h-7 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
                     
                     {/* Contador Badge */}
                     {isActive && (
-                      <div className={`absolute -top-1 -right-1 flex items-center justify-center w-7 h-7 rounded-full ${lightColor} ${textColor} border-2 border-white font-bold text-xs shadow-md`}>
+                      <div className={`absolute -top-1 -right-1 flex items-center justify-center w-7 h-7 rounded-full ${lightBg} ${textColor} border-2 border-white font-bold text-xs shadow-md`}>
                         {count}
                       </div>
                     )}
@@ -128,10 +160,10 @@ export default function MyRequisitionsPage() {
                   
                   {/* Label */}
                   <div className="mt-3 text-center">
-                    <p className={`text-sm font-semibold ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+                    <p className={`text-sm font-semibold ${isActive ? 'text-admin-text-primary' : 'text-admin-text-muted'}`}>
                       {label}
                     </p>
-                    <p className={`text-xs mt-0.5 ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>
+                    <p className={`text-xs mt-0.5 ${isActive ? 'text-admin-text-secondary' : 'text-admin-text-muted'}`}>
                       {count} {count === 1 ? 'solicitud' : 'solicitudes'}
                     </p>
                   </div>
@@ -140,15 +172,15 @@ export default function MyRequisitionsPage() {
                 {/* Línea conectora */}
                 {index < array.length - 1 && (
                   <div className="flex-1 flex items-center px-4" style={{ minWidth: '80px' }}>
-                    <div className="relative h-1 w-full rounded bg-gray-200 overflow-hidden">
+                    <div className="relative h-1 w-full rounded bg-admin-border-DEFAULT overflow-hidden">
                       {/* Línea de fondo estática cuando está activo */}
                       {isActive && (
-                        <div className={`absolute inset-0 rounded ${color} opacity-30`} />
+                        <div className={`absolute inset-0 rounded ${bgColor} opacity-30`} />
                       )}
                       {/* Línea animada cuando el paso actual tiene items */}
                       {isActive && (
                         <div
-                          className={`absolute inset-0 rounded ${color}`}
+                          className={`absolute inset-0 rounded ${bgColor}`}
                           style={{
                             animation: 'fillLine 2s ease-in-out infinite',
                           }}
