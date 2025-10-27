@@ -17,8 +17,9 @@ export const PublicNavbar: React.FC = () => {
       name: 'Acerca de Nosotros',
       path: '/about',
       submenu: [
-        { name: 'Nuestra Historia', path: '/about' },
-        { name: 'Beneficios', path: '/benefits' }
+        { name: 'Visión y Misión', path: '/about/#mision' },
+        { name: 'Nuestros Valores', path: '/about/#values' },
+        //{ name: 'Beneficios', path: '/benefits' }
       ]
     },
     { name: 'Portal de Empleos', path: '/jobs' },
