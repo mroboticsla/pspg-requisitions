@@ -13,8 +13,9 @@ export default function AuthTabSwitch({ activeTab, onTabChange }: AuthTabSwitchP
   const router = useRouter();
 
   const handleRegisterClick = () => {
-    // Redirigir a la página de selección de tipo de cuenta
-    router.push("/auth/select-account-type");
+    // Redirigir directamente al registro de candidatos
+    // Las cuentas empresariales se gestionan solo por invitación
+    router.push("/auth/register/candidate");
   };
 
   return (

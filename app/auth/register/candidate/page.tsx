@@ -165,15 +165,6 @@ export default function RegisterCandidatePage() {
           <div className="lg:col-span-3 min-w-0">
             <div className="w-full space-y-3 sm:space-y-4">
               
-              {/* Botón regresar */}
-              <button
-                onClick={() => router.back()}
-                className="flex items-center gap-2 text-neutral-600 hover:text-brand-dark transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="text-sm font-medium">Regresar</span>
-              </button>
-
               {/* Título */}
               <div className="text-center mb-3 sm:mb-4">
                 <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-brand-dark mb-1">
