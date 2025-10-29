@@ -73,7 +73,7 @@ export default function RegisterCandidatePage() {
       }
 
       // Redirigir a login con mensaje de éxito
-      router.push("/auth?success=true&message=" + encodeURIComponent("Cuenta creada exitosamente. Por favor, verifica tu correo e inicia sesión."));
+      router.push("/login?success=true&message=" + encodeURIComponent("Cuenta creada exitosamente. Por favor, verifica tu correo e inicia sesión."));
       
     } catch (error: any) {
       setErrorMsg(error.message || "Error al crear la cuenta");
@@ -371,7 +371,7 @@ export default function RegisterCandidatePage() {
               <div className="text-center pt-4">
                 <p className="text-sm text-neutral-600">
                   ¿Ya tienes una cuenta?{" "}
-                  <a href="/auth" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
+                  <a href="/login" className="font-medium text-brand-accent hover:text-brand-dark transition-colors">
                     Inicia sesión
                   </a>
                 </p>

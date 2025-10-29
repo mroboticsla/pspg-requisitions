@@ -7,8 +7,8 @@ export default function RegisterPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirigir a la nueva página de autenticación unificada en modo registro
-    router.replace("/auth?mode=register");
+    // Redirigir a la página de login en modo registro
+    router.replace("/login?mode=register");
   }, [router]);
 
   return (

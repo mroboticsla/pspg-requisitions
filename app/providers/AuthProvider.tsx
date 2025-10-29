@@ -256,8 +256,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
         loadingRef.current = false
         clearTimer()
-        if (pathname !== '/auth') {
-          router.replace('/auth?reason=timeout')
+        // Redirigir a la página de login pública por timeout
+        if (pathname !== '/login' && pathname !== '/admin/login') {
+          router.replace('/login?reason=timeout')
         }
         handlingInactivityRef.current = false
       }

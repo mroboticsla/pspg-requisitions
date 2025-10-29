@@ -12,7 +12,7 @@ export default function SettingsPage() {
   // Redireccionar si no hay usuario autenticado
   React.useEffect(() => {
     if (!loading && !user) {
-      router.push("/auth");
+      router.push("/login");
     }
   }, [user, loading, router]);
 

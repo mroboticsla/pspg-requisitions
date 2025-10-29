@@ -14,6 +14,11 @@ interface UserMenuProps {
     last_name?: string | null;
     phone?: string | null;
     is_active?: boolean;
+    roles?: {
+      id: string;
+      name: string;
+      permissions?: any;
+    } | null;
   } | null;
   signOut: () => Promise<void>;
 }
@@ -101,8 +106,15 @@ export default function UserMenu({ user, profile, signOut }: UserMenuProps) {
   };
 
   const handleSignOut = async () => {
+    const roleName = String(profile?.roles?.name || '').toLowerCase();
     await signOut();
-    router.push("/auth");
+    
+    // Redirigir según el rol previo del usuario
+    if (roleName === 'admin' || roleName === 'superadmin') {
+      router.push("/admin/login");
+    } else {
+      router.push("/login");
+    }
   };
 
   return (

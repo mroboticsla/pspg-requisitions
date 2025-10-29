@@ -111,7 +111,7 @@ export default function ProfilePage() {
   // Redireccionar si no hay usuario autenticado
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/auth");
+      router.push("/login");
     }
   }, [user, loading, router]);
 

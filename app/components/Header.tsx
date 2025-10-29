@@ -16,8 +16,8 @@ export default function Header({ showNavigation }: HeaderProps) {
   const { user, profile, loading, signOut } = useAuth()
   const headerRef = React.useRef<HTMLElement | null>(null)
 
-  // Determinar si estamos en una ruta de autenticación
-  const isAuthRoute = pathname?.startsWith("/auth")
+  // Determinar si estamos en una ruta de autenticación o login
+  const isAuthRoute = pathname?.startsWith("/auth") || pathname?.startsWith("/login") || pathname?.startsWith("/admin/login")
 
   // Establecer altura inicial inmediatamente
   React.useEffect(() => {
@@ -61,7 +61,7 @@ export default function Header({ showNavigation }: HeaderProps) {
   }, [user, loading, isAuthRoute]) // Re-ejecutar cuando cambie el usuario, el estado de carga o la ruta
   
   // Si la prop se pasa explícitamente, respetarla; si no, decidir por la ruta
-  const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !pathname?.startsWith("/auth");
+  const resolvedShowNavigation = typeof showNavigation === "boolean" ? showNavigation : !isAuthRoute;
 
   if (isAuthRoute) return null;
 
@@ -101,10 +101,10 @@ export default function Header({ showNavigation }: HeaderProps) {
               <UserMenu user={user} profile={profile} signOut={signOut} />
             ) : (
               <>
-                <Link href="/auth" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 bg-brand-dark text-white rounded-md font-medium hover:bg-brand-accent transition-colors whitespace-nowrap">
+                <Link href="/login" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 bg-brand-dark text-white rounded-md font-medium hover:bg-brand-accent transition-colors whitespace-nowrap">
                   Iniciar sesión
                 </Link>
-                <Link href="/auth?mode=register" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 border border-brand-accent text-brand-accent rounded-md font-medium hover:bg-brand-accent hover:text-white transition-colors whitespace-nowrap hidden sm:inline-block">
+                <Link href="/login?mode=register" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 border border-brand-accent text-brand-accent rounded-md font-medium hover:bg-brand-accent hover:text-white transition-colors whitespace-nowrap hidden sm:inline-block">
                   Registrarse
                 </Link>
               </>
