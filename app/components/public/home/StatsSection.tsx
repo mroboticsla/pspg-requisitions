@@ -18,7 +18,7 @@ export const StatsSection: React.FC = () => {
     },
     {
       icon: Building,
-      value: '300+',
+      value: '550+',
       label: 'Empresas Clientes',
       description: 'Confiando en nosotros'
     },

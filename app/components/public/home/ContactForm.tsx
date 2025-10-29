@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Mail, User, Phone, MessageSquare, Send, CheckCircle } from 'lucide-react';
+import { Mail, User, Phone, MessageSquare, Send, CheckCircle, Briefcase } from 'lucide-react';
+import PhoneInput from '@/app/components/PhoneInput';
 
 export const ContactForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,9 @@ export const ContactForm: React.FC = () => {
     subject: '',
     message: '',
   });
+
+  const [phoneCountry, setPhoneCountry] = useState('MX|+52');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -43,6 +47,8 @@ export const ContactForm: React.FC = () => {
         subject: '',
         message: '',
       });
+      setPhoneCountry('MX|+52');
+      setPhoneNumber('');
       setIsSubmitted(false);
     }, 3000);
   };
@@ -116,21 +122,16 @@ export const ContactForm: React.FC = () => {
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
                     Teléfono *
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Phone className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
-                      required
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:ring-brand-accent focus:border-brand-accent"
-                      placeholder="+52 56 1000 2000"
-                    />
-                  </div>
+                  <PhoneInput className='bg-white'
+                    phoneCountry={phoneCountry}
+                    phoneNumber={phoneNumber}
+                    onCountryChange={setPhoneCountry}
+                    onNumberChange={(value) => {
+                      setPhoneNumber(value);
+                      setFormData(prev => ({ ...prev, phone: value }));
+                    }}
+                    required
+                  />
                 </div>
 
                 {/* Subject */}
@@ -256,12 +257,22 @@ export const ContactForm: React.FC = () => {
                 </div>
 
                 <div className="flex items-start">
-                  <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+                  <div className="bg-brand-accent p-3 rounded-lg">
                     <Mail className="h-6 w-6" />
                   </div>
                   <div className="ml-4">
-                    <h4 className="font-semibold mb-1">Emails</h4>
-                    <p className="text-gray-100">contacto@pspgroup.com.mx</p>
+                    <h4 className="font-semibold mb-1">Atención al Cliente</h4>
+                    <p><a href="mailto:contacto@pspgroup.com.mx" className="text-gray-100">contacto@pspgroup.com.mx</a></p>
+                  </div>
+                </div>
+
+                <div className="flex items-start">
+                  <div className="bg-brand-accent p-3 rounded-lg">
+                    <Briefcase className="h-6 w-6" />
+                  </div>
+                  <div className="ml-4">
+                    <h4 className="font-semibold mb-1">Reclutamiento</h4>
+                    <p><a href="mailto:reclutamientopsp@pspgroup.com.mx" className="text-gray-100">reclutamientopsp@pspgroup.com.mx</a></p>
                   </div>
                 </div>
               </div>

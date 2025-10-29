@@ -22,8 +22,8 @@ export const ServicesSection: React.FC = () => {
     },
     {
       icon: LineChart,
-      title: 'Consultoría de RRHH',
-      description: 'Asesoría estratégica en gestión de talento y optimización de procesos de reclutamiento'
+      title: 'Consultoría',
+      description: 'Asesoría estratégica en gestión de talento y optimización de procesos'
     },
   ];
 
