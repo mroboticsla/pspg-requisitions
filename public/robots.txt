@@ -1,0 +1,51 @@
+# robots.txt para PSPG Requisitions
+# Última actualización: 28 de octubre de 2025
+
+# Permitir acceso a páginas públicas
+User-agent: *
+Allow: /
+Allow: /about
+Allow: /jobs
+Allow: /contact
+Allow: /benefits
+
+# Bloquear área administrativa completa
+Disallow: /admin/
+Disallow: /admin
+Disallow: /admin/*
+
+# Bloquear todas las rutas de autenticación y login
+Disallow: /login
+Disallow: /auth
+Disallow: /register
+
+# Bloquear áreas privadas de usuarios
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /profile
+Disallow: /settings
+Disallow: /requisitions
+Disallow: /request
+
+# Bloquear API endpoints
+Disallow: /api/
+
+# Bloquear rutas de gestión de contraseñas
+Disallow: /change-password
+Disallow: /forgot-password
+
+# Sitemap (si se implementa en el futuro)
+# Sitemap: https://pspgroup.com/sitemap.xml
+
+# Configuración específica para bots comunes
+User-agent: Googlebot
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: Bingbot
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: Slurp
+Disallow: /admin/
+Disallow: /api/

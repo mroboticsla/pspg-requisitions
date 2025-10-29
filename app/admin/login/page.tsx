@@ -14,6 +14,9 @@ export default function AdminLoginPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [warningMsg, setWarningMsg] = useState<string | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockTimeRemaining, setBlockTimeRemaining] = useState(0);
 
   const router = useRouter();
   const { profile, loading } = useAuth();
@@ -47,13 +50,41 @@ export default function AdminLoginPage() {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setWarningMsg(null);
     setFormLoading(true);
     setLoginSuccess(false);
     
     try {
+      // Verificar rate limiting ANTES de intentar login
+      const rateLimitCheck = await fetch('/api/admin/rate-limit', {
+        method: 'POST',
+      });
+      
+      const rateLimitData = await rateLimitCheck.json();
+      
+      if (rateLimitData.blocked) {
+        setIsBlocked(true);
+        setBlockTimeRemaining(rateLimitData.remainingSeconds);
+        setErrorMsg(rateLimitData.message);
+        setFormLoading(false);
+        return;
+      }
+      
+      // Mostrar advertencia si quedan pocos intentos
+      if (rateLimitData.attemptsRemaining <= 2 && rateLimitData.message) {
+        setWarningMsg(rateLimitData.message);
+      }
+      
       const result = await supabase.auth.signInWithPassword({ email, password });
       
       if (result.error) {
+        // Registrar intento fallido
+        await fetch('/api/admin/rate-limit', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ success: false, email }),
+        });
+        
         // Mensaje genérico para evitar enumeration attacks
         setErrorMsg("Credenciales inválidas. Por favor verifica tu información.");
         setFormLoading(false);
@@ -71,12 +102,26 @@ export default function AdminLoginPage() {
         const roleName = String(profileData?.roles?.name || '').toLowerCase();
         
         if (roleName !== 'admin' && roleName !== 'superadmin') {
+          // Registrar intento fallido
+          await fetch('/api/admin/rate-limit', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ success: false, email }),
+          });
+          
           // Cerrar sesión inmediatamente si no es admin
           await supabase.auth.signOut();
           setErrorMsg("Acceso denegado. Esta área es solo para administradores.");
           setFormLoading(false);
           return;
         }
+
+        // Registrar intento exitoso
+        await fetch('/api/admin/rate-limit', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ success: true, email }),
+        });
 
         setLoginSuccess(true);
         
@@ -177,17 +222,28 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
+            {warningMsg && (
+              <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-300">
+                <p className="text-sm text-yellow-800 font-medium">⚠️ {warningMsg}</p>
+              </div>
+            )}
+
             {errorMsg && (
               <div className="p-4 rounded-lg bg-red-50 border border-red-300">
                 <p className="text-sm text-red-800 font-medium">{errorMsg}</p>
+                {isBlocked && blockTimeRemaining > 0 && (
+                  <p className="text-xs text-red-600 mt-2">
+                    Tiempo restante: {Math.ceil(blockTimeRemaining / 60)} minutos
+                  </p>
+                )}
               </div>
             )}
 
             <button
               type="submit"
-              disabled={formLoading}
+              disabled={formLoading || isBlocked}
               className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white transition-all duration-200 transform ${
-                formLoading 
+                formLoading || isBlocked
                   ? "bg-gray-400 cursor-not-allowed" 
                   : "bg-admin-primary hover:bg-admin-accent hover:scale-[1.02] active:scale-[0.98]"
               }`}>

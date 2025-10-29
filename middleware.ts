@@ -2,14 +2,31 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
+  const { pathname, searchParams } = request.nextUrl
+  
+  // Aplicar rate limiting adicional a rutas administrativas
+  if (pathname.startsWith('/admin/login') || pathname.startsWith('/api/admin')) {
+    // Agregar headers de seguridad para rutas administrativas
+    const response = NextResponse.next()
+    
+    // Headers de seguridad adicionales
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    response.headers.set('Referrer-Policy', 'no-referrer')
+    response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+    
+    // Solo permitir en producción si viene de HTTPS
+    if (process.env.NODE_ENV === 'production') {
+      response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+    }
+  }
+  
   // Verificar si el modo "Coming Soon" está habilitado
   const comingSoonEnabled = process.env.NEXT_PUBLIC_ENABLE_COMING_SOON === 'true'
   
   if (!comingSoonEnabled) {
     return NextResponse.next()
   }
-
-  const { pathname, searchParams } = request.nextUrl
   
   // Rutas que nunca deben ser bloqueadas (API, archivos estáticos, etc.)
   const publicPaths = [

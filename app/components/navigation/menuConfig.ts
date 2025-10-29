@@ -43,6 +43,7 @@ export const MENU: MenuItem[] = [
     children: [
       { id: 'administrators', label: 'Administradores', path: '/admin/administrators', roles: ['superadmin'], icon: Shield },
       { id: 'roles', label: 'Roles', path: '/admin/roles', roles: ['superadmin'], icon: Shield },
+      { id: 'security', label: 'Monitor de Seguridad', path: '/admin/security', roles: ['superadmin'], icon: Shield },
     ]
   },
   { id: 'profile', label: 'Mi perfil', path: '/profile', icon: UserIcon },
