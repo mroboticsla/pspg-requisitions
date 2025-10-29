@@ -141,10 +141,10 @@ export default function AdminLoginPage() {
 
   // Mostrar loading mientras se verifica la sesión
   if (loading || loginSuccess) return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-admin-primary to-admin-accent">
+    <div className="flex-1 flex items-center justify-center bg-surface-secondary py-12">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-        <p className="text-white font-medium">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-accent mx-auto mb-4"></div>
+        <p className="text-gray-600 font-medium">
           {loginSuccess ? "Autenticación exitosa, redirigiendo..." : "Verificando credenciales..."}
         </p>
       </div>
@@ -152,39 +152,39 @@ export default function AdminLoginPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-admin-primary to-admin-accent flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md space-y-8">
+    <div className="flex-1 bg-surface-secondary flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md sm:max-w-lg space-y-6">
         
         {/* Header administrativo */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-lg">
-            <Shield className="h-10 w-10 text-admin-primary" />
+          <div className="mx-auto h-16 w-16 bg-brand-dark rounded-full flex items-center justify-center mb-4 shadow-lg">
+            <Shield className="h-10 w-10 text-white" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">
+          <h2 className="text-3xl font-bold text-brand-dark mb-2">
             Panel Administrativo
           </h2>
-          <p className="text-admin-accent/80 text-sm">
+          <p className="text-neutral-600 text-sm">
             Acceso restringido solo para administradores
           </p>
         </div>
 
         {/* Formulario de login */}
-        <div className="bg-white p-8 rounded-2xl shadow-2xl border border-admin-border">
-          <form onSubmit={handleLoginSubmit} className="space-y-6">
+        <div className="bg-surface-primary p-6 sm:p-8 rounded-xl shadow-lg border border-neutral-200">
+          <form onSubmit={handleLoginSubmit} className="space-y-5">
             <div>
-              <label htmlFor="admin-email" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="admin-email" className="block text-sm font-semibold text-neutral-700 mb-2">
                 Correo Electrónico Administrativo
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Mail className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                 </span>
                 <input
                   type="email"
                   id="admin-email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-primary focus:border-transparent transition-all duration-200 bg-gray-50 text-gray-900"
+                  className="w-full pl-10 pr-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
                   placeholder="admin@pspgroup.com"
                   required
                   autoComplete="username"
@@ -193,12 +193,12 @@ export default function AdminLoginPage() {
             </div>
 
             <div>
-              <label htmlFor="admin-password" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="admin-password" className="block text-sm font-semibold text-neutral-700 mb-2">
                 Contraseña
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <Lock className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                 </span>
 
                 <input
@@ -206,7 +206,7 @@ export default function AdminLoginPage() {
                   id="admin-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-primary focus:border-transparent transition-all duration-200 bg-gray-50 text-gray-900"
+                  className="w-full pl-10 pr-10 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent transition-all duration-200 bg-surface-secondary text-brand-dark"
                   placeholder="••••••••"
                   required
                   autoComplete="current-password"
@@ -216,21 +216,21 @@ export default function AdminLoginPage() {
                   type="button"
                   onClick={() => setShowPassword((s) => !s)}
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none">
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-500 hover:text-neutral-700 focus:outline-none">
                   {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
             {warningMsg && (
-              <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-300">
+              <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-300">
                 <p className="text-sm text-yellow-800 font-medium">⚠️ {warningMsg}</p>
               </div>
             )}
 
             {errorMsg && (
-              <div className="p-4 rounded-lg bg-red-50 border border-red-300">
-                <p className="text-sm text-red-800 font-medium">{errorMsg}</p>
+              <div className="p-3 rounded-lg bg-red-50 border border-red-300">
+                <p className="text-sm text-red-800">{errorMsg}</p>
                 {isBlocked && blockTimeRemaining > 0 && (
                   <p className="text-xs text-red-600 mt-2">
                     Tiempo restante: {Math.ceil(blockTimeRemaining / 60)} minutos
@@ -242,10 +242,10 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={formLoading || isBlocked}
-              className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white transition-all duration-200 transform ${
+              className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white transition-all duration-200 transform ${
                 formLoading || isBlocked
                   ? "bg-gray-400 cursor-not-allowed" 
-                  : "bg-admin-primary hover:bg-admin-accent hover:scale-[1.02] active:scale-[0.98]"
+                  : "bg-brand-dark hover:bg-brand-accent hover:scale-[1.02]"
               }`}>
               {formLoading ? (
                 <span className="flex items-center gap-2">
@@ -264,10 +264,10 @@ export default function AdminLoginPage() {
 
         {/* Footer de seguridad */}
         <div className="text-center">
-          <p className="text-sm text-white/80">
+          <p className="text-sm text-neutral-600">
             🔒 Conexión segura y encriptada
           </p>
-          <p className="text-xs text-white/60 mt-2">
+          <p className="text-xs text-neutral-500 mt-2">
             Todos los accesos son monitoreados y registrados
           </p>
         </div>

@@ -34,6 +34,13 @@ body {
     rgb(var(--background-start-rgb));
   /* Evitar scroll horizontal inesperado en móvil por elementos anchos */
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  margin: 0;
+  padding: 0;
 }
 
 /* Prevenir desbordamiento horizontal en todos los elementos */
@@ -42,7 +49,7 @@ body {
 }
 
 /* Permitir que ciertos elementos excedan si es necesario */
-html, body, #__next {
+html, body, #__next, nav, header, footer, main {
   max-width: none;
 }
 
