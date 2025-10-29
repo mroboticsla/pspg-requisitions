@@ -40,16 +40,15 @@ function LoginPageContent() {
     }
   }, [searchParams]);
 
+  // Verificar si ya hay una sesión válida al cargar la página
   useEffect(() => {
     if (!loading && profile?.roles?.name) {
       const roleName = String(profile.roles.name).toLowerCase();
-      // Redirigir usuarios administrativos a su portal
-      if (roleName === "admin" || roleName === "superadmin") {
-        router.replace("/admin");
-      } else {
-        // Partners y candidates van a su dashboard
+      // Solo redirigir a usuarios NO administrativos que ya tienen sesión
+      if (roleName === "partner" || roleName === "candidate") {
         router.replace("/request");
       }
+      // Los admin/superadmin que lleguen aquí serán manejados en handleLoginSubmit
     }
   }, [loading, profile, router]);
 
@@ -74,20 +73,58 @@ function LoginPageContent() {
     try {
       const result = await supabase.auth.signInWithPassword({ email, password });
       if (result.error) {
-        setErrorMsg(result.error.message);
+        // Traducir mensajes de error de Supabase
+        const errorMessage = result.error.message.toLowerCase();
+        if (errorMessage.includes('invalid login credentials') || errorMessage.includes('invalid') || errorMessage.includes('credentials')) {
+          setErrorMsg("Credenciales incorrectas");
+        } else if (errorMessage.includes('email not confirmed')) {
+          setErrorMsg("Correo electrónico no confirmado");
+        } else {
+          setErrorMsg("Error al iniciar sesión. Por favor, verifica tus credenciales.");
+        }
         setFormLoading(false);
         return;
       }
       
-      setLoginSuccess(true);
-      
-      // Capturar sesión de forma NO BLOQUEANTE
+      // Verificar el rol del usuario antes de permitir el acceso
       if (result.data?.user?.id) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*, roles(*)')
+          .eq('id', result.data.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error('Error al obtener perfil:', profileError);
+          setErrorMsg("Error al verificar las credenciales");
+          setFormLoading(false);
+          // Cerrar sesión si hay error
+          await supabase.auth.signOut();
+          return;
+        }
+        
+        // Verificar si es admin o superadmin
+        const roleName = profileData?.roles?.name?.toLowerCase();
+        if (roleName === 'admin' || roleName === 'superadmin') {
+          // Cerrar sesión inmediatamente
+          await supabase.auth.signOut();
+          setErrorMsg("Credenciales incorrectas");
+          setFormLoading(false);
+          return;
+        }
+        
+        // Si llegamos aquí, es un usuario válido (partner o candidate)
+        setLoginSuccess(true);
+        
+        // Capturar sesión de forma NO BLOQUEANTE
         captureSessionInfo()
           .then(sessionInfo => saveSessionToProfile(result.data.user.id, sessionInfo))
           .catch(sessionError => {
             console.warn('Error al guardar información de sesión:', sessionError);
           });
+        
+        // Redirigir al usuario
+        router.replace("/request");
       }
     } catch (err: any) {
       setErrorMsg(err?.message ?? "Error en autenticación");
@@ -137,7 +174,17 @@ function LoginPageContent() {
         password,
         options: { data: userMetadata },
       });
-      if (error) throw error;
+      if (error) {
+        // Traducir mensajes de error de Supabase en el registro
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
+          throw new Error("El correo electrónico ya está registrado.");
+        } else if (errorMessage.includes('password')) {
+          throw new Error("La contraseña no cumple con los requisitos mínimos.");
+        } else {
+          throw new Error("Error al crear la cuenta. Por favor, intenta nuevamente.");
+        }
+      }
 
       const userId = (data?.user as any)?.id || (data as any)?.id;
       if (userId) {
