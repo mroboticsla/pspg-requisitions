@@ -69,7 +69,7 @@ export const PublicFooter: React.FC = () => {
                 <MapPin className="h-5 w-5 text-brand-accent flex-shrink-0 mt-0.5" />
                 <span className="text-sm">Ciudad de México, México</span>
               </li>
-              <li className="flex items-center space-x-2">
+              <li className="flex items-center space-x-2 hidden">
                 <Phone className="h-5 w-5 text-brand-accent flex-shrink-0" />
                 <span className="text-sm">
                   +52 56 1089 2760
@@ -80,9 +80,7 @@ export const PublicFooter: React.FC = () => {
               <li className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-brand-accent flex-shrink-0" />
                 <span className="text-sm">
-                  recepcion@pspgroup.com.mx
-                  <br />
-                  reclutamientopsp@pspgroup.com.mx
+                  contacto@pspgroup.com.mx
                 </span>
               </li>
             </ul>

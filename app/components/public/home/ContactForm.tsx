@@ -128,7 +128,7 @@ export const ContactForm: React.FC = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-md focus:ring-brand-accent focus:border-brand-accent"
-                      placeholder="+52 56 1089 2760"
+                      placeholder="+52 56 1000 2000"
                     />
                   </div>
                 </div>
@@ -245,14 +245,13 @@ export const ContactForm: React.FC = () => {
             <div className="bg-gradient-to-br from-brand-dark/90 to-brand-dark rounded-2xl p-8 text-white">
               <h3 className="text-2xl font-bold mb-6">Información de Contacto</h3>
               <div className="space-y-6">
-                <div className="flex items-start">
+                <div className="flex items-start hidden">
                   <div className="bg-white bg-opacity-20 p-3 rounded-lg">
                     <Phone className="h-6 w-6" />
                   </div>
                   <div className="ml-4">
                     <h4 className="font-semibold mb-1">Teléfonos</h4>
                     <p className="text-gray-100">+52 56 1089 2760</p>
-                    <p className="text-gray-100">+52 56 1059 7290</p>
                   </div>
                 </div>
 
@@ -262,8 +261,7 @@ export const ContactForm: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <h4 className="font-semibold mb-1">Emails</h4>
-                    <p className="text-gray-100">recepcion@pspgroup.com.mx</p>
-                    <p className="text-gray-100">reclutamientopsp@pspgroup.com.mx</p>
+                    <p className="text-gray-100">contacto@pspgroup.com.mx</p>
                   </div>
                 </div>
               </div>

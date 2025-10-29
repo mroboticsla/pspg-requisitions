@@ -80,7 +80,7 @@ export const PublicNavbar: React.FC = () => {
               onClick={() => router.push('/auth')}
               className="bg-brand-accent text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-brand-accentDark transition-colors"
             >
-              Consola de Administración
+              Mi Cuenta
             </button>
           </div>
 

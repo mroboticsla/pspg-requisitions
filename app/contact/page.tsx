@@ -66,8 +66,8 @@ export default function ContactPage() {
               <div className="w-24 h-1 bg-gradient-to-r from-brand-accent to-brand-accentDark mx-auto rounded-full"></div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="group bg-brand-dark rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 text-center border-2 border-brand-dark hover:border-brand-accent transform hover:-translate-y-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              <div className="hidden group bg-brand-dark rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 text-center border-2 border-brand-dark hover:border-brand-accent transform hover:-translate-y-2">
                 <div className="relative mb-6">
                   <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-xl group-hover:shadow-2xl group-hover:shadow-brand-accent/50 transition-all duration-300 group-hover:scale-110">
                     <Phone className="h-10 w-10 text-white" strokeWidth={2.5} />
@@ -90,10 +90,7 @@ export default function ContactPage() {
                 </div>
                 <h3 className="font-bold text-xl text-white mb-3">Email</h3>
                 <a href="mailto:recepcion@pspgroup.com.mx" className="text-gray-200 hover:text-brand-accent transition-colors font-semibold text-base break-all">
-                  recepcion@pspgroup.com.mx
-                </a><br />
-                <a href="mailto:reclutamientopsp@pspgroup.com.mx" className="text-gray-200 hover:text-brand-accent transition-colors font-semibold text-base break-all">
-                  reclutamientopsp@pspgroup.com.mx
+                  contacto@pspgroup.com.mx
                 </a>
               </div>
 
