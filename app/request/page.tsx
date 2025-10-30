@@ -121,12 +121,8 @@ function RequisitionFormContent() {
     motivoPuesto: '',
     nombreEmpleadoReemplaza: '',
     
-    // Funciones principales del puesto
-    funcion1: '',
-    funcion2: '',
-    funcion3: '',
-    funcion4: '',
-    funcion5: '',
+  // Funciones principales del puesto (dinámico)
+  funcion1: '',
     
     // Perfil del puesto - Formación académica
     bachiller: false,
@@ -178,6 +174,19 @@ function RequisitionFormContent() {
         [field]: checked
       }
     }))
+  }
+
+  // Construye el arreglo TEXT[] de funciones desde los campos funcionN en formData
+  const buildFuncionesArray = () => {
+    return Object.keys(formData)
+      .map((k) => {
+        const m = /^funcion(\d+)$/.exec(k)
+        return m ? { key: k, idx: parseInt(m[1], 10) } : null
+      })
+      .filter((x): x is { key: string; idx: number } => !!x)
+      .sort((a, b) => a.idx - b.idx)
+      .map(({ key }) => (formData as any)[key] as string)
+      .filter((f) => typeof f === 'string' && f.trim().length > 0)
   }
 
   // Cargar plantilla cuando se selecciona una empresa
@@ -281,11 +290,20 @@ function RequisitionFormContent() {
           motivoPuesto: requisition.motivo_puesto || '',
           nombreEmpleadoReemplaza: requisition.nombre_empleado_reemplaza || '',
           
+          // Asegurar presencia de funcion1 para el tipo inferido
           funcion1: requisition.funciones_principales?.[0] || '',
-          funcion2: requisition.funciones_principales?.[1] || '',
-          funcion3: requisition.funciones_principales?.[2] || '',
-          funcion4: requisition.funciones_principales?.[3] || '',
-          funcion5: requisition.funciones_principales?.[4] || '',
+
+          // Mapear todas las funciones a funcion1..funcionN de forma dinámica
+          ...(() => {
+            const arr = requisition.funciones_principales || []
+            const acc: Record<string, string> = {}
+            arr.forEach((val, i) => {
+              if (i === 0) return // ya asignado en funcion1
+              acc[`funcion${i + 1}`] = val || ''
+            })
+            if (!acc.funcion1) acc.funcion1 = ''
+            return acc
+          })(),
           
           bachiller: (requisition.formacion_academica as any)?.bachiller || false,
           tecnico: (requisition.formacion_academica as any)?.tecnico || false,
@@ -459,13 +477,7 @@ function RequisitionFormContent() {
         },
         motivo_puesto: formData.motivoPuesto,
         nombre_empleado_reemplaza: formData.nombreEmpleadoReemplaza,
-        funciones_principales: [
-          formData.funcion1,
-          formData.funcion2,
-          formData.funcion3,
-          formData.funcion4,
-          formData.funcion5,
-        ].filter(f => f?.trim()),
+        funciones_principales: buildFuncionesArray(),
         formacion_academica: {
           bachiller: formData.bachiller,
           tecnico: formData.tecnico,
@@ -551,13 +563,7 @@ function RequisitionFormContent() {
         },
         motivo_puesto: formData.motivoPuesto,
         nombre_empleado_reemplaza: formData.nombreEmpleadoReemplaza,
-        funciones_principales: [
-          formData.funcion1,
-          formData.funcion2,
-          formData.funcion3,
-          formData.funcion4,
-          formData.funcion5,
-        ].filter(f => f?.trim()),
+        funciones_principales: buildFuncionesArray(),
         formacion_academica: {
           bachiller: formData.bachiller,
           tecnico: formData.tecnico,
