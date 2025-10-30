@@ -235,6 +235,29 @@ function RequisitionFormContent() {
           setTemplate(requisition.template_snapshot)
         }
 
+        // Normalizar motivo del puesto: garantizar solo un motivo seleccionado
+        const motivoKeys = [
+          'nuevaCreacion',
+          'reemplazoTemporal',
+          'reestructuracionPuesto',
+          'reemplazoDefinitivo',
+          'renunciaVoluntaria',
+          'promocion',
+          'incapacidad',
+          'cancelacionContrato',
+          'licencia',
+          'vacaciones',
+          'incrementoLabores',
+          'licenciaMaternidad',
+        ] as const
+        const tipoPuesto = (requisition.tipo_puesto as any) || {}
+        let selectedMotivo: string | null = null
+        for (const k of motivoKeys) {
+          if (tipoPuesto?.[k]) { selectedMotivo = k; break }
+        }
+        const tipoPuestoNormalizado: Record<string, boolean> = {}
+        motivoKeys.forEach(k => { tipoPuestoNormalizado[k as string] = selectedMotivo === k })
+
         // Mapear los datos de la requisición al formulario
         setFormData({
           companyId: requisition.company_id,
@@ -242,18 +265,18 @@ function RequisitionFormContent() {
           departamento: requisition.departamento || '',
           numeroVacantes: String(requisition.numero_vacantes || 1),
           
-          nuevaCreacion: (requisition.tipo_puesto as any)?.nuevaCreacion || false,
-          reemplazoTemporal: (requisition.tipo_puesto as any)?.reemplazoTemporal || false,
-          reestructuracionPuesto: (requisition.tipo_puesto as any)?.reestructuracionPuesto || false,
-          reemplazoDefinitivo: (requisition.tipo_puesto as any)?.reemplazoDefinitivo || false,
-          renunciaVoluntaria: (requisition.tipo_puesto as any)?.renunciaVoluntaria || false,
-          promocion: (requisition.tipo_puesto as any)?.promocion || false,
-          incapacidad: (requisition.tipo_puesto as any)?.incapacidad || false,
-          cancelacionContrato: (requisition.tipo_puesto as any)?.cancelacionContrato || false,
-          licencia: (requisition.tipo_puesto as any)?.licencia || false,
-          vacaciones: (requisition.tipo_puesto as any)?.vacaciones || false,
-          incrementoLabores: (requisition.tipo_puesto as any)?.incrementoLabores || false,
-          licenciaMaternidad: (requisition.tipo_puesto as any)?.licenciaMaternidad || false,
+          nuevaCreacion: tipoPuestoNormalizado.nuevaCreacion,
+          reemplazoTemporal: tipoPuestoNormalizado.reemplazoTemporal,
+          reestructuracionPuesto: tipoPuestoNormalizado.reestructuracionPuesto,
+          reemplazoDefinitivo: tipoPuestoNormalizado.reemplazoDefinitivo,
+          renunciaVoluntaria: tipoPuestoNormalizado.renunciaVoluntaria,
+          promocion: tipoPuestoNormalizado.promocion,
+          incapacidad: tipoPuestoNormalizado.incapacidad,
+          cancelacionContrato: tipoPuestoNormalizado.cancelacionContrato,
+          licencia: tipoPuestoNormalizado.licencia,
+          vacaciones: tipoPuestoNormalizado.vacaciones,
+          incrementoLabores: tipoPuestoNormalizado.incrementoLabores,
+          licenciaMaternidad: tipoPuestoNormalizado.licenciaMaternidad,
           
           motivoPuesto: requisition.motivo_puesto || '',
           nombreEmpleadoReemplaza: requisition.nombre_empleado_reemplaza || '',

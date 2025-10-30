@@ -10,6 +10,52 @@ interface Props {
 }
 
 export default function StepJobInfo({ formData, handleInputChange }: Props) {
+  // Motivos posibles (exclusivos)
+  const motivoKeys = [
+    'nuevaCreacion',
+    'reemplazoTemporal',
+    'reestructuracionPuesto',
+    'reemplazoDefinitivo',
+    'renunciaVoluntaria',
+    'promocion',
+    'incapacidad',
+    'cancelacionContrato',
+    'licencia',
+    'vacaciones',
+    'incrementoLabores',
+    'licenciaMaternidad',
+  ] as const
+
+  // Asegurar selección única del motivo
+  const handleMotivoChange = (name: (typeof motivoKeys)[number]) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked
+    if (checked) {
+      // Desmarcar todos los demás si se marca uno
+      motivoKeys.forEach((key) => {
+        if (key !== name && formData[key]) {
+          const syntheticEvent = {
+            target: { name: key, type: 'checkbox', checked: false },
+          } as unknown as React.ChangeEvent<HTMLInputElement>
+          handleInputChange(syntheticEvent)
+        }
+      })
+    }
+    // Aplicar cambio del actual
+    handleInputChange(e)
+  }
+
+  // Manejar el selector de reemplazo de empleado y limpiar el nombre si corresponde
+  const handleReemplazaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleInputChange(e)
+    const value = e.target.value
+    if (value !== 'si' && formData.nombreEmpleadoReemplaza) {
+      const clearEvent = {
+        target: { name: 'nombreEmpleadoReemplaza', value: '' },
+      } as unknown as React.ChangeEvent<HTMLInputElement>
+      handleInputChange(clearEvent)
+    }
+  }
+
   return (
     <div className="form-section">
       <div className="form-section-header">INFORMACIÓN SOBRE EL PUESTO</div>
@@ -23,7 +69,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="nuevaCreacion"
                 name="nuevaCreacion"
                 checked={formData.nuevaCreacion}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('nuevaCreacion')}
               />
               <label htmlFor="nuevaCreacion">Nueva creación</label>
             </div>
@@ -33,7 +79,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="reemplazoTemporal"
                 name="reemplazoTemporal"
                 checked={formData.reemplazoTemporal}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('reemplazoTemporal')}
               />
               <label htmlFor="reemplazoTemporal">Reemplazo temporal</label>
             </div>
@@ -43,7 +89,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="reestructuracionPuesto"
                 name="reestructuracionPuesto"
                 checked={formData.reestructuracionPuesto}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('reestructuracionPuesto')}
               />
               <label htmlFor="reestructuracionPuesto">Reestructuración del puesto</label>
             </div>
@@ -53,7 +99,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="reemplazoDefinitivo"
                 name="reemplazoDefinitivo"
                 checked={formData.reemplazoDefinitivo}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('reemplazoDefinitivo')}
               />
               <label htmlFor="reemplazoDefinitivo">Reemplazo definitivo</label>
             </div>
@@ -63,7 +109,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="renunciaVoluntaria"
                 name="renunciaVoluntaria"
                 checked={formData.renunciaVoluntaria}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('renunciaVoluntaria')}
               />
               <label htmlFor="renunciaVoluntaria">Renuncia voluntaria</label>
             </div>
@@ -73,7 +119,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="promocion"
                 name="promocion"
                 checked={formData.promocion}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('promocion')}
               />
               <label htmlFor="promocion">Promoción</label>
             </div>
@@ -83,7 +129,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="incapacidad"
                 name="incapacidad"
                 checked={formData.incapacidad}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('incapacidad')}
               />
               <label htmlFor="incapacidad">Incapacidad</label>
             </div>
@@ -93,7 +139,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="cancelacionContrato"
                 name="cancelacionContrato"
                 checked={formData.cancelacionContrato}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('cancelacionContrato')}
               />
               <label htmlFor="cancelacionContrato">Cancelación del contrato</label>
             </div>
@@ -103,7 +149,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="licencia"
                 name="licencia"
                 checked={formData.licencia}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('licencia')}
               />
               <label htmlFor="licencia">Licencia</label>
             </div>
@@ -113,7 +159,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="vacaciones"
                 name="vacaciones"
                 checked={formData.vacaciones}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('vacaciones')}
               />
               <label htmlFor="vacaciones">Vacaciones</label>
             </div>
@@ -123,7 +169,7 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="incrementoLabores"
                 name="incrementoLabores"
                 checked={formData.incrementoLabores}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('incrementoLabores')}
               />
               <label htmlFor="incrementoLabores">Incremento de labores</label>
             </div>
@@ -133,16 +179,16 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
                 id="licenciaMaternidad"
                 name="licenciaMaternidad"
                 checked={formData.licenciaMaternidad}
-                onChange={handleInputChange}
+                onChange={handleMotivoChange('licenciaMaternidad')}
               />
               <label htmlFor="licenciaMaternidad">Licencia de maternidad</label>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Motivo del puesto</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Descripción del puesto</label>
             <textarea
               name="motivoPuesto"
               value={formData.motivoPuesto}
@@ -153,15 +199,32 @@ export default function StepJobInfo({ formData, handleInputChange }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              NOMBRE DEL EMPLEADO A QUIEN REEMPLAZA
+              ¿El puesto reemplaza a otro empleado?
             </label>
-            <input
-              type="text"
-              name="nombreEmpleadoReemplaza"
-              value={formData.nombreEmpleadoReemplaza}
-              onChange={handleInputChange}
+            <select
+              name="reemplazaOtroEmpleado"
+              value={formData.reemplazaOtroEmpleado ?? (formData.nombreEmpleadoReemplaza ? 'si' : 'no')}
+              onChange={handleReemplazaChange}
               className="form-input"
-            />
+            >
+              <option value="no">No</option>
+              <option value="si">Sí</option>
+            </select>
+
+            {(formData.reemplazaOtroEmpleado === 'si' || !!formData.nombreEmpleadoReemplaza) && (
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  NOMBRE DEL EMPLEADO A QUIEN REEMPLAZA
+                </label>
+                <input
+                  type="text"
+                  name="nombreEmpleadoReemplaza"
+                  value={formData.nombreEmpleadoReemplaza}
+                  onChange={handleInputChange}
+                  className="form-input"
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
