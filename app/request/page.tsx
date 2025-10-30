@@ -11,6 +11,11 @@ import { getCompanyActiveTemplate } from '@/lib/templates'
 import { DynamicSection } from '../components/DynamicField'
 import type { FormTemplateComplete, RequisitionComplete } from '@/lib/types/requisitions'
 import { useToast } from '@/lib/useToast'
+import StepGeneralData from './steps/StepGeneralData'
+import StepJobInfo from './steps/StepJobInfo'
+import StepFunctions from './steps/StepFunctions'
+import StepProfile from './steps/StepProfile'
+import StepCustomSection from './steps/StepCustomSection'
 
 function RequisitionFormContent() {
   const { user, profile, loading } = useAuth()
@@ -27,6 +32,7 @@ function RequisitionFormContent() {
   const [customResponses, setCustomResponses] = useState<Record<string, Record<string, any>>>({})
   const [loadingRequisition, setLoadingRequisition] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
+  const [currentStep, setCurrentStep] = useState(0)
 
   // Obtener rol del usuario desde el profile
   const userRole = (profile as any)?.roles?.name || null
@@ -179,6 +185,7 @@ function RequisitionFormContent() {
     const loadTemplate = async () => {
       if (!formData.companyId) {
         setTemplate(null)
+        setCurrentStep(0)
         return
       }
 
@@ -333,6 +340,76 @@ function RequisitionFormContent() {
       }
     }))
   }
+
+  // Pasos del asistente (base + secciones personalizadas)
+  const sortedSections = useMemo(() => {
+    return (template?.sections || []).slice().sort((a, b) => a.position - b.position)
+  }, [template])
+
+  const baseSteps = useMemo(() => [
+    { key: 'datos_generales', label: 'Datos generales' },
+    { key: 'info_puesto', label: 'Información del puesto' },
+    { key: 'funciones', label: 'Funciones principales' },
+    { key: 'perfil', label: 'Perfil del puesto' },
+  ], [])
+
+  const allSteps = useMemo(() => {
+    const custom = sortedSections.map(s => ({ key: `section_${s.id}`, label: s.name }))
+    return [...baseSteps, ...custom]
+  }, [baseSteps, sortedSections])
+
+  // Ajustar step si cambia la cantidad
+  useEffect(() => {
+    if (currentStep >= allSteps.length) {
+      setCurrentStep(Math.max(0, allSteps.length - 1))
+    }
+  }, [allSteps.length, currentStep])
+
+  // Scroll al inicio al cambiar de paso
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [currentStep])
+
+  const totalSteps = allSteps.length
+
+  const goNext = () => {
+    // Validaciones mínimas por paso
+    // Paso 0: empresa requerida
+    if (currentStep === 0) {
+      if (!formData.companyId) {
+        warning('Por favor seleccione una empresa para continuar')
+        return
+      }
+    }
+
+    // Pasos de secciones personalizadas: validar campos requeridos
+    const baseCount = baseSteps.length
+    if (currentStep >= baseCount) {
+      const sectionIdx = currentStep - baseCount
+      const section = sortedSections[sectionIdx]
+      if (section) {
+        const values = customResponses[section.id] || {}
+        const missing: string[] = []
+        section.fields.forEach(f => {
+          if (f.validation?.required) {
+            const v = values[f.name]
+            const isEmpty = v === undefined || v === null || (typeof v === 'string' && v.trim() === '') || (Array.isArray(v) && v.length === 0) || (typeof v === 'object' && f.field_type === 'currency' && (v.amount == null))
+            if (isEmpty) missing.push(f.label)
+          }
+        })
+        if (missing.length > 0) {
+          warning(`Complete los campos requeridos: ${missing.join(', ')}`)
+          return
+        }
+      }
+    }
+
+    setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))
+  }
+
+  const goPrev = () => setCurrentStep((s) => Math.max(0, s - 1))
 
   const handleSaveDraft = async () => {
     try {
@@ -554,6 +631,19 @@ function RequisitionFormContent() {
           <p className="text-sm text-center mt-1">
             Recuerde realizar su requisición de personal con <strong>mínimo 15 días hábiles de ANTICIPACIÓN</strong> a la fecha de inicio de labores solicitadas.
           </p>
+          {/* Progreso */}
+          <div className="mt-4 max-w-3xl mx-auto">
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span>Paso {currentStep + 1} de {totalSteps}</span>
+              <span>{allSteps[currentStep]?.label}</span>
+            </div>
+            <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-2 bg-brand-accent transition-all"
+                style={{ width: `${Math.max(5, ((currentStep + 1) / Math.max(1, totalSteps)) * 100)}%` }}
+              />
+            </div>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 p-6">
@@ -572,540 +662,102 @@ function RequisitionFormContent() {
               </button>
             </div>
           )}
+          {/* Paso 0: Datos Generales */}
+          {currentStep === 0 && (
+            <StepGeneralData
+              loadingCompanies={loadingCompanies}
+              userCompanies={userCompanies}
+              userRole={userRole}
+              editRequisitionId={editRequisitionId}
+              formData={formData}
+              handleInputChange={handleInputChange}
+            />
+          )}
 
-          {/* Datos Generales */}
-          <div className="form-section">
-            <div className="form-section-header">
-              DATOS GENERALES
-            </div>
-            <div className="form-section-content">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    NOMBRE DE LA EMPRESA <span className="text-red-600">*</span>
-                  </label>
-                  {loadingCompanies ? (
-                    <div className="form-input flex items-center text-gray-500">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
-                      Cargando empresas...
-                    </div>
-                  ) : userCompanies.length === 0 ? (
-                    <div className="form-input text-red-600">
-                      No tiene empresas asignadas. Contacte al administrador.
-                    </div>
-                  ) : (
-                    <>
-                      <select
-                        name="companyId"
-                        value={formData.companyId}
-                        onChange={handleInputChange}
-                        className="form-input"
-                        required
-                        disabled={!!editRequisitionId}
-                      >
-                        <option value="">Seleccione una empresa</option>
-                        {userCompanies.map((company) => (
-                          <option key={company.company_id} value={company.company_id}>
-                            {company.company_name}
-                          </option>
-                        ))}
-                      </select>
-                      {editRequisitionId && (
-                        <p className="mt-1 text-xs text-gray-500">
-                          No se puede cambiar la empresa al editar una requisición
-                        </p>
-                      )}
-                      {!editRequisitionId && (userRole === 'admin' || userRole === 'superadmin') && (
-                        <p className="mt-1 text-xs text-brand-accent">
-                          <span className="font-semibold">Admin:</span> Puede ver todas las empresas activas
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    DEPARTAMENTO
-                  </label>
-                  <input
-                    type="text"
-                    name="departamento"
-                    value={formData.departamento}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    PUESTO REQUERIDO
-                  </label>
-                  <input
-                    type="text"
-                    name="puestoRequerido"
-                    value={formData.puestoRequerido}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    NÚMERO DE VACANTES
-                  </label>
-                  <input
-                    type="number"
-                    name="numeroVacantes"
-                    value={formData.numeroVacantes}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
+          {/* Paso 1: Información sobre el puesto */}
+          {currentStep === 1 && (
+            <StepJobInfo formData={formData} handleInputChange={handleInputChange} />
+          )}
+
+          {/* Paso 2: Funciones principales */}
+          {currentStep === 2 && (
+            <StepFunctions formData={formData} handleInputChange={handleInputChange} />
+          )}
+
+          {/* Paso 3: Perfil del puesto */}
+          {currentStep === 3 && (
+            <StepProfile
+              formData={formData}
+              handleInputChange={handleInputChange}
+              handleNestedCheckboxChange={handleNestedCheckboxChange}
+            />
+          )}
+
+          {/* Pasos 4+: secciones personalizadas */}
+          {currentStep >= 4 && currentStep < totalSteps && (
+            loadingTemplate ? (
+              <div className="flex items-center text-gray-500">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
+                Cargando secciones...
               </div>
-            </div>
-          </div>
-
-          {/* Informaci f3n sobre el puesto */}
-          <div className="form-section">
-            <div className="form-section-header">
-              INFORMACIÓN SOBRE EL PUESTO
-            </div>
-            <div className="form-section-content">
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-3">El puesto responde a:</p>
-                <div className="checkbox-group">
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="nuevaCreacion"
-                      name="nuevaCreacion"
-                      checked={formData.nuevaCreacion}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="nuevaCreacion">Nueva creación</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="reemplazoTemporal"
-                      name="reemplazoTemporal"
-                      checked={formData.reemplazoTemporal}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="reemplazoTemporal">Reemplazo temporal</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="reestructuracionPuesto"
-                      name="reestructuracionPuesto"
-                      checked={formData.reestructuracionPuesto}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="reestructuracionPuesto">Reestructuración del puesto</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="reemplazoDefinitivo"
-                      name="reemplazoDefinitivo"
-                      checked={formData.reemplazoDefinitivo}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="reemplazoDefinitivo">Reemplazo definitivo</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="renunciaVoluntaria"
-                      name="renunciaVoluntaria"
-                      checked={formData.renunciaVoluntaria}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="renunciaVoluntaria">Renuncia voluntaria</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="promocion"
-                      name="promocion"
-                      checked={formData.promocion}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="promocion">Promoción</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="incapacidad"
-                      name="incapacidad"
-                      checked={formData.incapacidad}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="incapacidad">Incapacidad</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="cancelacionContrato"
-                      name="cancelacionContrato"
-                      checked={formData.cancelacionContrato}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="cancelacionContrato">Cancelación del contrato</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="licencia"
-                      name="licencia"
-                      checked={formData.licencia}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="licencia">Licencia</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="vacaciones"
-                      name="vacaciones"
-                      checked={formData.vacaciones}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="vacaciones">Vacaciones</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="incrementoLabores"
-                      name="incrementoLabores"
-                      checked={formData.incrementoLabores}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="incrementoLabores">Incremento de labores</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="licenciaMaternidad"
-                      name="licenciaMaternidad"
-                      checked={formData.licenciaMaternidad}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="licenciaMaternidad">Licencia de maternidad</label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Motivo del puesto
-                  </label>
-                  <textarea
-                    name="motivoPuesto"
-                    value={formData.motivoPuesto}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="form-textarea"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    NOMBRE DEL EMPLEADO A QUIEN REEMPLAZA
-                  </label>
-                  <input
-                    type="text"
-                    name="nombreEmpleadoReemplaza"
-                    value={formData.nombreEmpleadoReemplaza}
-                    onChange={handleInputChange}
-                    className="form-input"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Funciones principales del puesto */}
-          <div className="form-section">
-            <div className="form-section-header">
-              FUNCIONES PRINCIPALES DEL PUESTO
-            </div>
-            <div className="form-section-content space-y-3">
-              {[1, 2, 3, 4, 5].map((num) => (
-                <div key={num}>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {num}.-
-                  </label>
-                  <textarea
-                    name={`funcion${num}`}
-                    value={(formData as any)[`funcion${num}`] as string}
-                    onChange={handleInputChange}
-                    rows={2}
-                    className="form-textarea"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Perfil del puesto */}
-          <div className="form-section">
-            <div className="form-section-header">
-              PERFIL DEL PUESTO
-            </div>
-            <div className="form-section-content">
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-3">FORMACIÓN ACADÉMICA REQUERIDA PARA EL PUESTO</p>
-                <div className="checkbox-group">
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="bachiller"
-                      name="bachiller"
-                      checked={formData.bachiller}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="bachiller">Bachiller</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="tecnico"
-                      name="tecnico"
-                      checked={formData.tecnico}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="tecnico">Técnico</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="profesional"
-                      name="profesional"
-                      checked={formData.profesional}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="profesional">Profesional</label>
-                  </div>
-                  <div className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      id="especializacion"
-                      name="especializacion"
-                      checked={formData.especializacion}
-                      onChange={handleInputChange}
-                    />
-                    <label htmlFor="especializacion">Especialización</label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <p className="text-sm font-medium text-gray-700 mb-3">HABILIDAD INFORMÁTICA REQUERIDA</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        id="windows"
-                        checked={formData.sistemaOperativo.windows}
-                        onChange={(e) => handleNestedCheckboxChange('sistemaOperativo', 'windows', e.target.checked)}
-                      />
-                      <label htmlFor="windows">Windows</label>
-                    </div>
-                    <div className="checkbox-item">
-                      <input
-                        type="checkbox"
-                        id="otrosSO"
-                        checked={formData.sistemaOperativo.otros}
-                        onChange={(e) => handleNestedCheckboxChange('sistemaOperativo', 'otros', e.target.checked)}
-                      />
-                      <label htmlFor="otrosSO">Otros</label>
-                    </div>
-                  </div>
-
-                  {( [ 'wordExcelPowerPoint', 'baseDatos', 'internet', 'correoElectronico' ] as const).map((skill) => (
-                    <div key={skill}>
-                      <p className="text-sm font-medium text-gray-700 mb-2">
-                        {skill === 'wordExcelPowerPoint' && 'Word-Excel-Power Point'}
-                        {skill === 'baseDatos' && 'Base de datos'}
-                        {skill === 'internet' && 'Internet (Navegadores)'}
-                        {skill === 'correoElectronico' && 'Correo electrónico'}
-                      </p>
-                      <div className="flex space-x-4">
-                        {(['basico', 'intermedio', 'avanzado'] as const).map((level) => (
-                          <div key={level} className="checkbox-item">
-                            <input
-                              type="checkbox"
-                              id={`${skill}_${level}`}
-                              checked={((formData as any)[skill] as any)[level]}
-                              onChange={(e) => handleNestedCheckboxChange(skill, level, e.target.checked)}
-                            />
-                            <label htmlFor={`${skill}_${level}`} className="capitalize">{level}</label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Otro (Especifique)
-                    </label>
-                    <input
-                      type="text"
-                      name="otroEspecifique"
-                      value={formData.otroEspecifique}
-                      onChange={handleInputChange}
-                      className="form-input"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Habilidad y conocimientos técnicos */}
-              <div className="form-section">
-                <div className="form-section-header">
-                  HABILIDAD Y CONOCIMIENTOS TÉCNICOS EN EL ÁREA DE:
-                </div>
-                <div className="form-section-content">
-                  <div className="space-y-4">
-                    <div className="checkbox-group">
-                      <div className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          id="informacion"
-                          name="informacion"
-                          checked={formData.informacion}
-                          onChange={handleInputChange}
-                        />
-                        <label htmlFor="informacion">Información</label>
-                      </div>
-                      <div className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          id="maquinariaEquipos"
-                          name="maquinariaEquipos"
-                          checked={formData.maquinariaEquipos}
-                          onChange={handleInputChange}
-                        />
-                        <label htmlFor="maquinariaEquipos">Maquinaria y equipos</label>
-                      </div>
-                      <div className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          id="decisiones"
-                          name="decisiones"
-                          checked={formData.decisiones}
-                          onChange={handleInputChange}
-                        />
-                        <label htmlFor="decisiones">Decisiones</label>
-                      </div>
-                      <div className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          id="supervisionPersonal"
-                          name="supervisionPersonal"
-                          checked={formData.supervisionPersonal}
-                          onChange={handleInputChange}
-                        />
-                        <label htmlFor="supervisionPersonal">Supervisión Personal a cargo</label>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">RESPONSABILIDADES</p>
-                        <div className="space-y-2">
-                          <div className="checkbox-item">
-                            <input
-                              type="checkbox"
-                              id="confidencial"
-                              checked={formData.responsabilidades.confidencial}
-                              onChange={(e) => handleNestedCheckboxChange('responsabilidades', 'confidencial', e.target.checked)}
-                            />
-                            <label htmlFor="confidencial">Confidencial</label>
-                          </div>
-                          <div className="checkbox-item">
-                            <input
-                              type="checkbox"
-                              id="restringida"
-                              checked={formData.responsabilidades.restringida}
-                              onChange={(e) => handleNestedCheckboxChange('responsabilidades', 'restringida', e.target.checked)}
-                            />
-                            <label htmlFor="restringida">Restringida</label>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-2">SUPERVISIÓN</p>
-                        <div className="space-y-2">
-                          <div className="checkbox-item">
-                            <input
-                              type="checkbox"
-                              id="directa"
-                              checked={formData.supervision.directa}
-                              onChange={(e) => handleNestedCheckboxChange('supervision', 'directa', e.target.checked)}
-                            />
-                            <label htmlFor="directa">Directa</label>
-                          </div>
-                          <div className="checkbox-item">
-                            <input
-                              type="checkbox"
-                              id="indirecta"
-                              checked={formData.supervision.indirecta}
-                              onChange={(e) => handleNestedCheckboxChange('supervision', 'indirecta', e.target.checked)}
-                            />
-                            <label htmlFor="indirecta">Indirecta</label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Secciones Personalizadas */}
-          {template && template.sections && template.sections.length > 0 && (
-            <div className="space-y-6">
-              <div className="border-t-2 border-brand-dark pt-6">
-                <h3 className="text-lg font-bold text-brand-dark mb-4">
-                  INFORMACIÓN ADICIONAL PERSONALIZADA
-                </h3>
-              </div>
-              {template.sections
-                .sort((a, b) => a.position - b.position)
-                .map((section) => (
-                  <DynamicSection
-                    key={section.id}
-                    section={section}
+            ) : (
+              (() => {
+                const idx = currentStep - 4
+                const section = sortedSections[idx]
+                if (!section) return null
+                return (
+                  <StepCustomSection
+                    section={section as any}
                     values={customResponses[section.id] || {}}
                     onChange={handleCustomResponse}
                     disabled={saving}
                   />
-                ))}
-            </div>
+                )
+              })()
+            )
           )}
 
-          {/* Submit button */}
-          <div className="flex justify-end space-x-4 pt-6">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              disabled={saving}
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              {saving ? 'Guardando...' : editRequisitionId ? 'Actualizar Borrador' : 'Guardar como Borrador'}
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {saving ? 'Enviando...' : editRequisitionId ? 'Actualizar y Enviar' : 'Enviar Requisición'}
-            </button>
+          {/* Navegación y acciones */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-6">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={currentStep === 0 || saving}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400"
+              >
+                Anterior
+              </button>
+              {currentStep < totalSteps - 1 && (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  disabled={saving}
+                  className="px-4 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent disabled:bg-gray-400"
+                >
+                  Siguiente
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-3 justify-end">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={saving}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                {saving ? 'Guardando...' : editRequisitionId ? 'Actualizar Borrador' : 'Guardar como Borrador'}
+              </button>
+              {currentStep === totalSteps - 1 && (
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-6 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {saving ? 'Enviando...' : editRequisitionId ? 'Actualizar y Enviar' : 'Enviar Requisición'}
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>
