@@ -26,23 +26,25 @@ function RequisitionFormContent() {
   const [saving, setSaving] = useState(false)
   const [customResponses, setCustomResponses] = useState<Record<string, Record<string, any>>>({})
   const [loadingRequisition, setLoadingRequisition] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
 
   // Obtener rol del usuario desde el profile
   const userRole = (profile as any)?.roles?.name || null
 
-  // Redirigir al login si no hay usuario autenticado
+  // Redirigir al login si no hay usuario autenticado - OPTIMIZADO
   useEffect(() => {
-    if (!loading && (!user || !profile)) {
-      console.debug('RequisitionForm: No hay usuario autenticado, redirigiendo al login')
+    if (!loading && !user && !redirecting) {
+      setRedirecting(true)
       router.replace('/auth')
     }
-  }, [loading, user, profile, router])
+  }, [loading, user, redirecting, router])
 
-  // Cargar empresas según el rol del usuario
+  // Cargar empresas según el rol del usuario - OPTIMIZADO
   useEffect(() => {
+    // No cargar si no hay usuario o si ya estamos redirigiendo
+    if (!user || !profile || redirecting) return
+    
     const fetchUserCompanies = async () => {
-      if (!user || !userRole) return
-      
       try {
         setLoadingCompanies(true)
         
@@ -87,7 +89,7 @@ function RequisitionFormContent() {
     }
 
     fetchUserCompanies()
-  }, [user, userRole])
+  }, [user, profile, userRole, redirecting])
 
   const [formData, setFormData] = useState({
     // Datos Generales
@@ -194,21 +196,21 @@ function RequisitionFormContent() {
     loadTemplate()
   }, [formData.companyId])
 
-  // Cargar requisición existente si está en modo edición
+  // Cargar requisición existente si está en modo edición - OPTIMIZADO
   useEffect(() => {
-    const loadExistingRequisition = async () => {
-      if (!editRequisitionId) return
-      if (loadingRequisition) return // Evitar múltiples cargas simultáneas
+    // No ejecutar si no hay usuario, está redirigiendo, o no hay ID de requisición
+    if (!user || !profile || redirecting || !editRequisitionId) return
+    
+    // Prevenir múltiples cargas simultáneas
+    if (loadingRequisition) return
 
+    const loadExistingRequisition = async () => {
       try {
         setLoadingRequisition(true)
-        console.log('Cargando requisición para editar:', editRequisitionId)
         
         const requisition = await getRequisitionById(editRequisitionId) as RequisitionComplete
-        console.log('Requisición cargada:', requisition)
 
         if (!requisition) {
-          console.error('Requisición no encontrada')
           error('No se encontró la requisición')
           router.push('/requisitions')
           return
@@ -216,7 +218,6 @@ function RequisitionFormContent() {
 
         // Verificar que sea editable (solo drafts)
         if (requisition.status !== 'draft') {
-          console.warn('Requisición no editable, estado:', requisition.status)
           warning('Solo se pueden editar requisiciones en estado borrador')
           router.push(`/requisitions/${editRequisitionId}`)
           return
@@ -224,12 +225,10 @@ function RequisitionFormContent() {
 
         // Cargar template snapshot
         if (requisition.template_snapshot) {
-          console.log('Cargando template snapshot')
           setTemplate(requisition.template_snapshot)
         }
 
         // Mapear los datos de la requisición al formulario
-        console.log('Mapeando datos al formulario...')
         setFormData({
           companyId: requisition.company_id,
           puestoRequerido: requisition.puesto_requerido || '',
@@ -302,22 +301,14 @@ function RequisitionFormContent() {
 
         // Cargar custom responses
         if (requisition.custom_responses && requisition.custom_responses.length > 0) {
-          console.log('Cargando respuestas personalizadas:', requisition.custom_responses.length)
           const responses: Record<string, Record<string, any>> = {}
           requisition.custom_responses.forEach((response) => {
             responses[response.section_id] = response.responses
           })
           setCustomResponses(responses)
         }
-
-        console.log('Requisición cargada exitosamente')
       } catch (err: any) {
         console.error('Error loading requisition:', err)
-        console.error('Error type:', typeof err)
-        console.error('Error keys:', err ? Object.keys(err) : 'null')
-        console.error('Error message:', err?.message)
-        console.error('Error toString:', err?.toString())
-        console.error('Error JSON:', JSON.stringify(err, null, 2))
         
         // Mostrar notificación de error
         if (err?.message) {
@@ -325,16 +316,13 @@ function RequisitionFormContent() {
         } else {
           error('Error inesperado al cargar la requisición')
         }
-        // No redirigir, permitir que el usuario vea qué pasó
-        // router.push('/requisitions')
       } finally {
         setLoadingRequisition(false)
       }
     }
 
     loadExistingRequisition()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editRequisitionId]) // Solo depende de editRequisitionId, no de router
+  }, [editRequisitionId, user, profile, redirecting]) // Dependencias optimizadas
 
   const handleCustomResponse = (sectionId: string, fieldName: string, value: any) => {
     setCustomResponses(prev => ({
@@ -519,22 +507,32 @@ function RequisitionFormContent() {
     }
   }
 
-  // Mostrar loading mientras se verifica la sesión o se carga la requisición
-  if (loading || loadingRequisition) {
+  // Mostrar loading solo mientras AuthProvider está cargando inicialmente
+  if (loading && !user) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">
-            {loadingRequisition ? 'Cargando requisición...' : 'Verificando sesión...'}
-          </p>
+          <p className="text-gray-600">Verificando sesión...</p>
         </div>
       </div>
     )
   }
 
-  // Si no hay usuario, mostrar loading mientras redirige
-  if (!user || !profile) {
+  // Mostrar loading mientras se carga la requisición existente
+  if (loadingRequisition) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando requisición...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Si no hay usuario después de la carga, mostrar loading mientras redirige
+  if (!user || !profile || redirecting) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
