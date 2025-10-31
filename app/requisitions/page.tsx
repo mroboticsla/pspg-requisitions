@@ -39,19 +39,121 @@ export default function MyRequisitionsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<RequisitionStatus | "">("");
+  const [companyFilter, setCompanyFilter] = useState<string | "">("");
+  const [tipoFilter, setTipoFilter] = useState<
+    "nuevaCreacion" | "reemplazoTemporal" | "reemplazoDefinitivo" | "incrementoPlantilla" | ""
+  >("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   
   const userRole = (profile as any)?.roles?.name || null;
 
+  const companyOptions = useMemo(() => {
+    return Object.entries(companyNames)
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [companyNames]);
+
+  // Normalizador compartido (acentos + minúsculas)
+  const normalizeForMatch = useCallback((v?: string) =>
+    (v || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+  , []);
+
+  // Tokens de búsqueda aplicados (solo cambian al presionar "Buscar")
+  const searchTokens = useMemo(() => {
+    const query = normalizeForMatch(debouncedSearch);
+    return query.split(/\s+/).filter(Boolean);
+  }, [debouncedSearch, normalizeForMatch]);
+
   const filteredRequisitions = useMemo(() => {
-    return requisitions.filter((req) => {
-      const matchesStatus = !statusFilter || req.status === statusFilter;
-      const matchesSearch =
-        !searchTerm.trim() ||
-        req.puesto_requerido?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.departamento?.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesStatus && matchesSearch;
-    });
-  }, [requisitions, statusFilter, searchTerm]);
+    const freeTokens: string[] = searchTokens;
+
+    // Scoring por relevancia
+    type FieldKey =
+      | "title"      // puesto
+      | "department" // departamento
+      | "reason"     // motivo
+      | "company"    // empresa
+      | "date";      // fecha
+
+    const weights: Record<FieldKey, number> = {
+      title: 8,
+      department: 6,
+      company: 7,
+      reason: 5,
+      date: 3,
+    };
+
+    const statusText = (s: RequisitionStatus) => normalizeForMatch(statusLabels[s]);
+
+    // Solo buscar en: puesto, empresa, departamento, motivo, fecha
+    const formatDate = (iso: string) => {
+      try { return new Date(iso).toLocaleDateString(); } catch { return ""; }
+    };
+    const combinedText = (req: Requisition) =>
+      normalizeForMatch([
+        req.puesto_requerido,
+        req.departamento,
+        companyNames[req.company_id],
+        req.motivo_puesto,
+        formatDate(req.created_at),
+      ].filter(Boolean).join(" "));
+
+    const matchesAllTokens = (
+      haystack: string,
+      tokensArr: string[]
+    ) => tokensArr.every((t) => haystack.includes(t));
+
+    const calcScore = (req: Requisition): number => {
+      // Filtros simples desde UI
+      if (statusFilter && req.status !== statusFilter) return -1;
+      if (companyFilter && req.company_id !== companyFilter) return -1;
+      if (tipoFilter) {
+        const tp = req.tipo_puesto || ({} as NonNullable<Requisition["tipo_puesto"]>);
+        if (!tp[tipoFilter as keyof typeof tp]) return -1;
+      }
+
+      // Si hay texto de búsqueda, todos los tokens deben aparecer en el texto combinado (campos distintos permiten coincidencias distribuidas)
+      if (freeTokens.length > 0) {
+        const combined = combinedText(req);
+        if (!matchesAllTokens(combined, freeTokens)) return -1;
+      }
+
+      const compName = normalizeForMatch(companyNames[req.company_id]);
+      const fields: Array<[FieldKey, string]> = [
+        ["title", normalizeForMatch(req.puesto_requerido)],
+        ["department", normalizeForMatch(req.departamento)],
+        ["company", compName],
+        ["reason", normalizeForMatch(req.motivo_puesto)],
+        ["date", normalizeForMatch(formatDate(req.created_at))],
+      ];
+
+      // Si no hay términos libres, score 0 (pasa por filtros de arriba)
+      if (freeTokens.length === 0) return 0;
+
+      // Sumar pesos por cada campo donde aparezcan TODOS los términos libres
+      let score = 0;
+      for (const [k, val] of fields) {
+        if (!val) continue;
+        if (matchesAllTokens(val, freeTokens)) score += weights[k];
+      }
+      return score;
+    };
+
+    const withScores = requisitions
+      .map((r) => ({ r, s: calcScore(r) }))
+      .filter(({ s }) => s >= 0);
+
+    // Ordenar por score desc; si no hay términos, mantener orden original
+    if (freeTokens.length > 0) {
+      withScores.sort((a, b) => b.s - a.s);
+    }
+
+    return withScores.map(({ r }) => r);
+  }, [requisitions, statusFilter, companyFilter, tipoFilter, debouncedSearch, companyNames]);
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
@@ -114,6 +216,90 @@ export default function MyRequisitionsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // La búsqueda solo se aplica al hacer clic en "Buscar"
+
+  // Acciones de filtros
+  const handleApplySearch = useCallback(() => {
+    // Aplica de inmediato la búsqueda escrita
+    setDebouncedSearch(searchTerm);
+  }, [searchTerm]);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchTerm("");
+    setDebouncedSearch("");
+    setStatusFilter("");
+    setCompanyFilter("");
+    setTipoFilter("");
+  }, []);
+
+  // Highlight de coincidencias en texto (insensible a acentos)
+  const highlightText = useCallback((text?: string | null) => {
+    const src = text ?? "";
+    if (!src) return src;
+    if (searchTokens.length === 0) return src;
+
+    // Construir mapa índice-normalizado -> índice-original
+    const buildMap = (s: string) => {
+      const normChars: string[] = [];
+      const map: number[] = [];
+      for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        const nfd = ch.normalize("NFD");
+        const base = nfd.replace(/[\u0300-\u036f]/g, "");
+        for (let j = 0; j < base.length; j++) {
+          normChars.push(base[j].toLowerCase());
+          map.push(i);
+        }
+      }
+      return { norm: normChars.join(""), map };
+    };
+
+    const { norm, map } = buildMap(src);
+    const ranges: Array<{ start: number; end: number }> = [];
+
+    for (const t of searchTokens) {
+      if (!t) continue;
+      let idx = 0;
+      while (true) {
+        const pos = norm.indexOf(t, idx);
+        if (pos === -1) break;
+        const start = map[pos];
+        const end = map[pos + t.length - 1] + 1; // exclusivo
+        if (start != null && end != null) {
+          ranges.push({ start, end });
+        }
+        idx = pos + t.length;
+      }
+    }
+
+    if (ranges.length === 0) return src;
+
+    // Unir rangos solapados
+    ranges.sort((a, b) => (a.start - b.start) || (a.end - b.end));
+    const merged: Array<{ start: number; end: number }> = [];
+    for (const r of ranges) {
+      if (!merged.length || r.start > merged[merged.length - 1].end) {
+        merged.push({ ...r });
+      } else {
+        merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, r.end);
+      }
+    }
+
+    const nodes: any[] = [];
+    let last = 0;
+    merged.forEach((r, i) => {
+      if (r.start > last) nodes.push(src.slice(last, r.start));
+      nodes.push(
+        <mark key={`hl-${last}-${i}`} className="bg-yellow-200 text-admin-text-primary rounded px-0.5">
+          {src.slice(r.start, r.end)}
+        </mark>
+      );
+      last = r.end;
+    });
+    if (last < src.length) nodes.push(src.slice(last));
+    return nodes;
+  }, [searchTokens]);
 
   if (loading) {
     return (
@@ -245,14 +431,14 @@ export default function MyRequisitionsPage() {
       </div>
 
       <div className="bg-admin-bg-card rounded-lg shadow-sm border border-admin-border-DEFAULT p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-admin-text-secondary mb-2">Búsqueda</label>
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por puesto o departamento..."
+              placeholder="Buscar por puesto, empresa, departamento, motivo o fecha…"
               className="w-full rounded-md border border-admin-border-DEFAULT px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm bg-admin-bg-input"
             />
           </div>
@@ -270,6 +456,52 @@ export default function MyRequisitionsPage() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-admin-text-secondary mb-2">Empresa</label>
+            <select
+              value={companyFilter}
+              onChange={(e) => setCompanyFilter(e.target.value)}
+              className="w-full rounded-md border border-admin-border-DEFAULT px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm bg-admin-bg-input">
+              <option value="">Todas las empresas</option>
+              {companyOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name || c.id}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-admin-text-secondary mb-2">Tipo de puesto</label>
+            <select
+              value={tipoFilter}
+              onChange={(e) => setTipoFilter(e.target.value as any)}
+              className="w-full rounded-md border border-admin-border-DEFAULT px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm bg-admin-bg-input">
+              <option value="">Todos los tipos</option>
+              <option value="nuevaCreacion">Nueva creación</option>
+              <option value="reemplazoTemporal">Reemplazo temporal</option>
+              <option value="reemplazoDefinitivo">Reemplazo definitivo</option>
+              <option value="incrementoPlantilla">Incremento de plantilla</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <p className="text-sm text-admin-text-secondary">
+            Mostrando {filteredRequisitions.length} {filteredRequisitions.length === 1 ? 'resultado' : 'resultados'} de {requisitions.length} disponibles
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleApplySearch}
+              className="px-4 py-2 rounded-lg bg-brand-accent text-white hover:bg-brand-accentDark transition-colors text-sm font-medium">
+              Buscar
+            </button>
+            <button
+              onClick={handleClearFilters}
+              className="px-4 py-2 rounded-lg border border-admin-border-DEFAULT text-admin-text-primary hover:bg-surface-secondary transition-colors text-sm font-medium">
+              Eliminar Filtros
+            </button>
           </div>
         </div>
       </div>
@@ -304,15 +536,15 @@ export default function MyRequisitionsPage() {
                     <Briefcase className="w-5 h-5 text-brand-accent flex-shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-admin-text-primary">
-                        {req.puesto_requerido || "Sin especificar"}
+                        {highlightText(req.puesto_requerido || "Sin especificar")}
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ml-2 ${statusColors[req.status]}`}>
                           {statusLabels[req.status]}
                         </span>
                       </h3>
-                      {req.departamento && <p className="text-sm text-admin-text-secondary mt-0.5">{req.departamento}</p>}
+                      {req.departamento && <p className="text-sm text-admin-text-secondary mt-0.5">{highlightText(req.departamento)}</p>}
                       {req.motivo_puesto && (
                         <p className="text-xs text-admin-text-muted mt-1 truncate" title={req.motivo_puesto}>
-                          {req.motivo_puesto}
+                          {highlightText(req.motivo_puesto)}
                         </p>
                       )}
                       <div className="flex items-center gap-4 mt-2 text-xs text-admin-text-muted">
@@ -322,7 +554,7 @@ export default function MyRequisitionsPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          {new Date(req.created_at).toLocaleDateString()}
+                          {highlightText(new Date(req.created_at).toLocaleDateString())}
                         </span>
                       </div>
 
@@ -333,7 +565,7 @@ export default function MyRequisitionsPage() {
                           <p
                             className="text-admin-text-primary font-medium truncate"
                             title={companyNames[req.company_id] || req.company_id}>
-                            {companyNames[req.company_id] || "—"}
+                            {highlightText(companyNames[req.company_id] || "—")}
                           </p>
                         </div>
                         <div className="bg-surface-tertiary border border-admin-border-DEFAULT rounded-md p-2">
