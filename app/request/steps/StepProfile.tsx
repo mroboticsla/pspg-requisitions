@@ -15,118 +15,171 @@ export default function StepProfile({
   handleInputChange,
   handleNestedCheckboxChange,
 }: Props) {
+  // Asegurar exclusividad de nivel por cada habilidad (básico/intermedio/avanzado)
+  const handleExclusiveLevel = (
+    skill: 'wordExcelPowerPoint' | 'baseDatos' | 'internet' | 'correoElectronico',
+    level: 'basico' | 'intermedio' | 'avanzado',
+    checked: boolean
+  ) => {
+    // Si se marca un nivel, desmarcar los otros del mismo skill
+    if (checked) {
+      (['basico', 'intermedio', 'avanzado'] as const).forEach((lv) => {
+        handleNestedCheckboxChange(skill, lv, lv === level)
+      })
+    } else {
+      // Si se desmarca, simplemente dejarlo en false
+      handleNestedCheckboxChange(skill, level, false)
+    }
+  }
+
   return (
     <div className="form-section">
       <div className="form-section-header">PERFIL DEL PUESTO</div>
       <div className="form-section-content">
-        <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 mb-3">
-            FORMACIÓN ACADÉMICA REQUERIDA PARA EL PUESTO
-          </p>
-          <div className="checkbox-group">
-            <div className="checkbox-item">
+        {/* Formación Académica */}
+        <div className="mb-6">
+          <p className="text-sm font-medium text-gray-700 mb-3">FORMACIÓN ACADÉMICA REQUERIDA PARA EL PUESTO</p>
+          <div className="space-y-2">
+            <label className="checkbox-item flex items-center gap-2">
               <input
                 type="checkbox"
                 id="bachiller"
                 name="bachiller"
-                checked={formData.bachiller}
+                checked={!!formData.bachiller}
                 onChange={handleInputChange}
               />
-              <label htmlFor="bachiller">Bachiller</label>
-            </div>
-            <div className="checkbox-item">
+              <span>Bachiller</span>
+            </label>
+            <label className="checkbox-item flex items-center gap-2">
               <input
                 type="checkbox"
                 id="tecnico"
                 name="tecnico"
-                checked={formData.tecnico}
+                checked={!!formData.tecnico}
                 onChange={handleInputChange}
               />
-              <label htmlFor="tecnico">Técnico</label>
-            </div>
-            <div className="checkbox-item">
+              <span>Técnico</span>
+            </label>
+            <label className="checkbox-item flex items-center gap-2">
               <input
                 type="checkbox"
                 id="profesional"
                 name="profesional"
-                checked={formData.profesional}
+                checked={!!formData.profesional}
                 onChange={handleInputChange}
               />
-              <label htmlFor="profesional">Profesional</label>
-            </div>
-            <div className="checkbox-item">
+              <span>Profesional</span>
+            </label>
+            <label className="checkbox-item flex items-center gap-2">
               <input
                 type="checkbox"
                 id="especializacion"
                 name="especializacion"
-                checked={formData.especializacion}
+                checked={!!formData.especializacion}
                 onChange={handleInputChange}
               />
-              <label htmlFor="especializacion">Especialización</label>
-            </div>
+              <span>Especialización</span>
+            </label>
+            <label className="checkbox-item flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="estudianteUniversitario"
+                name="estudianteUniversitario"
+                checked={!!formData.estudianteUniversitario}
+                onChange={handleInputChange}
+              />
+              <span>Estudiante universitario</span>
+            </label>
+          </div>
+
+          {/* Idiomas */}
+          <div className="mt-4">
+            <p className="text-sm font-medium text-gray-700 mb-2">IDIOMAS</p>
+            <label className="checkbox-item flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="idiomaIngles"
+                name="idiomaIngles"
+                checked={!!formData.idiomaIngles}
+                onChange={handleInputChange}
+              />
+              <span>Inglés</span>
+            </label>
+          </div>
+
+          {/* Otros estudios */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Otros estudios</label>
+            <input
+              type="text"
+              name="otrosEstudios"
+              value={formData.otrosEstudios || ''}
+              onChange={handleInputChange}
+              className="form-input"
+              placeholder="Diplomados, certificaciones, etc."
+            />
           </div>
         </div>
 
-        <div className="mb-4">
+        {/* Habilidad Informática */}
+        <div className="mb-6">
           <p className="text-sm font-medium text-gray-700 mb-3">HABILIDAD INFORMÁTICA REQUERIDA</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <div className="checkbox-item">
+          <div className="space-y-3">
+            {/* Sistema operativo */}
+            <div className="flex items-center flex-wrap gap-4">
+              <span className="text-sm text-gray-700 w-full sm:w-auto">Sistema Operativo:</span>
+              <label className="checkbox-item flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="windows"
-                  checked={formData.sistemaOperativo.windows}
+                  checked={!!formData.sistemaOperativo?.windows}
                   onChange={(e) => handleNestedCheckboxChange('sistemaOperativo', 'windows', e.target.checked)}
                 />
-                <label htmlFor="windows">Windows</label>
-              </div>
-              <div className="checkbox-item">
+                <span>Windows</span>
+              </label>
+              <label className="checkbox-item flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="otrosSO"
-                  checked={formData.sistemaOperativo.otros}
+                  checked={!!formData.sistemaOperativo?.otros}
                   onChange={(e) => handleNestedCheckboxChange('sistemaOperativo', 'otros', e.target.checked)}
                 />
-                <label htmlFor="otrosSO">Otros</label>
-              </div>
+                <span>Otros</span>
+              </label>
             </div>
 
-            {(['wordExcelPowerPoint', 'baseDatos', 'internet', 'correoElectronico'] as const).map(
-              (skill) => (
-                <div key={skill}>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    {skill === 'wordExcelPowerPoint' && 'Word-Excel-Power Point'}
-                    {skill === 'baseDatos' && 'Base de datos'}
-                    {skill === 'internet' && 'Internet (Navegadores)'}
-                    {skill === 'correoElectronico' && 'Correo electrónico'}
-                  </p>
-                  <div className="flex space-x-4">
-                    {(['basico', 'intermedio', 'avanzado'] as const).map((level) => (
-                      <div key={level} className="checkbox-item">
-                        <input
-                          type="checkbox"
-                          id={`${skill}_${level}`}
-                          checked={((formData as any)[skill] as any)[level]}
-                          onChange={(e) => handleNestedCheckboxChange(skill, level, e.target.checked)}
-                        />
-                        <label htmlFor={`${skill}_${level}`} className="capitalize">
-                          {level}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            )}
+            {/* Niveles por habilidad, una línea por habilidad */}
+            {([
+              { key: 'wordExcelPowerPoint', label: 'Word-Excel-PowerPoint' },
+              { key: 'baseDatos', label: 'Base de datos' },
+              { key: 'internet', label: 'Internet (Navegadores)' },
+              { key: 'correoElectronico', label: 'Correo electrónico' },
+            ] as const).map(({ key, label }) => (
+              <div key={key} className="flex items-center flex-wrap gap-4">
+                <span className="text-sm text-gray-700 w-full sm:w-64">{label}</span>
+                {(['basico', 'intermedio', 'avanzado'] as const).map((level) => (
+                  <label key={level} className="checkbox-item flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id={`${key}_${level}`}
+                      checked={!!(formData as any)?.[key]?.[level]}
+                      onChange={(e) => handleExclusiveLevel(key as any, level, e.target.checked)}
+                    />
+                    <span className="capitalize">{level}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Otro (Especifique)</label>
+            {/* Otro (Especifique) */}
+            <div className="flex items-center flex-wrap gap-3">
+              <label className="text-sm text-gray-700 w-full sm:w-64">Otro (Especifique)</label>
               <input
                 type="text"
                 name="otroEspecifique"
-                value={formData.otroEspecifique}
+                value={formData.otroEspecifique || ''}
                 onChange={handleInputChange}
-                className="form-input"
+                className="form-input flex-1 min-w-[240px]"
               />
             </div>
           </div>
