@@ -301,7 +301,7 @@ function RequisitionFormContent() {
               if (i === 0) return // ya asignado en funcion1
               acc[`funcion${i + 1}`] = val || ''
             })
-            if (!acc.funcion1) acc.funcion1 = ''
+            // Importante: NO sobrescribir funcion1; solo devolver funcion2..N
             return acc
           })(),
           
@@ -408,14 +408,21 @@ function RequisitionFormContent() {
 
   // Scroll al inicio al cambiar de paso
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return
+    const root = document.scrollingElement || document.documentElement
+    const hasVerticalOverflow = (root?.scrollHeight || 0) > (root?.clientHeight || 0) + 8
+    const scrolled = (root?.scrollTop || 0) > 24
+    // Solo desplazamos si hay overflow vertical y el usuario está algo desplazado
+    if (hasVerticalOverflow && scrolled) {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [currentStep])
 
   const totalSteps = allSteps.length
 
-  const goNext = () => {
+  const goNext = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault()
+    e?.stopPropagation()
     // Validaciones mínimas por paso
     // Paso 0: empresa requerida
     if (currentStep === 0) {
@@ -450,7 +457,11 @@ function RequisitionFormContent() {
     setCurrentStep((s) => Math.min(totalSteps - 1, s + 1))
   }
 
-  const goPrev = () => setCurrentStep((s) => Math.max(0, s - 1))
+  const goPrev = (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    setCurrentStep((s) => Math.max(0, s - 1))
+  }
 
   const handleSaveDraft = async () => {
     try {
@@ -528,6 +539,12 @@ function RequisitionFormContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Evitar envíos prematuros si aún se están cargando secciones dinámicas
+    if (loadingTemplate) {
+      warning('Aún se están cargando secciones adicionales. Por favor continúa con "Siguiente" y completa los pasos.')
+      return
+    }
     
     if (!formData.companyId) {
       warning('Por favor seleccione una empresa')
@@ -649,9 +666,13 @@ function RequisitionFormContent() {
     )
   }
 
+  // Determinar si mostrar "Siguiente" o "Enviar" evitando envíos prematuros mientras se cargan secciones
+  const isLastStep = currentStep === totalSteps - 1
+  const showNext = !isLastStep || loadingTemplate
+
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="min-h-[calc(100dvh-var(--header-h,64px))] flex items-start md:items-center py-6 md:py-12">
+      <div className="w-full max-w-5xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         {/* Header with instructions */}
         <div className="bg-brand-dark text-white p-4">
           <h2 className="text-lg font-bold text-center">
@@ -675,7 +696,7 @@ function RequisitionFormContent() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 p-6">
+  <form onSubmit={handleSubmit} className="space-y-6 p-6">
           {/* Botón volver si está editando */}
           {editRequisitionId && (
             <div className="mb-4">
@@ -746,8 +767,22 @@ function RequisitionFormContent() {
             )
           )}
 
-          {/* Navegación y acciones */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-6">
+          {/* Navegación y acciones (barra inferior sticky para mejor UX) */}
+          <div className="sticky bottom-0 left-0 right-0 mt-8 -mx-6 px-6 py-4 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75 border-t border-gray-200 flex items-center justify-between">
+            {/* Acción secundaria: Guardar borrador (lado izquierdo para reducir confusión con primarios) */}
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={saving}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                aria-label={editRequisitionId ? 'Actualizar borrador' : 'Guardar como borrador'}
+              >
+                {saving ? 'Guardando…' : editRequisitionId ? 'Actualizar borrador' : 'Guardar borrador'}
+              </button>
+            </div>
+
+            {/* Navegación del asistente (lado derecho, primaria a la derecha) */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -757,33 +792,23 @@ function RequisitionFormContent() {
               >
                 Anterior
               </button>
-              {currentStep < totalSteps - 1 && (
+
+              {showNext ? (
                 <button
                   type="button"
-                  onClick={goNext}
+                  onClick={(e) => goNext(e)}
                   disabled={saving}
                   className="px-4 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent disabled:bg-gray-400"
                 >
                   Siguiente
                 </button>
-              )}
-            </div>
-            <div className="flex items-center gap-3 justify-end">
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                disabled={saving}
-                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                {saving ? 'Guardando...' : editRequisitionId ? 'Actualizar Borrador' : 'Guardar como Borrador'}
-              </button>
-              {currentStep === totalSteps - 1 && (
+              ) : (
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || loadingTemplate}
                   className="px-6 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {saving ? 'Enviando...' : editRequisitionId ? 'Actualizar y Enviar' : 'Enviar Requisición'}
+                  {saving ? 'Enviando…' : editRequisitionId ? 'Actualizar y enviar' : 'Enviar requisición'}
                 </button>
               )}
             </div>

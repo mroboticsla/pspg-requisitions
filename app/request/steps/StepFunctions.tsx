@@ -18,6 +18,16 @@ export default function StepFunctions({ formData, handleInputChange }: Props) {
     return Math.max(1, nonEmpty)
   })
 
+  // Si el formulario se llena asíncronamente (modo edición), ampliar el conteo para mostrar todas
+  React.useEffect(() => {
+    const nonEmpty = Object.entries(formData || {})
+      .filter(([k, v]) => /^funcion\d+$/.test(k) && typeof v === 'string' && v.trim().length > 0)
+      .length
+    if (nonEmpty > count) {
+      setCount(nonEmpty)
+    }
+  }, [formData, count])
+
   // Helper para emitir cambios programáticos compatibles con handleInputChange
   const emitChange = (name: string, value: string) => {
     const e = {
@@ -26,7 +36,10 @@ export default function StepFunctions({ formData, handleInputChange }: Props) {
     handleInputChange(e)
   }
 
-  const getVal = (n: number) => ((formData as any)[`funcion${n}`] as string) || ''
+  const getVal = (n: number) => {
+    const val = (formData as any)[`funcion${n}`]
+    return typeof val === 'string' ? val : ''
+  }
 
   const handleRemove = (index: number) => {
     if (count <= 1) return
