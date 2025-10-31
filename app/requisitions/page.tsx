@@ -39,6 +39,8 @@ export default function MyRequisitionsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<RequisitionStatus | "">("");
+  
+  const userRole = (profile as any)?.roles?.name || null;
 
   const filteredRequisitions = useMemo(() => {
     return requisitions.filter((req) => {
@@ -56,7 +58,29 @@ export default function MyRequisitionsPage() {
 
     try {
       setLoading(true);
-      const requisitionsData = await listRequisitions({ created_by: profile.id });
+
+      let requisitionsData: Requisition[] = [];
+
+      // Admin/Superadmin: ver todas las requisiciones (RLS limitará si aplica)
+      if (userRole === 'admin' || userRole === 'superadmin') {
+        requisitionsData = await listRequisitions({});
+      } else {
+        // Otros roles: obtener empresas asignadas y filtrar por ellas
+        const { data: userCompanies, error: companiesAccessError } = await supabase.rpc('get_user_companies');
+        if (companiesAccessError) {
+          console.error('Error al obtener empresas del usuario:', companiesAccessError);
+          throw new Error('No se pudo verificar el acceso a empresas');
+        }
+
+        const companyIds = (userCompanies || []).map((c: any) => c.company_id).filter(Boolean);
+
+        if (companyIds.length === 0) {
+          requisitionsData = [];
+        } else {
+          requisitionsData = await listRequisitions({ company_ids: companyIds });
+        }
+      }
+
       setRequisitions(requisitionsData);
 
       // Cargar nombres de empresas para las tarjetas
@@ -85,7 +109,7 @@ export default function MyRequisitionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, error]);
+  }, [profile?.id, userRole, error]);
 
   useEffect(() => {
     loadData();
@@ -96,7 +120,7 @@ export default function MyRequisitionsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-dark mx-auto mb-4"></div>
-          <p className="text-admin-text-secondary">Cargando mis requisiciones...</p>
+          <p className="text-admin-text-secondary">Cargando información...</p>
         </div>
       </div>
     );
@@ -106,9 +130,9 @@ export default function MyRequisitionsPage() {
     <div className="space-y-6 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-admin-text-primary">Mis Requisiciones</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-admin-text-primary">Solicitudes</h1>
           <p className="text-admin-text-secondary mt-1">
-            Tienes {requisitions.length} {requisitions.length === 1 ? "requisición" : "requisiciones"}
+            Tienes {requisitions.length} {requisitions.length === 1 ? "requisición" : "requisiciones"} accesible{requisitions.length === 1 ? '' : 's'}
           </p>
         </div>
         <button
@@ -191,7 +215,7 @@ export default function MyRequisitionsPage() {
                       {label}
                     </p>
                     <p className={`text-xs mt-0.5 ${isActive ? "text-admin-text-secondary" : "text-admin-text-muted"}`}>
-                      {count} {count === 1 ? "solicitud" : "solicitudes"}
+                      {count} {count === 1 ? "requisición" : "requisiciones"}
                     </p>
                   </div>
                 </div>
@@ -257,7 +281,7 @@ export default function MyRequisitionsPage() {
             <p className="text-admin-text-secondary">
               {searchTerm.trim() || statusFilter
                 ? "No se encontraron requisiciones con los criterios de búsqueda"
-                : "Aún no has creado ninguna requisición"}
+                : "No hay requisiciones disponibles para las empresas a las que tienes acceso"}
             </p>
             {!searchTerm && !statusFilter && (
               <button

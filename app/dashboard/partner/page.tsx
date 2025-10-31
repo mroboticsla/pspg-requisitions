@@ -269,7 +269,7 @@ export default function PartnerDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mi Dashboard</h1>
-          <p className="text-gray-600 mt-1">Panel de control de mis requisiciones</p>
+          <p className="text-gray-600 mt-1">Panel de control</p>
         </div>
         <div className="flex items-center space-x-2">
           <Activity className="w-5 h-5 text-brand-accent animate-pulse" />

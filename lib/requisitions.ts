@@ -289,6 +289,8 @@ export async function listRequisitions(
     // Aplicar filtros
     if (filters.company_id) {
       query = query.eq('company_id', filters.company_id);
+    } else if (filters.company_ids && filters.company_ids.length > 0) {
+      query = query.in('company_id', filters.company_ids);
     }
 
     if (filters.status) {

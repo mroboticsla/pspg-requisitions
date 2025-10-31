@@ -19,8 +19,8 @@ export const MENU: MenuItem[] = [
     label: 'Requisiciones', 
     roles: ['superadmin', 'admin', 'partner'], 
     children: [
-      { id: 'req-new', label: 'Crear Requisición', path: '/request', roles: ['superadmin', 'admin', 'partner'], icon: FilePlus2 },
-      { id: 'req-mine', label: 'Mis Requisiciones', path: '/requisitions', roles: ['superadmin', 'admin', 'partner'], icon: ListChecks },
+      { id: 'req-new', label: 'Crear Solicitud', path: '/request', roles: ['superadmin', 'admin', 'partner'], icon: FilePlus2 },
+      { id: 'req-mine', label: 'Solicitudes', path: '/requisitions', roles: ['superadmin', 'admin', 'partner'], icon: ListChecks },
     ]
   },
   { id: 'reports', label: 'Reportes', path: '/reports', roles: ['superadmin','admin'], icon: BarChart3 },

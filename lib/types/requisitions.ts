@@ -250,6 +250,7 @@ export interface UpdateRequisitionData extends Partial<CreateRequisitionData> {
  */
 export interface RequisitionFilters {
   company_id?: string;
+  company_ids?: string[];
   status?: RequisitionStatus | RequisitionStatus[];
   created_by?: string;
   date_from?: string;
