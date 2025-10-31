@@ -417,54 +417,28 @@ export async function updateRequisitionStatus(
   reviewedBy?: string
 ): Promise<Requisition> {
   try {
-    const { data: userData } = await supabase.auth.getUser();
-
-    // Verificación de permisos
-    const userRole = await getCurrentUserRole();
-    const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
-
-    // Obtener requisición actual para validar dueño y estado
-    const { data: existingReq, error: fetchError } = await supabase
-      .from('requisitions')
-      .select('id, created_by, status')
-      .eq('id', requisitionId)
-      .single();
-    if (fetchError || !existingReq) {
-      throw new Error('La requisición no existe o fue eliminada.');
+    // Llamar API segura con service role (evita bloqueos por RLS en transiciones permitidas)
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) {
+      throw new Error('Usuario no autenticado');
     }
 
-    const isOwner = !!(userData?.user?.id && existingReq.created_by === userData.user.id);
+    const res = await fetch(`/api/requisitions/${requisitionId}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status, reviewedBy }),
+    });
 
-    // Regla de permisos:
-    // - Admin/superadmin: pueden cambiar a cualquier estado
-    // - Usuario dueño: puede regresar de 'submitted' a 'draft'
-    const isRevertSubmittedToDraft = existingReq.status === 'submitted' && status === 'draft';
-    if (!isAdminRole) {
-      if (!(isOwner && isRevertSubmittedToDraft)) {
-        throw new Error('No tiene permisos para cambiar el estado de la requisición.');
-      }
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error || 'Error al cambiar el estado de la requisición');
     }
 
-    const updates: any = {
-      status,
-    };
-
-    // Si se aprueba o rechaza, guardar información de revisión
-    if (status === 'approved' || status === 'rejected') {
-      updates.reviewed_at = new Date().toISOString();
-      updates.reviewed_by = reviewedBy || userData?.user?.id;
-    }
-
-    const { data, error } = await supabase
-      .from('requisitions')
-      .update(updates)
-      .eq('id', requisitionId)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return data;
+    return json as Requisition;
   } catch (error) {
     console.error('Error updating requisition status:', error);
     throw error;

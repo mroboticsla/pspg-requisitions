@@ -15,6 +15,7 @@ import type { RequisitionComplete, RequisitionStatus } from '@/lib/types/requisi
 import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle } from 'lucide-react';
 import { useToast } from '@/lib/useToast';
 import { useAuth } from '@/app/providers/AuthProvider';
+import ConfirmModal from '@/app/components/ConfirmModal';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -44,6 +45,8 @@ export default function RequisitionDetailPage() {
 
   const [requisition, setRequisition] = useState<RequisitionComplete | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<RequisitionStatus | null>(null);
   const { user, profile } = useAuth();
 
   const isAdminRole = (profile?.roles?.name === 'admin' || profile?.roles?.name === 'superadmin');
@@ -88,6 +91,17 @@ export default function RequisitionDetailPage() {
       console.error('Error updating status:', err);
       error(err?.message || 'Error al cambiar el estado de la requisición');
     }
+  }
+
+  function requestStatusChange(newStatus: RequisitionStatus) {
+    // Solo mostramos modal si la requisición está en 'submitted'
+    if (requisition?.status === 'submitted') {
+      setPendingStatus(newStatus);
+      setShowConfirm(true);
+      return;
+    }
+    // Para otros estados, proceder directamente
+    handleStatusChange(newStatus);
   }
 
   async function handleDelete() {
@@ -178,21 +192,21 @@ export default function RequisitionDetailPage() {
             {isAdminRole && requisition.status === 'submitted' && (
               <>
                 <button
-                  onClick={() => handleStatusChange('in_review')}
+                  onClick={() => requestStatusChange('in_review')}
                   className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors shadow-sm"
                 >
                   <Clock className="w-4 h-4" />
                   Marcar en Revisión
                 </button>
                 <button
-                  onClick={() => handleStatusChange('approved')}
+                  onClick={() => requestStatusChange('approved')}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
                 >
                   <CheckCircle className="w-4 h-4" />
                   Aprobar
                 </button>
                 <button
-                  onClick={() => handleStatusChange('rejected')}
+                  onClick={() => requestStatusChange('rejected')}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
                 >
                   <XCircle className="w-4 h-4" />
@@ -204,7 +218,7 @@ export default function RequisitionDetailPage() {
             {/* Dueño puede regresar Enviada -> Borrador */}
             {isOwner && requisition.status === 'submitted' && (
               <button
-                onClick={() => handleStatusChange('draft')}
+                onClick={() => requestStatusChange('draft')}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-sm"
               >
                 <Clock className="w-4 h-4" />
@@ -425,6 +439,37 @@ export default function RequisitionDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación para cambios desde "Enviada" */}
+      <ConfirmModal
+        isOpen={showConfirm}
+        title="Confirmar cambio de estado"
+        message={
+          pendingStatus === 'draft'
+            ? (
+                <span>
+                  Esta requisición está <strong>Enviada</strong>.
+                  Al regresar a <strong>Borrador</strong>, podrás editarla nuevamente y deberás volver a enviarla para su revisión/aprobación.
+                  ¿Deseas continuar?
+                </span>
+              )
+            : (
+                <span>
+                  Esta requisición está <strong>Enviada</strong>. ¿Deseas cambiar su estado a <strong>{pendingStatus ? statusLabels[pendingStatus] : ''}</strong>?
+                </span>
+              )
+        }
+        confirmText="Sí, cambiar estado"
+        cancelText="Cancelar"
+        type="warning"
+        onConfirm={() => {
+          setShowConfirm(false);
+          if (pendingStatus) {
+            handleStatusChange(pendingStatus);
+          }
+        }}
+        onCancel={() => setShowConfirm(false)}
+      />
     </div>
   );
 }
