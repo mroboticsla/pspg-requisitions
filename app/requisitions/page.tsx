@@ -7,6 +7,8 @@ import type { Requisition, RequisitionStatus } from '@/lib/types/requisitions';
 import { FileText, Plus, Eye, Edit, Users, Calendar, Briefcase } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useToast } from '@/lib/useToast';
+import { supabase } from '@/lib/supabaseClient';
+import type { Company } from '@/lib/types/company';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -33,6 +35,7 @@ export default function MyRequisitionsPage() {
   const { profile } = useAuth();
   const { error } = useToast();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
+  const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequisitionStatus | ''>('');
@@ -54,6 +57,27 @@ export default function MyRequisitionsPage() {
       setLoading(true);
       const requisitionsData = await listRequisitions({ created_by: profile.id });
       setRequisitions(requisitionsData);
+
+      // Cargar nombres de empresas para las tarjetas
+      const uniqueCompanyIds = Array.from(new Set((requisitionsData || []).map(r => r.company_id).filter(Boolean)));
+      if (uniqueCompanyIds.length > 0) {
+        const { data: companies, error: companiesError } = await supabase
+          .from('companies')
+          .select('id, name')
+          .in('id', uniqueCompanyIds);
+
+        if (companiesError) {
+          console.warn('No se pudieron cargar los nombres de empresas:', companiesError.message);
+        } else if (companies) {
+          const map: Record<string, string> = {};
+          (companies as Pick<Company, 'id' | 'name'>[]).forEach(c => {
+            map[c.id] = c.name;
+          });
+          setCompanyNames(map);
+        }
+      } else {
+        setCompanyNames({});
+      }
     } catch (err: any) {
       console.error('Error loading requisitions:', err);
       error(err?.message || 'Error al cargar las requisiciones');
@@ -268,6 +292,9 @@ export default function MyRequisitionsPage() {
                       {req.departamento && (
                         <p className="text-sm text-gray-600 mt-0.5">{req.departamento}</p>
                       )}
+                      {req.motivo_puesto && (
+                        <p className="text-xs text-gray-500 mt-1 truncate" title={req.motivo_puesto}>{req.motivo_puesto}</p>
+                      )}
                       <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Users className="w-3 h-3" />
@@ -277,6 +304,28 @@ export default function MyRequisitionsPage() {
                           <Calendar className="w-3 h-3" />
                           {new Date(req.created_at).toLocaleDateString()}
                         </span>
+                      </div>
+
+                      {/* Información adicional solicitada */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3 text-xs">
+                        <div className="bg-gray-50 border border-gray-200 rounded-md p-2">
+                          <p className="text-gray-500">Empresa</p>
+                          <p className="text-gray-800 font-medium truncate" title={companyNames[req.company_id] || req.company_id}>
+                            {companyNames[req.company_id] || '—'}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-200 rounded-md p-2">
+                          <p className="text-gray-500">Tipo de Puesto</p>
+                          <p className="text-gray-800 font-medium truncate" title={formatTipoPuesto(req)}>
+                            {formatTipoPuesto(req) || '—'}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-200 rounded-md p-2">
+                          <p className="text-gray-500">Nivel educativo requerido</p>
+                          <p className="text-gray-800 font-medium truncate" title={formatNivelEducativo(req)}>
+                            {formatNivelEducativo(req) || '—'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -316,4 +365,39 @@ export default function MyRequisitionsPage() {
       </div>
     </div>
   );
+}
+
+// Helpers
+function formatNivelEducativo(req: Requisition): string {
+  const fa = req.formacion_academica;
+  if (!fa) return '';
+
+  // Prioridad desde mayor a menor
+  const order: Array<[keyof NonNullable<typeof fa>, string]> = [
+    ['doctorado', 'Doctorado'],
+    ['maestria', 'Maestría'],
+    ['universitario', 'Universitario'],
+    ['tecnico', 'Técnico'],
+    ['bachiller', 'Bachiller'],
+  ];
+
+  for (const [key, label] of order) {
+    if ((fa as any)[key]) return label;
+  }
+
+  if (fa.otro) {
+    return fa.detalles ? `Otro (${fa.detalles})` : 'Otro';
+  }
+  return fa.detalles || '';
+}
+
+function formatTipoPuesto(req: Requisition): string {
+  const tp = req.tipo_puesto;
+  if (!tp) return '';
+  const labels: string[] = [];
+  if (tp.nuevaCreacion) labels.push('Nueva creación');
+  if (tp.reemplazoTemporal) labels.push('Reemplazo temporal');
+  if (tp.reemplazoDefinitivo) labels.push('Reemplazo definitivo');
+  if (tp.incrementoPlantilla) labels.push('Incremento de plantilla');
+  return labels.join(', ');
 }
