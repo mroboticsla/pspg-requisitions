@@ -474,12 +474,27 @@ export default function RequisitionDetailPage() {
               <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
                 <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-2">Tipo de Puesto</p>
                 {(() => {
-                  const t = requisition.tipo_puesto || {} as any;
-                  const chips: string[] = [];
-                  if (t.nuevaCreacion) chips.push('Nueva creación');
-                  if (t.reemplazoTemporal) chips.push('Reemplazo temporal');
-                  if (t.reemplazoDefinitivo) chips.push('Reemplazo definitivo');
-                  if (t.incrementoPlantilla) chips.push('Incremento de plantilla');
+                  const t = (requisition.tipo_puesto || {}) as any;
+                  const map: Array<[keyof typeof t, string]> = [
+                    ['nuevaCreacion', 'Nueva creación'],
+                    ['reemplazoTemporal', 'Reemplazo temporal'],
+                    ['reestructuracionPuesto', 'Reestructuración del puesto'],
+                    ['reemplazoDefinitivo', 'Reemplazo definitivo'],
+                    ['renunciaVoluntaria', 'Renuncia voluntaria'],
+                    ['promocion', 'Promoción'],
+                    ['incapacidad', 'Incapacidad'],
+                    ['cancelacionContrato', 'Cancelación del contrato'],
+                    ['licencia', 'Licencia'],
+                    ['vacaciones', 'Vacaciones'],
+                    ['incrementoLabores', 'Incremento de labores'],
+                    ['licenciaMaternidad', 'Licencia de maternidad'],
+                    // Compatibilidad con posible clave histórica
+                    ['incrementoPlantilla', 'Incremento de plantilla'],
+                  ] as any;
+                  const chips = map
+                    .filter(([k]) => !!t?.[k])
+                    .map(([, lbl]) => lbl as string)
+                    .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
                   return (
                     <div className="flex flex-wrap gap-2">
                       {chips.length > 0 ? chips.map((txt) => (
@@ -532,14 +547,41 @@ export default function RequisitionDetailPage() {
           {requisition.formacion_academica && Object.keys(requisition.formacion_academica).length > 0 && (
             <div className="mb-6">
               <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-3">Formación Académica</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(requisition.formacion_academica).map(([key, value]) => (
-                  value && (
-                    <span key={key} className="px-3 py-1.5 bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT rounded-admin text-sm font-medium">
-                      {key}
-                    </span>
-                  )
-                ))}
+              {(() => {
+                const fa = requisition.formacion_academica as any;
+                const labelMap: Record<string, string> = {
+                  bachiller: 'Bachiller',
+                  tecnico: 'Técnico',
+                  profesional: 'Profesional',
+                  especializacion: 'Especialización',
+                  estudianteUniversitario: 'Estudiante universitario',
+                };
+                const chips = Object.keys(labelMap)
+                  .filter((k) => !!fa?.[k])
+                  .map((k) => labelMap[k])
+                  .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+                return (
+                  <div className="flex flex-wrap gap-2">
+                    {chips.length > 0 ? (
+                      chips.map((label) => (
+                        <span key={label} className="px-3 py-1.5 bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT rounded-admin text-sm font-medium">
+                          {label}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm text-admin-text-secondary">—</p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {requisition.otros_estudios && requisition.otros_estudios.trim() !== '' && (
+            <div className="mb-6">
+              <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-2">Otros estudios</p>
+              <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
+                <p className="text-sm text-admin-text-primary whitespace-pre-line">{requisition.otros_estudios}</p>
               </div>
             </div>
           )}
@@ -582,6 +624,7 @@ export default function RequisitionDetailPage() {
                 ['powerpoint', 'PowerPoint'],
                 ['outlook', 'Outlook'],
                 ['internet', 'Internet'],
+                ['base_datos', 'Base de datos'],
               ];
               return (
                 <div className="space-y-4">
@@ -599,15 +642,30 @@ export default function RequisitionDetailPage() {
                       );
                     })}
                   </div>
+                  {(hi?.sistema_operativo?.windows || hi?.sistema_operativo?.otros) && (
+                    <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
+                      <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-2">Sistema Operativo</p>
+                      <div className="flex flex-wrap gap-2">
+                        {hi?.sistema_operativo?.windows && (
+                          <span className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">Windows</span>
+                        )}
+                        {hi?.sistema_operativo?.otros && (
+                          <span className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">Otros</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {Array.isArray(hi?.software_especifico) && hi.software_especifico.length > 0 && (
                     <div>
                       <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-2">Software específico</p>
                       <div className="flex flex-wrap gap-2">
-                        {hi.software_especifico.map((s: any, idx: number) => (
-                          <span key={`${s.nombre}-${idx}`} className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">
-                            {s.nombre} {s.nivel ? `• ${nivelLabel[s.nivel] || s.nivel}` : ''}
-                          </span>
-                        ))}
+                        {[...hi.software_especifico]
+                          .sort((a: any, b: any) => String(a?.nombre || '').localeCompare(String(b?.nombre || ''), 'es', { sensitivity: 'base' }))
+                          .map((s: any, idx: number) => (
+                            <span key={`${s.nombre}-${idx}`} className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">
+                              {s.nombre} {s.nivel ? `• ${nivelLabel[s.nivel] || s.nivel}` : ''}
+                            </span>
+                          ))}
                       </div>
                     </div>
                   )}
@@ -626,14 +684,13 @@ export default function RequisitionDetailPage() {
             </h2>
             {(() => {
               const ht = requisition.habilidades_tecnicas as any;
-              const items: Array<[string, string, boolean]> = [
+              const baseItems: Array<[string, string, boolean]> = [
                 ['informacion', 'Información', !!ht?.informacion],
                 ['maquinariaEquipos', 'Maquinaria y equipos', !!ht?.maquinariaEquipos],
-                ['idiomas', 'Idiomas', !!ht?.idiomas],
-                ['certificaciones', 'Certificaciones', !!ht?.certificaciones],
-                ['licencias', 'Licencias', !!ht?.licencias],
+                ['decisiones', 'Decisiones', !!ht?.decisiones],
+                ['supervisionPersonal', 'Supervisión personal a cargo', !!ht?.supervisionPersonal],
               ];
-              const enabled = items.filter(([, , v]) => v);
+              const enabled = baseItems.filter(([, , v]) => v);
               return (
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
@@ -645,6 +702,32 @@ export default function RequisitionDetailPage() {
                       <p className="text-sm text-admin-text-secondary">—</p>
                     )}
                   </div>
+                  {(ht?.responsabilidades?.confidencial || ht?.responsabilidades?.restringida) && (
+                    <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
+                      <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-2">Responsabilidades</p>
+                      <div className="flex flex-wrap gap-2">
+                        {ht?.responsabilidades?.confidencial && (
+                          <span className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">Confidencial</span>
+                        )}
+                        {ht?.responsabilidades?.restringida && (
+                          <span className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">Restringida</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {(ht?.supervision?.directa || ht?.supervision?.indirecta) && (
+                    <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
+                      <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-2">Supervisión</p>
+                      <div className="flex flex-wrap gap-2">
+                        {ht?.supervision?.directa && (
+                          <span className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">Directa</span>
+                        )}
+                        {ht?.supervision?.indirecta && (
+                          <span className="px-2.5 py-1 rounded-admin-sm bg-admin-bg-hover text-admin-text-primary border border-admin-border-DEFAULT text-xs font-medium">Indirecta</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {ht?.detalles && (
                     <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
                       <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-2">Detalles</p>
