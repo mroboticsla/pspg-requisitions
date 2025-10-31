@@ -134,7 +134,10 @@ function RequisitionFormContent() {
     otrosEstudios: '',
     
     // Habilidad informática requerida
-    sistemaOperativo: { windows: false, otros: false },
+      sistemaOperativo: { 
+        windows: false, 
+        otros: false 
+      },
     wordExcelPowerPoint: { basico: false, intermedio: false, avanzado: false },
     baseDatos: { basico: false, intermedio: false, avanzado: false },
     internet: { basico: false, intermedio: false, avanzado: false },
@@ -313,20 +316,17 @@ function RequisitionFormContent() {
           idiomaIngles: requisition.idioma_ingles || false,
           otrosEstudios: requisition.otros_estudios || '',
           
-          sistemaOperativo: { 
-            windows: false, 
-            otros: false 
-          },
+          
           wordExcelPowerPoint: { 
             basico: requisition.habilidad_informatica?.word === 'basico',
             intermedio: requisition.habilidad_informatica?.word === 'intermedio',
             avanzado: requisition.habilidad_informatica?.word === 'avanzado'
           },
-          baseDatos: { 
-            basico: false, 
-            intermedio: false, 
-            avanzado: false 
-          },
+            baseDatos: { 
+              basico: requisition.habilidad_informatica?.base_datos === 'basico', 
+              intermedio: requisition.habilidad_informatica?.base_datos === 'intermedio', 
+              avanzado: requisition.habilidad_informatica?.base_datos === 'avanzado' 
+            },
           internet: { 
             basico: requisition.habilidad_informatica?.internet === 'basico',
             intermedio: requisition.habilidad_informatica?.internet === 'intermedio',
@@ -336,6 +336,11 @@ function RequisitionFormContent() {
             basico: requisition.habilidad_informatica?.outlook === 'basico',
             intermedio: requisition.habilidad_informatica?.outlook === 'intermedio',
             avanzado: requisition.habilidad_informatica?.outlook === 'avanzado'
+          },
+          // Mapear sistema operativo si existe
+          sistemaOperativo: {
+            windows: !!requisition.habilidad_informatica?.sistema_operativo?.windows,
+            otros: !!requisition.habilidad_informatica?.sistema_operativo?.otros,
           },
           otroEspecifique: requisition.habilidad_informatica?.software_especifico?.[0]?.nombre || '',
           
@@ -504,6 +509,11 @@ function RequisitionFormContent() {
           powerpoint: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           outlook: (formData.correoElectronico.basico ? 'basico' : formData.correoElectronico.intermedio ? 'intermedio' : formData.correoElectronico.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           internet: (formData.internet.basico ? 'basico' : formData.internet.intermedio ? 'intermedio' : formData.internet.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          base_datos: (formData.baseDatos.basico ? 'basico' : formData.baseDatos.intermedio ? 'intermedio' : formData.baseDatos.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          sistema_operativo: {
+            windows: !!formData.sistemaOperativo.windows,
+            otros: !!formData.sistemaOperativo.otros,
+          },
           software_especifico: formData.otroEspecifique ? [{ nombre: formData.otroEspecifique, nivel: 'basico' as const }] : undefined,
         },
         habilidades_tecnicas: {
@@ -596,6 +606,11 @@ function RequisitionFormContent() {
           powerpoint: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           outlook: (formData.correoElectronico.basico ? 'basico' : formData.correoElectronico.intermedio ? 'intermedio' : formData.correoElectronico.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           internet: (formData.internet.basico ? 'basico' : formData.internet.intermedio ? 'intermedio' : formData.internet.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          base_datos: (formData.baseDatos.basico ? 'basico' : formData.baseDatos.intermedio ? 'intermedio' : formData.baseDatos.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
+          sistema_operativo: {
+            windows: !!formData.sistemaOperativo.windows,
+            otros: !!formData.sistemaOperativo.otros,
+          },
           software_especifico: formData.otroEspecifique ? [{ nombre: formData.otroEspecifique, nivel: 'basico' as const }] : undefined,
         },
         habilidades_tecnicas: {

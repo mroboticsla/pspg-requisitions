@@ -139,6 +139,11 @@ export interface HabilidadInformatica {
   powerpoint?: NivelHabilidad;
   outlook?: NivelHabilidad;
   internet?: NivelHabilidad;
+  base_datos?: NivelHabilidad;
+  sistema_operativo?: {
+    windows?: boolean;
+    otros?: boolean;
+  };
   software_especifico?: {
     nombre: string;
     nivel: NivelHabilidad;
