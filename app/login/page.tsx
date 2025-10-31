@@ -45,8 +45,10 @@ function LoginPageContent() {
     if (!loading && profile?.roles?.name) {
       const roleName = String(profile.roles.name).toLowerCase();
       // Solo redirigir a usuarios NO administrativos que ya tienen sesión
-      if (roleName === "partner" || roleName === "candidate") {
-        router.replace("/request");
+      if (roleName === "partner") {
+        router.replace("/dashboard/partner");
+      }else if (roleName === "candidate") {
+        router.replace("/dashboard/candidate");
       }
       // Los admin/superadmin que lleguen aquí serán manejados en handleLoginSubmit
     }
