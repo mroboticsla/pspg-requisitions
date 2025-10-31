@@ -12,12 +12,13 @@ import {
   deleteRequisition,
 } from '@/lib/requisitions';
 import type { RequisitionComplete, RequisitionStatus } from '@/lib/types/requisitions';
-import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle, Laptop, Wrench } from 'lucide-react';
+import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle, Laptop, Wrench, Building2 } from 'lucide-react';
 import { useToast } from '@/lib/useToast';
 import { useAuth } from '@/app/providers/AuthProvider';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { CURRENCIES, type CurrencyValue } from '@/app/components/CurrencyInput';
 import type { FormField } from '@/lib/types/requisitions';
+import { supabase } from '@/lib/supabaseClient';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -187,6 +188,7 @@ export default function RequisitionDetailPage() {
   const [pendingStatus, setPendingStatus] = useState<RequisitionStatus | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { user, profile } = useAuth();
+  const [companyName, setCompanyName] = useState<string | null>(null);
 
   const isAdminRole = (profile?.roles?.name === 'admin' || profile?.roles?.name === 'superadmin');
   const isOwner = !!(user?.id && requisition?.created_by && user.id === requisition.created_by);
@@ -197,6 +199,26 @@ export default function RequisitionDetailPage() {
       setLoading(true);
       const data = await getRequisitionById(requisitionId);
       setRequisition(data);
+      // Cargar nombre de la empresa si procede
+      if (data?.company_id) {
+        try {
+          const { data: comp, error: compErr } = await supabase
+            .from('companies')
+            .select('name')
+            .eq('id', data.company_id)
+            .single();
+          if (!compErr && comp?.name) {
+            setCompanyName(comp.name);
+          } else {
+            setCompanyName(null);
+          }
+        } catch (e) {
+          console.warn('No se pudo obtener el nombre de la empresa', e);
+          setCompanyName(null);
+        }
+      } else {
+        setCompanyName(null);
+      }
     } catch (err: any) {
       console.error('Error loading requisition:', err);
       error(err?.message || 'Error al cargar la requisición');
@@ -299,10 +321,18 @@ export default function RequisitionDetailPage() {
                   <h1 className="text-2xl sm:text-3xl font-bold text-admin-text-primary">
                     {requisition.puesto_requerido || 'Requisición'}
                   </h1>
+                  {/* Empresa visible para todos */}
                   <p className="mt-2 text-sm text-admin-text-secondary flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    ID: {requisition.id.substring(0, 8)}...
+                    <Building2 className="w-4 h-4" />
+                    Empresa: {companyName || requisition.company_id || '—'}
                   </p>
+                  {/* ID visible solo para admin/superadmin */}
+                  {isAdminRole && (
+                    <p className="mt-1 text-sm text-admin-text-secondary flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      ID: {requisition.id}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
