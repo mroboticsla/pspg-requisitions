@@ -62,13 +62,11 @@ export function useRequisitionForm({ companyId, requisitionId }: UseRequisitionF
         const activeTemplate = await getCompanyActiveTemplate(companyId);
         setTemplate(activeTemplate);
 
-        // Inicializar funciones principales según la plantilla
+        // Ya no inicializamos funciones principales por cantidad fija; se manejarán dinámicamente
         if (activeTemplate) {
-          const emptyFunctions = Array(activeTemplate.num_main_functions).fill('');
           setFormData((prev) => ({
             ...prev,
             company_id: companyId,
-            funciones_principales: emptyFunctions,
           }));
         }
       } catch (error) {
@@ -295,9 +293,7 @@ export function useRequisitionForm({ companyId, requisitionId }: UseRequisitionF
       tipo_puesto: {},
       motivo_puesto: '',
       nombre_empleado_reemplaza: '',
-      funciones_principales: template
-        ? Array(template.num_main_functions).fill('')
-        : [],
+      funciones_principales: [],
       formacion_academica: {},
       otros_estudios: '',
       idioma_ingles: false,

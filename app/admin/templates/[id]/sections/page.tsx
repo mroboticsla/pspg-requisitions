@@ -229,9 +229,6 @@ export default function TemplateSectionsPage() {
           <p className="mt-2 text-sm text-gray-600">
             Gestiona las secciones personalizadas de esta plantilla
           </p>
-          <p className="mt-1 text-sm text-gray-500">
-            Funciones principales configuradas: {template.num_main_functions}
-          </p>
         </div>
 
         {/* Botón Agregar Sección */}

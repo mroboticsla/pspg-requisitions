@@ -41,7 +41,7 @@ export default function TemplatesPage() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [newTemplateName, setNewTemplateName] = useState('');
   const [newTemplateDesc, setNewTemplateDesc] = useState('');
-  const [numFunctions, setNumFunctions] = useState(5);
+  // Campo eliminado: cantidad de funciones principales ya no es configurable desde UI
   
   const [showDeleteModal, setShowDeleteModal] = useState<{
     open: boolean;
@@ -117,13 +117,11 @@ export default function TemplatesPage() {
         company_id: selectedCompanyId,
         name: newTemplateName,
         description: newTemplateDesc,
-        num_main_functions: numFunctions,
       });
 
       setShowCreateModal(false);
       setNewTemplateName('');
       setNewTemplateDesc('');
-      setNumFunctions(5);
       setSelectedCompanyId('');
       
       success('Plantilla creada exitosamente');
@@ -536,20 +534,7 @@ export default function TemplatesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">
-                  Número de funciones principales (1-10)
-                </label>
-                <input
-                  type="number"
-                  value={numFunctions}
-                  onChange={(e) => setNumFunctions(Math.min(10, Math.max(1, Number(e.target.value))))}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min={1}
-                  max={10}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Cantidad de campos para funciones principales en el formulario
-                </p>
+                {/* Campo de cantidad de funciones principales retirado intencionalmente */}
               </div>
             </div>
 
@@ -567,7 +552,6 @@ export default function TemplatesPage() {
                   setSelectedCompanyId('');
                   setNewTemplateName('');
                   setNewTemplateDesc('');
-                  setNumFunctions(5);
                 }}
                 disabled={busy}
                 className="flex-1 px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
