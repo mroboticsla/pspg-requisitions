@@ -99,10 +99,12 @@ export default function ConfirmModal({
                 <h3 className="text-lg font-semibold leading-6 text-gray-900">
                   {title}
                 </h3>
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600">
-                    {message}
-                  </p>
+                <div className="mt-2 text-sm text-gray-600">
+                  {typeof message === 'string' ? (
+                    <p>{message}</p>
+                  ) : (
+                    message
+                  )}
                 </div>
               </div>
             </div>

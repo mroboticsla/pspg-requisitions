@@ -9,6 +9,8 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { useToast } from "@/lib/useToast";
 import { supabase } from "@/lib/supabaseClient";
 import type { Company } from "@/lib/types/company";
+import ConfirmModal from "@/app/components/ConfirmModal";
+import QRCode from "qrcode";
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: "Borrador",
@@ -33,7 +35,7 @@ const statusColors: Record<RequisitionStatus, string> = {
 export default function MyRequisitionsPage() {
   const router = useRouter();
   const { profile } = useAuth();
-  const { error } = useToast();
+  const { error, success } = useToast();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -44,6 +46,9 @@ export default function MyRequisitionsPage() {
     "nuevaCreacion" | "reemplazoTemporal" | "reemplazoDefinitivo" | "incrementoPlantilla" | ""
   >("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareQR, setShareQR] = useState<string>("");
   
   const userRole = (profile as any)?.roles?.name || null;
 
@@ -219,10 +224,47 @@ export default function MyRequisitionsPage() {
 
   // La búsqueda solo se aplica al hacer clic en "Buscar"
 
+  // Leer filtros desde la URL al cargar
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const qsSearch = params.get('search') || '';
+    const qsStatus = params.get('status') || '';
+    const qsCompany = params.get('company') || '';
+    const qsTipo = params.get('tipo') || '';
+
+    // Validar status
+    const validStatuses: Array<RequisitionStatus> = [
+      'draft','submitted','in_review','approved','rejected','cancelled','filled'
+    ];
+    if (qsSearch) {
+      setSearchTerm(qsSearch);
+      setDebouncedSearch(qsSearch); // aplicar inmediatamente la búsqueda compartida
+    }
+    if (qsStatus && (validStatuses as string[]).includes(qsStatus)) {
+      setStatusFilter(qsStatus as RequisitionStatus);
+    }
+    if (qsCompany) setCompanyFilter(qsCompany);
+    if (qsTipo && ['nuevaCreacion','reemplazoTemporal','reemplazoDefinitivo','incrementoPlantilla'].includes(qsTipo)) {
+      setTipoFilter(qsTipo as any);
+    }
+  }, []);
+
   // Acciones de filtros
   const handleApplySearch = useCallback(() => {
     // Aplica de inmediato la búsqueda escrita
     setDebouncedSearch(searchTerm);
+    // Actualizar la URL con los filtros actuales
+    if (typeof window !== 'undefined') {
+      const qs = new URLSearchParams();
+      if (searchTerm.trim()) qs.set('search', searchTerm.trim());
+      if (statusFilter) qs.set('status', statusFilter);
+      if (companyFilter) qs.set('company', companyFilter);
+      if (tipoFilter) qs.set('tipo', tipoFilter);
+      const url = `${window.location.pathname}${qs.toString() ? `?${qs.toString()}` : ''}`;
+      // Utilizar replaceState para no llenar el historial
+      window.history.replaceState(null, '', url);
+    }
   }, [searchTerm]);
 
   const handleClearFilters = useCallback(() => {
@@ -231,7 +273,39 @@ export default function MyRequisitionsPage() {
     setStatusFilter("");
     setCompanyFilter("");
     setTipoFilter("");
+    if (typeof window !== 'undefined') {
+      const url = `${window.location.pathname}`;
+      window.history.replaceState(null, '', url);
+    }
   }, []);
+
+  // Compartir búsqueda: copia enlace con filtros aplicados
+  const handleShareSearch = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const qs = new URLSearchParams();
+      if (debouncedSearch.trim()) qs.set('search', debouncedSearch.trim());
+      if (statusFilter) qs.set('status', statusFilter);
+      if (companyFilter) qs.set('company', companyFilter);
+      if (tipoFilter) qs.set('tipo', tipoFilter);
+      const fullUrl = `${window.location.origin}${window.location.pathname}${qs.toString() ? `?${qs.toString()}` : ''}`;
+      setShareUrl(fullUrl);
+      const dataUrl = await QRCode.toDataURL(fullUrl, { width: 256, margin: 1 });
+      setShareQR(dataUrl);
+      setShareOpen(true);
+    } catch (e) {
+      error('No se pudo preparar el enlace para compartir');
+    }
+  }, [debouncedSearch, statusFilter, companyFilter, tipoFilter, error]);
+
+  const copyShareUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      success('Enlace copiado al portapapeles');
+    } catch (e) {
+      error('No se pudo copiar el enlace');
+    }
+  }, [shareUrl, success, error]);
 
   // Highlight de coincidencias en texto (insensible a acentos)
   const highlightText = useCallback((text?: string | null) => {
@@ -314,6 +388,46 @@ export default function MyRequisitionsPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
+      {/* Modal para compartir búsqueda */}
+      <ConfirmModal
+        isOpen={shareOpen}
+        title="Compartir búsqueda"
+        type="info"
+        message={(
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-admin-text-secondary mb-1">Enlace</label>
+              <div className="flex items-stretch gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareUrl}
+                  className="flex-1 rounded-md border border-admin-border-DEFAULT px-3 py-2 text-sm bg-admin-bg-input"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
+                <button
+                  onClick={copyShareUrl}
+                  className="px-3 py-2 rounded-md bg-brand-accent text-white text-sm hover:bg-brand-accentDark"
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+            {shareQR && (
+              <div className="flex items-center gap-4">
+                <img src={shareQR} alt="QR de búsqueda" className="w-40 h-40 border border-admin-border-DEFAULT rounded" />
+                <p className="text-xs text-admin-text-secondary">
+                  Escanea el código QR para abrir esta misma búsqueda.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+        confirmText="Copiar enlace"
+        cancelText="Cerrar"
+        onConfirm={copyShareUrl}
+        onCancel={() => setShareOpen(false)}
+      />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-admin-text-primary">Solicitudes</h1>
@@ -438,6 +552,7 @@ export default function MyRequisitionsPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleApplySearch(); } }}
               placeholder="Buscar por puesto, empresa, departamento, motivo o fecha…"
               className="w-full rounded-md border border-admin-border-DEFAULT px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-sm bg-admin-bg-input"
             />
@@ -501,6 +616,11 @@ export default function MyRequisitionsPage() {
               onClick={handleClearFilters}
               className="px-4 py-2 rounded-lg border border-admin-border-DEFAULT text-admin-text-primary hover:bg-surface-secondary transition-colors text-sm font-medium">
               Eliminar Filtros
+            </button>
+            <button
+              onClick={handleShareSearch}
+              className="px-4 py-2 rounded-lg bg-admin-secondary text-white hover:opacity-90 transition-colors text-sm font-medium">
+              Compartir búsqueda
             </button>
           </div>
         </div>
