@@ -14,6 +14,7 @@ import {
 import type { RequisitionComplete, RequisitionStatus } from '@/lib/types/requisitions';
 import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle } from 'lucide-react';
 import { useToast } from '@/lib/useToast';
+import { useAuth } from '@/app/providers/AuthProvider';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -43,6 +44,11 @@ export default function RequisitionDetailPage() {
 
   const [requisition, setRequisition] = useState<RequisitionComplete | null>(null);
   const [loading, setLoading] = useState(true);
+  const { user, profile } = useAuth();
+
+  const isAdminRole = (profile?.roles?.name === 'admin' || profile?.roles?.name === 'superadmin');
+  const isOwner = !!(user?.id && requisition?.created_by && user.id === requisition.created_by);
+  const isDraft = requisition?.status === 'draft';
 
   const loadRequisition = useCallback(async () => {
     try {
@@ -168,7 +174,8 @@ export default function RequisitionDetailPage() {
             Acciones Disponibles
           </h2>
           <div className="flex flex-wrap gap-3">
-            {requisition.status === 'submitted' && (
+            {/* Cambio de estado: solo admin/superadmin */}
+            {isAdminRole && requisition.status === 'submitted' && (
               <>
                 <button
                   onClick={() => handleStatusChange('in_review')}
@@ -194,7 +201,18 @@ export default function RequisitionDetailPage() {
               </>
             )}
 
-            {requisition.status === 'in_review' && (
+            {/* Dueño puede regresar Enviada -> Borrador */}
+            {isOwner && requisition.status === 'submitted' && (
+              <button
+                onClick={() => handleStatusChange('draft')}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-sm"
+              >
+                <Clock className="w-4 h-4" />
+                Regresar a Borrador
+              </button>
+            )}
+
+            {isAdminRole && requisition.status === 'in_review' && (
               <>
                 <button
                   onClick={() => handleStatusChange('approved')}
@@ -213,7 +231,7 @@ export default function RequisitionDetailPage() {
               </>
             )}
 
-            {requisition.status === 'approved' && (
+            {isAdminRole && requisition.status === 'approved' && (
               <button
                 onClick={() => handleStatusChange('filled')}
                 className="flex items-center gap-2 px-4 py-2 bg-brand-accent text-white rounded-lg hover:bg-brand-accentDark transition-colors shadow-sm"
@@ -223,7 +241,8 @@ export default function RequisitionDetailPage() {
               </button>
             )}
 
-            {requisition.status === 'draft' && (
+            {/* Edición/Eliminación: creador con borrador, o admin */}
+            {isDraft && (isOwner || isAdminRole) && (
               <>
                 <button
                   onClick={() => router.push(`/request?edit=${requisition.id}`)}
@@ -240,6 +259,14 @@ export default function RequisitionDetailPage() {
                   Eliminar
                 </button>
               </>
+            )}
+
+            {/* Mensaje de restricción para no admin/no dueño */}
+            {!isAdminRole && !isDraft && !(isOwner && requisition.status === 'submitted') && (
+              <p className="text-sm text-gray-600 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                Solo los administradores pueden cambiar el estado. Puede revisar la información enviada.
+              </p>
             )}
           </div>
         </div>

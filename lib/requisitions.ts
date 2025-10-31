@@ -163,14 +163,19 @@ export async function updateRequisition(
       throw new Error('La requisición no existe o fue eliminada.');
     }
 
-    // Verificar permisos: el creador puede actualizar siempre
-    // Admin y superadmin pueden editar cualquier requisición
+    // Verificar permisos: solo admin/superadmin pueden editar cualquier requisición
+    // Usuarios no admin solo pueden editar sus propias requisiciones en estado 'draft'
     const userRole = await getCurrentUserRole();
     const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
     const isOwner = existingReq.created_by === userData.user.id;
 
-    if (!isOwner && !isAdminRole) {
-      throw new Error('Solo puede actualizar sus propias requisiciones.');
+    if (!isAdminRole) {
+      if (!isOwner) {
+        throw new Error('Solo puede actualizar sus propias requisiciones.');
+      }
+      if (existingReq.status !== 'draft') {
+        throw new Error('Solo puede editar requisiciones en estado "Borrador".');
+      }
     }
 
     // Extraer custom_responses si existe
@@ -413,6 +418,32 @@ export async function updateRequisitionStatus(
 ): Promise<Requisition> {
   try {
     const { data: userData } = await supabase.auth.getUser();
+
+    // Verificación de permisos
+    const userRole = await getCurrentUserRole();
+    const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
+
+    // Obtener requisición actual para validar dueño y estado
+    const { data: existingReq, error: fetchError } = await supabase
+      .from('requisitions')
+      .select('id, created_by, status')
+      .eq('id', requisitionId)
+      .single();
+    if (fetchError || !existingReq) {
+      throw new Error('La requisición no existe o fue eliminada.');
+    }
+
+    const isOwner = !!(userData?.user?.id && existingReq.created_by === userData.user.id);
+
+    // Regla de permisos:
+    // - Admin/superadmin: pueden cambiar a cualquier estado
+    // - Usuario dueño: puede regresar de 'submitted' a 'draft'
+    const isRevertSubmittedToDraft = existingReq.status === 'submitted' && status === 'draft';
+    if (!isAdminRole) {
+      if (!(isOwner && isRevertSubmittedToDraft)) {
+        throw new Error('No tiene permisos para cambiar el estado de la requisición.');
+      }
+    }
 
     const updates: any = {
       status,
