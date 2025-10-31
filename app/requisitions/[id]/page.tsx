@@ -233,14 +233,9 @@ export default function RequisitionDetailPage() {
   }
 
   function requestStatusChange(newStatus: RequisitionStatus) {
-    // Solo mostramos modal si la requisición está en 'submitted'
-    if (requisition?.status === 'submitted') {
-      setPendingStatus(newStatus);
-      setShowConfirm(true);
-      return;
-    }
-    // Para otros estados, proceder directamente
-    handleStatusChange(newStatus);
+    // Mostrar confirmación SIEMPRE, independientemente del estado actual
+    setPendingStatus(newStatus);
+    setShowConfirm(true);
   }
 
   async function handleDelete() {
@@ -366,14 +361,14 @@ export default function RequisitionDetailPage() {
             {isAdminRole && requisition.status === 'in_review' && (
               <>
                 <button
-                  onClick={() => handleStatusChange('approved')}
+                  onClick={() => requestStatusChange('approved')}
                   className="flex items-center gap-2 px-4 py-2 bg-admin-success text-white rounded-admin hover:bg-admin-successHover transition-colors shadow-sm"
                 >
                   <CheckCircle className="w-4 h-4" />
                   Aprobar
                 </button>
                 <button
-                  onClick={() => handleStatusChange('rejected')}
+                  onClick={() => requestStatusChange('rejected')}
                   className="flex items-center gap-2 px-4 py-2 bg-admin-danger text-white rounded-admin hover:bg-admin-dangerHover transition-colors shadow-sm"
                 >
                   <XCircle className="w-4 h-4" />
@@ -384,7 +379,7 @@ export default function RequisitionDetailPage() {
 
             {isAdminRole && requisition.status === 'approved' && (
               <button
-                onClick={() => handleStatusChange('filled')}
+                onClick={() => requestStatusChange('filled')}
                 className="flex items-center gap-2 px-4 py-2 bg-admin-accent text-white rounded-admin hover:bg-admin-accentHover transition-colors shadow-sm"
               >
                 <CheckCircle className="w-4 h-4" />
@@ -392,8 +387,8 @@ export default function RequisitionDetailPage() {
               </button>
             )}
 
-            {/* Edición/Eliminación: creador con borrador, o admin */}
-            {isDraft && (isOwner || isAdminRole) && (
+            {/* Edición: admin/superadmin pueden editar SIEMPRE; dueño solo en borrador */}
+            {isAdminRole ? (
               <>
                 <button
                   onClick={() => router.push(`/request?edit=${requisition.id}`)}
@@ -402,14 +397,35 @@ export default function RequisitionDetailPage() {
                   <Edit className="w-4 h-4" />
                   Editar
                 </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-admin-danger text-white rounded-admin hover:bg-admin-dangerHover transition-colors shadow-sm"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Eliminar
-                </button>
+                {isDraft && (
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-admin-danger text-white rounded-admin hover:bg-admin-dangerHover transition-colors shadow-sm"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar
+                  </button>
+                )}
               </>
+            ) : (
+              isDraft && isOwner && (
+                <>
+                  <button
+                    onClick={() => router.push(`/request?edit=${requisition.id}`)}
+                    className="flex items-center gap-2 px-4 py-2 bg-admin-secondary text-white rounded-admin hover:opacity-90 transition-colors shadow-sm"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-admin-danger text-white rounded-admin hover:bg-admin-dangerHover transition-colors shadow-sm"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar
+                  </button>
+                </>
+              )
             )}
 
             {/* Mensaje de restricción para no admin/no dueño */}
@@ -783,21 +799,21 @@ export default function RequisitionDetailPage() {
       <ConfirmModal
         isOpen={showConfirm}
         title="Confirmar cambio de estado"
-        message={
-          pendingStatus === 'draft'
-            ? (
-                <span>
-                  Esta requisición está <strong>Enviada</strong>.
-                  Al regresar a <strong>Borrador</strong>, podrás editarla nuevamente y deberás volver a enviarla para su revisión/aprobación.
-                  ¿Deseas continuar?
-                </span>
-              )
-            : (
-                <span>
-                  Esta requisición está <strong>Enviada</strong>. ¿Deseas cambiar su estado a <strong>{pendingStatus ? statusLabels[pendingStatus] : ''}</strong>?
-                </span>
-              )
-        }
+        message={(
+          <span>
+            Estado actual: <strong>{statusLabels[requisition.status]}</strong>.
+            {pendingStatus === 'draft' ? (
+              <>
+                {' '}Al regresar a <strong>{statusLabels['draft']}</strong>, podrás editarla nuevamente y deberás volver a enviarla para su revisión/aprobación.
+                {' '}¿Deseas continuar?
+              </>
+            ) : (
+              <>
+                {' '}¿Deseas cambiar su estado a <strong>{pendingStatus ? statusLabels[pendingStatus] : ''}</strong>?
+              </>
+            )}
+          </span>
+        )}
         confirmText="Sí, cambiar estado"
         cancelText="Cancelar"
         type="warning"

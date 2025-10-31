@@ -31,6 +31,7 @@ function RequisitionFormContent() {
   const [saving, setSaving] = useState(false)
   const [customResponses, setCustomResponses] = useState<Record<string, Record<string, any>>>({})
   const [loadingRequisition, setLoadingRequisition] = useState(false)
+  const [editingStatus, setEditingStatus] = useState<RequisitionComplete['status'] | null>(null)
   const [redirecting, setRedirecting] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
 
@@ -235,12 +236,15 @@ function RequisitionFormContent() {
           return
         }
 
-        // Verificar que sea editable (solo drafts)
-        if (requisition.status !== 'draft') {
+        // Verificar que sea editable: admins pueden editar cualquier estado, otros solo borrador
+        if (requisition.status !== 'draft' && !(userRole === 'admin' || userRole === 'superadmin')) {
           warning('Solo se pueden editar requisiciones en estado borrador')
           router.push(`/requisitions/${editRequisitionId}`)
           return
         }
+
+        // Guardar estado actual para lógica de envío posterior
+        setEditingStatus(requisition.status)
 
         // Cargar template snapshot
         if (requisition.template_snapshot) {
@@ -626,16 +630,22 @@ function RequisitionFormContent() {
 
       let requisition
       if (editRequisitionId) {
-        // Actualizar requisición existente y cambiar estado
-        await updateRequisition(editRequisitionId, requisitionData)
-        requisition = await updateRequisition(editRequisitionId, { status: 'submitted' })
+        // Actualizar requisición existente; si era borrador, enviarla; si no, conservar estado actual
+        requisition = await updateRequisition(editRequisitionId, requisitionData)
+        if (editingStatus === 'draft') {
+          requisition = await updateRequisition(editRequisitionId, { status: 'submitted' })
+        }
       } else {
         // Crear y enviar la requisición
         requisition = await createRequisition(requisitionData)
         await updateRequisition(requisition.id, { status: 'submitted' })
       }
       
-      success('¡Requisición enviada exitosamente!')
+      if (editRequisitionId && editingStatus !== 'draft') {
+        success('¡Requisición actualizada exitosamente!')
+      } else {
+        success('¡Requisición enviada exitosamente!')
+      }
       router.push(`/requisitions/${requisition.id}`)
     } catch (err: any) {
       console.error('Error submitting requisition:', err)
@@ -793,7 +803,11 @@ function RequisitionFormContent() {
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 aria-label={editRequisitionId ? 'Actualizar borrador' : 'Guardar como borrador'}
               >
-                {saving ? 'Guardando…' : editRequisitionId ? 'Actualizar borrador' : 'Guardar borrador'}
+                {saving
+                  ? 'Guardando…'
+                  : editRequisitionId
+                    ? (editingStatus && editingStatus !== 'draft' ? 'Guardar cambios' : 'Actualizar borrador')
+                    : 'Guardar borrador'}
               </button>
             </div>
 
