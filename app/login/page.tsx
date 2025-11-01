@@ -126,7 +126,7 @@ function LoginPageContent() {
           });
         
         // Redirigir al usuario
-        router.replace("/request");
+        router.replace("/dashboard/partner");
       }
     } catch (err: any) {
       setErrorMsg(err?.message ?? "Error en autenticación");
