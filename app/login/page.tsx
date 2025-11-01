@@ -125,8 +125,15 @@ function LoginPageContent() {
             console.warn('Error al guardar información de sesión:', sessionError);
           });
         
-        // Redirigir al usuario
-        router.replace("/dashboard/partner");
+        // Redirigir al usuario según rol
+        if (roleName === 'partner') {
+          router.replace("/dashboard/partner");
+        } else if (roleName === 'candidate') {
+          router.replace("/dashboard/candidate");
+        } else {
+          // Rol desconocido — enviar al dashboard por defecto
+          router.replace("/dashboard/partner");
+        }
       }
     } catch (err: any) {
       setErrorMsg(err?.message ?? "Error en autenticación");
