@@ -60,8 +60,60 @@ export async function POST(req: Request) {
 
     // LIST USERS
     if (action === 'list-users') {
-      const { data } = await adminClient.from('profiles').select('id, first_name, last_name, phone, is_active, role_id, roles(id, name)')
-      return NextResponse.json({ ok: true, data })
+      // Obtener perfiles (sin created_at porque no existe en profiles)
+      const { data: profilesData, error: profilesError } = await adminClient
+        .from('profiles')
+        .select('id, first_name, last_name, phone, is_active, updated_at, role_id, roles(id, name)')
+
+      // Obtener usuarios de Auth para derivar created_at
+      const { data: usersList, error: usersError } = await adminClient.auth.admin.listUsers()
+      if (usersError) {
+        return NextResponse.json({ error: usersError.message || 'Failed to list users' }, { status: 500 })
+      }
+
+      const createdAtMap = new Map<string, string>()
+      const metaMap = new Map<string, any>()
+      for (const u of usersList?.users || []) {
+        createdAtMap.set(u.id, u.created_at)
+        metaMap.set(u.id, u.user_metadata || {})
+      }
+
+      if (!profilesError && profilesData && profilesData.length > 0) {
+        // Fusionar profiles + created_at desde Auth
+        const merged = profilesData.map((p: any) => ({
+          id: p.id,
+          first_name: p.first_name ?? metaMap.get(p.id)?.first_name ?? null,
+          last_name: p.last_name ?? metaMap.get(p.id)?.last_name ?? null,
+          phone: p.phone ?? metaMap.get(p.id)?.phone ?? null,
+          is_active: p.is_active ?? true,
+          created_at: createdAtMap.get(p.id) ?? p.updated_at ?? null,
+          role_id: p.role_id ?? null,
+          roles: p.roles ?? null,
+        }))
+
+        // Ordenar por created_at desc si existe, si no por last_name
+        merged.sort((a: any, b: any) => {
+          const da = a.created_at ? new Date(a.created_at).getTime() : 0
+          const db = b.created_at ? new Date(b.created_at).getTime() : 0
+          return db - da
+        })
+
+        return NextResponse.json({ ok: true, data: merged })
+      }
+
+      // Fallback: si no hay perfiles, regresar solo desde Auth
+      const fallback = (usersList?.users || []).map((u: any) => ({
+        id: u.id,
+        first_name: u.user_metadata?.first_name || null,
+        last_name: u.user_metadata?.last_name || null,
+        phone: u.user_metadata?.phone || null,
+        is_active: true,
+        created_at: u.created_at,
+        role_id: null,
+        roles: null,
+      }))
+      fallback.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      return NextResponse.json({ ok: true, data: fallback })
     }
 
     // LIST ROLES

@@ -6,11 +6,15 @@ import { supabase } from '../../lib/supabaseClient'
 import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
 import { RequireRoleClient } from '../components/RequireRole'
-import { Users, Shield, TrendingUp, Activity, UserCheck, UserX, Clock, ChevronRight, Download, Calendar, BarChart2 } from 'lucide-react'
-import { LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { Users, Shield, TrendingUp, Activity, UserCheck, UserX, Clock, ChevronRight, Download, Calendar, BarChart2, Briefcase, CheckCircle2, XCircle } from 'lucide-react'
+import { PieChart, Pie, Cell, Legend } from 'recharts'
 import { format as formatDate, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { downloadCSV, downloadExcel, downloadJSON, formatUsersForExport, formatRolesForExport } from '@/lib/exportUtils'
+import { PieChartComponent } from '@/app/components/charts/PieChartComponent'
+import { BarChartComponent } from '@/app/components/charts/BarChartComponent'
+import { LineChartComponent } from '@/app/components/charts/LineChartComponent'
+import { RequisitionStatus } from '@/lib/types/requisitions'
 import { useToast } from '@/lib/useToast'
 
 type ProfileRow = { id: string, first_name?: string, last_name?: string, is_active?: boolean, roles?: any, created_at?: string }
@@ -43,6 +47,13 @@ export default function DashboardPage() {
   const [loadingData, setLoadingData] = useState(false)
   const [dateRange, setDateRange] = useState<'7days' | '30days' | 'all'>('30days')
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const [requisitionData, setRequisitionData] = useState<{ total: number; processed: number; byStatus: Record<string, number>; recent: { id: string; status: string; created_at?: string }[] }>({
+    total: 0,
+    processed: 0,
+    byStatus: {},
+    recent: []
+  })
+  const [requisitionsList, setRequisitionsList] = useState<{ id: string; status: RequisitionStatus; created_at?: string }[]>([])
 
   const allowed = useMemo(() => {
     const roleName = (profile as any)?.roles?.name
@@ -112,8 +123,7 @@ export default function DashboardPage() {
       })
       const bodyUsers = await resUsers.json()
       if (!resUsers.ok) throw new Error(bodyUsers.error || 'Failed fetching users')
-      const users: ProfileRow[] = bodyUsers.data || []
-      setAllUsers(users)
+  const users: ProfileRow[] = bodyUsers.data || []
 
       // Obtener roles
       const resRoles = await fetch('/api/admin/secure', {
@@ -126,8 +136,30 @@ export default function DashboardPage() {
       const roles: RoleRow[] = bodyRoles.data || []
       setAllRoles(roles)
 
-      // Filtrar usuarios por rango de fechas
-      const filteredUsers = filterUsersByDateRange(users, dateRange)
+      // Mapa de roles por id para asignación cuando falte el objeto roles
+      const rolesMap = roles.reduce<Record<string, string>>((acc, r) => {
+        acc[r.id] = r.name
+        return acc
+      }, {})
+
+      // Normalizar usuarios: garantizar created_at y rol
+      const normalizedUsers = users.map(u => {
+        let roleName: string | undefined
+        if (Array.isArray(u.roles)) roleName = u.roles[0]?.name
+        else if (u.roles && typeof u.roles === 'object') roleName = (u.roles as any)?.name
+        else if ((u as any).role_id && rolesMap[(u as any).role_id]) roleName = rolesMap[(u as any).role_id]
+        return {
+          ...u,
+          roles: roleName ? { name: roleName } : null,
+          // No inventar fecha actual si falta: usar updated_at si existe o dejar null para excluir del gráfico
+          created_at: u.created_at || (u as any).updated_at || null
+        }
+      })
+
+      // Guardar usuarios normalizados para tendencia
+      setAllUsers(normalizedUsers)
+
+      const filteredUsers = filterUsersByDateRange(normalizedUsers, dateRange)
 
       // Calcular estadísticas
       const activeUsers = filteredUsers.filter(u => u.is_active !== false).length
@@ -143,7 +175,7 @@ export default function DashboardPage() {
 
       // Usuarios por rol
       const roleCount = filteredUsers.reduce((acc, u) => {
-        const roleName = Array.isArray(u.roles) ? u.roles[0]?.name : u.roles?.name
+        const roleName = (u as any)?.roles?.name || (Array.isArray(u.roles) ? u.roles[0]?.name : null)
         const role = roleName || 'Sin rol'
         acc[role] = (acc[role] || 0) + 1
         return acc
@@ -162,6 +194,43 @@ export default function DashboardPage() {
         recentUsers,
         usersByRole
       })
+
+      // ----------------------------------------------------
+      // Requisiciones (solicitudes) - filtradas por rango de fecha
+      // ----------------------------------------------------
+      // Nota: Usamos el cliente autenticado (admin/superadmin) para obtener todas las requisiciones.
+      const { data: allRequisitions, error: reqError } = await supabase
+        .from('requisitions')
+        .select('id, status, created_at')
+        .order('created_at', { ascending: false })
+
+      if (reqError) {
+        console.error('Error obteniendo requisiciones:', reqError)
+      } else {
+        // Filtrar por rango de fechas
+        const reqs = (allRequisitions || []) as { id: string; status: RequisitionStatus; created_at?: string }[]
+        const filteredReqs = filterRequisitionsByDateRange(reqs, dateRange)
+
+        // Conteo por estado
+        const byStatus: Record<string, number> = {}
+        filteredReqs.forEach(r => {
+          byStatus[r.status] = (byStatus[r.status] || 0) + 1
+        })
+
+  // En proceso: enviadas + en revisión (no cuenta aprobadas/rechazadas/canceladas/draft)
+  const processed = filteredReqs.filter(r => r.status === 'submitted' || r.status === 'in_review').length
+
+        // Requisiciones recientes (últimas 5)
+        const recent = filteredReqs.slice(0, 5)
+
+        setRequisitionData({
+          total: filteredReqs.length,
+            processed,
+            byStatus,
+            recent
+        })
+        setRequisitionsList(reqs)
+      }
     } catch (err: any) {
       setError(err.message || String(err))
     } finally {
@@ -189,38 +258,136 @@ export default function DashboardPage() {
     })
   }
 
+  // Filtrar requisiciones por rango de fechas
+  const filterRequisitionsByDateRange = (reqs: { id: string; status: RequisitionStatus; created_at?: string }[], range: '7days' | '30days' | 'all') => {
+    if (range === 'all') return reqs
+    const now = new Date()
+    const daysAgo = range === '7days' ? 7 : 30
+    const startDate = startOfDay(subDays(now, daysAgo))
+    const endDate = endOfDay(now)
+    return reqs.filter(r => {
+      if (!r.created_at) return false
+      try {
+        const d = parseISO(r.created_at)
+        return isWithinInterval(d, { start: startDate, end: endDate })
+      } catch {
+        return false
+      }
+    })
+  }
+
   // Datos para gráfico de tendencia (usuarios por día)
   const userTrendData = useMemo(() => {
     if (allUsers.length === 0) return []
+    // Aplicar mismo filtro de rango a usuarios
+    const usersInRange = filterUsersByDateRange(allUsers, dateRange)
+    if (usersInRange.length === 0) return []
 
     const days = dateRange === '7days' ? 7 : dateRange === '30days' ? 30 : 90
-    const data = []
-
+    const data: { date: string; usuarios: number }[] = []
     for (let i = days - 1; i >= 0; i--) {
       const date = subDays(new Date(), i)
-      const dateStr = formatDate(date, 'dd/MMM', { locale: es })
-      
-      const usersOnDay = allUsers.filter(user => {
-        if (!user.created_at) return false
+      const label = formatDate(date, 'dd/MMM', { locale: es })
+      const count = usersInRange.filter(u => {
+        if (!u.created_at) return false
         try {
-          const userDate = parseISO(user.created_at)
-          return formatDate(userDate, 'yyyy-MM-dd') === formatDate(date, 'yyyy-MM-dd')
+          const d = parseISO(u.created_at)
+          return formatDate(d, 'yyyy-MM-dd') === formatDate(date, 'yyyy-MM-dd')
         } catch {
           return false
         }
       }).length
-
-      data.push({
-        date: dateStr,
-        usuarios: usersOnDay
-      })
+      data.push({ date: label, usuarios: count })
     }
-
     return data
   }, [allUsers, dateRange])
 
   // Colores para el gráfico de pastel - Usando paleta de marca
   const COLORS = ['#FF1556', '#00253F', '#94a3b8', '#cbd5e1', '#e2e8f0', '#f1f5f9']
+
+  // Datos para gráfico de barras de estados de requisiciones
+  const requisitionStatusChartData = useMemo(() => {
+    const entries = Object.entries(requisitionData.byStatus)
+    if (!entries.length) return []
+    const total = requisitionData.total || 1
+    return entries.map(([status, count]) => ({
+      status,
+      count,
+      porcentaje: Math.round((count / total) * 100)
+    }))
+  }, [requisitionData])
+
+  // Distribución (pie) por estado para usar el componente compartido
+  const statusColors: Record<RequisitionStatus, string> = {
+    draft: '#94a3b8',
+    submitted: '#3b82f6',
+    in_review: '#f59e0b',
+    approved: '#10b981',
+    rejected: '#ef4444',
+    cancelled: '#6b7280',
+    filled: '#8b5cf6',
+  }
+
+  const statusLabels: Record<RequisitionStatus, string> = {
+    draft: 'Borrador',
+    submitted: 'Enviada',
+    in_review: 'En Revisión',
+    approved: 'Aprobada',
+    rejected: 'Rechazada',
+    cancelled: 'Cancelada',
+    filled: 'Cubierta',
+  }
+
+  const statusDistribution = useMemo(() => {
+    const entries = Object.entries(requisitionData.byStatus) as [RequisitionStatus, number][]
+    const data = entries.map(([status, value]) => ({
+      name: statusLabels[status] || status,
+      value,
+      color: statusColors[status] || '#94a3b8'
+    }))
+    return data.filter(d => d.value > 0)
+  }, [requisitionData])
+
+  // Tendencia de requisiciones por día
+  const requisitionTrendData = useMemo(() => {
+    if (!requisitionsList || requisitionsList.length === 0) return []
+    const days = dateRange === '7days' ? 7 : dateRange === '30days' ? 30 : 90
+    const data: { date: string; requisiciones: number }[] = []
+    for (let i = days - 1; i >= 0; i--) {
+      const date = subDays(new Date(), i)
+      const label = formatDate(date, 'dd/MMM', { locale: es })
+      const count = requisitionsList.filter(r => {
+        if (!r.created_at) return false
+        try {
+          const d = parseISO(r.created_at)
+          return formatDate(d, 'yyyy-MM-dd') === formatDate(date, 'yyyy-MM-dd')
+        } catch {
+          return false
+        }
+      }).length
+      data.push({ date: label, requisiciones: count })
+    }
+    return data
+  }, [requisitionsList, dateRange])
+
+  // Datos de barra por estado para el componente reutilizable
+  const requisitionStatusBarData = useMemo(() => {
+    return (Object.entries(requisitionData.byStatus) as [RequisitionStatus, number][]) 
+      .map(([status, count]) => ({
+        date: (statusLabels[status] || status).replace('_', ' '),
+        requisiciones: count
+      }))
+  }, [requisitionData])
+
+  // Distribución de roles para gráfico Pie (usuarios)
+  const userRolesPieData = useMemo(() => {
+    if (!stats.usersByRole || stats.usersByRole.length === 0) return []
+    return stats.usersByRole.map((r, idx) => ({
+      name: r.role || 'Sin rol',
+      value: r.count,
+      color: COLORS[idx % COLORS.length]
+    }))
+  }, [stats.usersByRole])
 
   // Funciones de exportación
   const handleExport = (format: 'csv' | 'excel' | 'json') => {
@@ -379,7 +546,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* KPI Cards */}
+  {/* KPI Cards - Usuarios */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Usuarios */}
         <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
@@ -453,6 +620,80 @@ export default function DashboardPage() {
         </div>
       </div>
 
+  {/* KPI Cards - Requisiciones */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Total Requisiciones */}
+        <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-100 text-sm font-medium">Total Requisiciones</p>
+              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : requisitionData.total}</p>
+            </div>
+            <Briefcase className="w-12 h-12 text-gray-200 opacity-80" />
+          </div>
+          <div className="mt-4 flex items-center text-gray-100 text-sm">
+            <TrendingUp className="w-4 h-4 mr-1" />
+            Solicitudes registradas
+          </div>
+        </div>
+        {/* Requisiciones en Proceso (Enviadas + En Revisión) */}
+        <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-pink-100 text-sm font-medium">Requisiciones en Proceso</p>
+              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : requisitionData.processed}</p>
+            </div>
+            <Activity className="w-12 h-12 text-pink-100 opacity-80" />
+          </div>
+          <div className="mt-4 flex items-center text-pink-100 text-sm">
+            {!loadingData && (requisitionData.total - (requisitionData.byStatus['draft'] || 0)) > 0 && (
+              <>
+                <span className="font-semibold">{Math.round((requisitionData.processed / (requisitionData.total - (requisitionData.byStatus['draft'] || 0))) * 100)}%</span>
+                <span className="ml-1">del total (sin borradores)</span>
+              </>
+            )}
+          </div>
+        </div>
+        {/* Aprobadas */}
+        <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg shadow-md p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Requisiciones Aprobadas</p>
+              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : (requisitionData.byStatus['approved'] || 0)}</p>
+            </div>
+            <CheckCircle2 className="w-12 h-12 text-green-100 opacity-80" />
+          </div>
+          <div className="mt-4 flex items-center text-green-100 text-sm">
+            {(requisitionData.byStatus['approved'] || 0) > 0 ? 'Listas para cubrir' : 'Sin aprobaciones'}
+          </div>
+        </div>
+        {/* Rechazadas */}
+        <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-lg shadow-md p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-100 text-sm font-medium">Requisiciones Rechazadas</p>
+              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : (requisitionData.byStatus['rejected'] || 0)}</p>
+            </div>
+            <XCircle className="w-12 h-12 text-red-100 opacity-80" />
+          </div>
+          <div className="mt-4 flex items-center text-red-100 text-sm">
+            {(requisitionData.byStatus['rejected'] || 0) > 0 ? 'Revisar causas' : 'Sin rechazos'}
+          </div>
+        </div>
+        {/* Borradores (integrado en la misma fila) */}
+        <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-white/90 text-sm font-medium">Requisiciones en Borrador</p>
+              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : (requisitionData.byStatus['draft'] || 0)}</p>
+            </div>
+            <Clock className="w-12 h-12 text-white/80" />
+          </div>
+          <div className="mt-4 text-white/90 text-sm">
+            {(requisitionData.byStatus['draft'] || 0) > 0 ? 'Por completar' : 'Sin borradores'}
+          </div>
+        </div>
+      </div>
       {/* Accesos Rápidos */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -496,72 +737,72 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Gráficos Avanzados */}
+      {/* Gráficos de Requisiciones y Usuarios */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Tendencia de Usuarios */}
+        {/* Tendencia de Requisiciones */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <BarChart2 className="w-5 h-5 mr-2 text-brand-accent" />
-            Tendencia de Registros
+            Tendencia de Requisiciones
           </h2>
-          {loadingData ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            </div>
-          ) : userTrendData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={userTrendData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#6b7280" />
-                <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                  labelStyle={{ color: '#374151', fontWeight: 'bold' }}
-                />
-                <Line type="monotone" dataKey="usuarios" stroke="#FF1556" strokeWidth={2} dot={{ fill: '#FF1556', r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 text-center py-16">No hay datos suficientes para el período seleccionado</p>
-          )}
+          <BarChartComponent data={requisitionTrendData} loading={loadingData} />
         </div>
 
-        {/* Gráfico de Pastel - Distribución por Roles */}
+        {/* Distribución por Estado de Requisiciones */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Briefcase className="w-5 h-5 mr-2 text-brand-accent" />
+            Distribución por Estado
+          </h2>
+          <PieChartComponent data={statusDistribution} loading={loadingData} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Tendencia de Usuarios (solo si hay usuarios) */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Users className="w-5 h-5 mr-2 text-brand-accent" />
+            Tendencia de Usuarios
+          </h2>
+          <LineChartComponent data={userTrendData.map(d => ({ date: d.date, value: d.usuarios }))} loading={loadingData} dataKey="value" labelKey="date" color="#FF1556" />
+        </div>
+
+        {/* Distribución por Roles */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Shield className="w-5 h-5 mr-2 text-brand-accent" />
-            Distribución de Roles
+            Distribución por Roles
           </h2>
-          {loadingData ? (
-            <div className="text-center py-16">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            </div>
-          ) : stats.usersByRole.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={stats.usersByRole}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => `${entry.role}: ${entry.count} (${(entry.percent * 100).toFixed(0)}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {stats.usersByRole.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 text-center py-16">No hay datos disponibles</p>
-          )}
+          <PieChartComponent data={userRolesPieData} loading={loadingData} />
         </div>
+      </div>
+
+      {/* Estados de Requisiciones (Resumen detallado) */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <Briefcase className="w-5 h-5 mr-2 text-brand-accent" />
+          Estados de Requisiciones (Detalle)
+        </h2>
+        {loadingData ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          </div>
+        ) : requisitionStatusBarData.length > 0 ? (
+          <BarChartComponent data={requisitionStatusBarData} loading={false} />
+        ) : (
+          <p className="text-gray-500 text-center py-8">No hay datos de requisiciones para el período seleccionado</p>
+        )}
+        {!loadingData && requisitionStatusChartData.length > 0 && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {requisitionStatusChartData.map(item => (
+              <div key={item.status} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="text-sm font-medium text-gray-700 capitalize">{item.status.replace('_', ' ')}</div>
+                <div className="text-sm text-gray-600">{item.count} ({item.porcentaje}%)</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Grid de estadísticas */}
