@@ -94,8 +94,8 @@ export default function DashboardPage() {
     if (!loading) return
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.warn('Timeout de verificación de sesión alcanzado (25s), redirigiendo al login')
-        router.replace('/auth')
+        console.warn('Timeout de verificación de sesión alcanzado (25s), redirigiendo a /admin')
+        router.replace('/admin?reason=session-check-timeout')
       }
     }, 25000)
     return () => clearTimeout(timeoutId)
@@ -104,8 +104,8 @@ export default function DashboardPage() {
   // Redirigir al login si no hay usuario autenticado
   useEffect(() => {
     if (!loading && (!user || !profile)) {
-      console.debug('Dashboard: No hay usuario autenticado, redirigiendo al login')
-      router.replace('/auth')
+      console.debug('Dashboard: No hay usuario autenticado, redirigiendo a /admin (login admin)')
+      router.replace('/admin?reason=unauthenticated')
     }
   }, [loading, user, profile, router])
 

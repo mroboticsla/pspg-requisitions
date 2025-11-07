@@ -251,14 +251,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Error al cerrar sesión por inactividad:', error)
         await supabase.auth.signOut().catch(() => {})
       } finally {
+        // Determinar destino según el rol actual antes de limpiar el estado
+  const roleName = profile?.roles?.name?.toLowerCase()
+  const isAdminLike = roleName === 'admin' || roleName === 'superadmin'
+  const target = isAdminLike ? '/admin?reason=timeout' : '/login?reason=timeout'
+
         setUser(null)
         setProfile(null)
         setLoading(false)
         loadingRef.current = false
         clearTimer()
-        // Redirigir a la página de login pública por timeout
-        if (pathname !== '/login' && pathname !== '/admin/login') {
-          router.replace('/login?reason=timeout')
+        // Redirigir a la página de login adecuada por timeout
+        if (pathname !== '/login' && pathname !== '/admin') {
+          router.replace(target)
         }
         handlingInactivityRef.current = false
       }

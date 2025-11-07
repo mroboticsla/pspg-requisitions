@@ -31,7 +31,7 @@ export default function RolesAdminPage() {
 
   useEffect(() => {
     if (!loading && (!user || !profile)) {
-      router.replace('/auth')
+      router.replace('/admin/login?reason=unauthenticated')
     }
   }, [loading, user, profile, router])
 

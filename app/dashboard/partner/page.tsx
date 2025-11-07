@@ -90,8 +90,8 @@ export default function PartnerDashboardPage() {
     if (!loading) return
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.warn('Timeout de verificación de sesión alcanzado (25s), redirigiendo al login')
-        router.replace('/auth')
+        console.warn('Timeout de verificación de sesión alcanzado (25s), redirigiendo a login público')
+        router.replace('/login?reason=session-check-timeout')
       }
     }, 25000)
     return () => clearTimeout(timeoutId)
@@ -100,8 +100,8 @@ export default function PartnerDashboardPage() {
   // Redirigir al login si no hay usuario autenticado
   useEffect(() => {
     if (!loading && (!user || !profile)) {
-      console.debug('Dashboard Partner: No hay usuario autenticado, redirigiendo al login')
-      router.replace('/auth')
+      console.debug('Dashboard Partner: No hay usuario autenticado, redirigiendo a login público')
+      router.replace('/login?reason=unauthenticated')
     }
   }, [loading, user, profile, router])
 

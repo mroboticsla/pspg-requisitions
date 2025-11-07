@@ -63,7 +63,7 @@ export default function CompanyUsersPage() {
   // Redirect if not authenticated
   useEffect(() => {
     if (!loading && (!user || !profile)) {
-      router.replace('/auth')
+      router.replace('/admin/login?reason=unauthenticated')
     }
   }, [loading, user, profile, router])
 
