@@ -21,24 +21,33 @@ export const MENU: MenuItem[] = [
     children: [
       { id: 'req-new', label: 'Crear Solicitud', path: '/request', roles: ['superadmin', 'admin', 'partner'], icon: FilePlus2 },
       { id: 'req-mine', label: 'Solicitudes', path: '/requisitions', roles: ['superadmin', 'admin', 'partner'], icon: ListChecks },
+      { id: 'templates', label: 'Plantillas', path: '/admin/templates', roles: ['superadmin', 'admin'], icon: FileText },
     ]
   },
-  { id: 'reports', label: 'Reportes', path: '/reports', roles: ['superadmin','admin'], icon: BarChart3 },
+  { id: 'reports', 
+    label: 'Reportes', 
+    roles: ['superadmin','admin'], children: [
+      { id: 'req-reports', label: 'Reportes de Requisiciones', path: '/admin/requisitions', roles: ['superadmin','admin'], icon: BarChart3 },
+    ] 
+  },
   { 
-    id: 'admin', 
-    label: 'Administración', 
+    id: 'customers', 
+    label: 'Clientes', 
     roles: ['superadmin','admin'], 
     children: [
       { id: 'companies', label: 'Empresas', path: '/admin/companies', roles: ['superadmin', 'admin'], icon: Building2 },
-      { id: 'partners', label: 'Asociados', path: '/admin/partners', roles: ['superadmin', 'admin'], icon: Users },
-      { id: 'users', label: 'Usuarios', path: '/admin/users', roles: ['superadmin', 'admin'], icon: UserIcon },
-      { id: 'templates', label: 'Plantillas de Requisiciones', path: '/admin/templates', roles: ['superadmin', 'admin'], icon: FileText },
-      { id: 'req-admin', label: 'Gestión de Requisiciones', path: '/admin/requisitions', roles: ['superadmin', 'admin'], icon: CheckSquare },
+      { id: 'partners', label: 'Contactos', path: '/admin/partners', roles: ['superadmin', 'admin'], icon: Users },
     ]
   },
-  { 
+  { id: 'candidates', 
+    label: 'Candidatos', 
+    roles: ['superadmin','admin'], children: [
+      { id: 'users', label: 'Listado de Candidatos', path: '/admin/users', roles: ['superadmin', 'admin'], icon: UserIcon },
+    ] 
+  },
+  {   
     id: 'access', 
-    label: 'Acceso', 
+    label: 'Administración de Acceso', 
     roles: ['superadmin'], 
     children: [
       { id: 'administrators', label: 'Administradores', path: '/admin/administrators', roles: ['superadmin'], icon: Shield },
