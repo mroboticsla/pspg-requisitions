@@ -12,7 +12,7 @@ import {
   deleteRequisition,
 } from '@/lib/requisitions';
 import type { RequisitionComplete, RequisitionStatus } from '@/lib/types/requisitions';
-import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle, Laptop, Wrench, Building2 } from 'lucide-react';
+import { ArrowLeft, FileText, Users, Calendar, Briefcase, CheckCircle, XCircle, Clock, Trash2, Edit, AlertCircle, Laptop, Wrench, Building2, Mail, Phone, Globe, User, ClipboardCopy } from 'lucide-react';
 import { useToast } from '@/lib/useToast';
 import { useAuth } from '@/app/providers/AuthProvider';
 import ConfirmModal from '@/app/components/ConfirmModal';
@@ -189,6 +189,9 @@ export default function RequisitionDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { user, profile } = useAuth();
   const [companyName, setCompanyName] = useState<string | null>(null);
+  const [companyContact, setCompanyContact] = useState<{ email?: string; phone?: string; mobile?: string; website?: string } | null>(null);
+  const [creatorContact, setCreatorContact] = useState<{ first_name?: string | null; last_name?: string | null; phone?: string | null; email?: string | null; role?: string | null } | null>(null);
+  const [contactLoading, setContactLoading] = useState(false);
 
   const isAdminRole = (profile?.roles?.name === 'admin' || profile?.roles?.name === 'superadmin');
   const isOwner = !!(user?.id && requisition?.created_by && user.id === requisition.created_by);
@@ -218,6 +221,58 @@ export default function RequisitionDetailPage() {
         }
       } else {
         setCompanyName(null);
+      }
+      // Cargar contacto extendido si rol admin
+      if (data && isAdminRole) {
+        setContactLoading(true);
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+          if (token) {
+            // Empresa
+            if (data.company_id) {
+              try {
+                const res = await fetch(`/api/companies/${data.company_id}/contact`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.ok) {
+                  const json = await res.json();
+                  const contact = json.company?.contact_info || {};
+                  setCompanyContact({
+                    email: contact.email,
+                    phone: contact.phone,
+                    mobile: contact.mobile,
+                    website: json.company?.website || undefined,
+                  });
+                } else {
+                  setCompanyContact(null);
+                }
+              } catch (err) {
+                console.warn('Error obteniendo contacto empresa', err);
+                setCompanyContact(null);
+              }
+            }
+            // Creador
+            if (data.created_by) {
+              try {
+                const res = await fetch(`/api/users/${data.created_by}/contact`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                if (res.ok) {
+                  const json = await res.json();
+                  setCreatorContact(json.user || null);
+                } else {
+                  setCreatorContact(null);
+                }
+              } catch (err) {
+                console.warn('Error obteniendo contacto creador', err);
+                setCreatorContact(null);
+              }
+            }
+          }
+        } finally {
+          setContactLoading(false);
+        }
       }
     } catch (err: any) {
       console.error('Error loading requisition:', err);
@@ -341,6 +396,108 @@ export default function RequisitionDetailPage() {
               {statusLabels[requisition.status]}
             </span>
           </div>
+          {/* Bloque de contacto rápido para admin */}
+          {isAdminRole && (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
+                <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-3 flex items-center gap-1"><Building2 className="w-3 h-3" />Contacto Empresa</p>
+                {contactLoading ? (
+                  <p className="text-xs text-admin-text-secondary">Cargando contacto...</p>
+                ) : companyContact ? (
+                  <div className="space-y-2 text-sm">
+                    {companyContact.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-admin-primary" />
+                        <a href={`mailto:${companyContact.email}`} className="text-admin-primary underline break-all">{companyContact.email}</a>
+                        <button
+                          aria-label="Copiar email"
+                          onClick={() => navigator.clipboard.writeText(companyContact.email || '')}
+                          className="p-1 rounded-admin-sm hover:bg-admin-bg-hover transition"
+                        >
+                          <ClipboardCopy className="w-3.5 h-3.5 text-admin-text-muted" />
+                        </button>
+                      </div>
+                    )}
+                    {(companyContact.phone || companyContact.mobile) && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-admin-primary" />
+                        <a href={`tel:${companyContact.phone || companyContact.mobile}`} className="text-admin-text-primary">
+                          {companyContact.phone || companyContact.mobile}
+                        </a>
+                        <button
+                          aria-label="Copiar teléfono"
+                          onClick={() => navigator.clipboard.writeText(companyContact.phone || companyContact.mobile || '')}
+                          className="p-1 rounded-admin-sm hover:bg-admin-bg-hover transition"
+                        >
+                          <ClipboardCopy className="w-3.5 h-3.5 text-admin-text-muted" />
+                        </button>
+                      </div>
+                    )}
+                    {companyContact.website && (
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-admin-primary" />
+                        <a href={companyContact.website.startsWith('http') ? companyContact.website : `https://${companyContact.website}`} target="_blank" rel="noopener noreferrer" className="text-admin-primary underline break-all">
+                          {companyContact.website.replace(/^https?:\/\//, '')}
+                        </a>
+                      </div>
+                    )}
+                    {!companyContact.email && !companyContact.phone && !companyContact.mobile && !companyContact.website && (
+                      <p className="text-xs text-admin-text-secondary">Sin datos de contacto registrados.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-admin-text-secondary">No disponible</p>
+                )}
+              </div>
+              <div className="bg-surface-tertiary rounded-admin p-admin-sm border border-admin-border-DEFAULT">
+                <p className="text-xs font-medium text-admin-text-muted uppercase tracking-wide mb-3 flex items-center gap-1"><User className="w-3 h-3" />Contacto Solicitante</p>
+                {contactLoading ? (
+                  <p className="text-xs text-admin-text-secondary">Cargando contacto...</p>
+                ) : creatorContact ? (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-admin-primary" />
+                      <span className="text-admin-text-primary font-medium">{[creatorContact.first_name, creatorContact.last_name].filter(Boolean).join(' ') || '—'}</span>
+                      {creatorContact.role && (
+                        <span className="px-2 py-0.5 rounded-full bg-admin-bg-hover text-xs font-semibold text-admin-text-secondary border border-admin-border-DEFAULT">{creatorContact.role}</span>
+                      )}
+                    </div>
+                    {creatorContact.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-admin-primary" />
+                        <a href={`mailto:${creatorContact.email}`} className="text-admin-primary underline break-all">{creatorContact.email}</a>
+                        <button
+                          aria-label="Copiar email"
+                          onClick={() => navigator.clipboard.writeText(creatorContact.email || '')}
+                          className="p-1 rounded-admin-sm hover:bg-admin-bg-hover transition"
+                        >
+                          <ClipboardCopy className="w-3.5 h-3.5 text-admin-text-muted" />
+                        </button>
+                      </div>
+                    )}
+                    {creatorContact.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-admin-primary" />
+                        <a href={`tel:${creatorContact.phone}`} className="text-admin-text-primary">{creatorContact.phone}</a>
+                        <button
+                          aria-label="Copiar teléfono"
+                          onClick={() => navigator.clipboard.writeText(creatorContact.phone || '')}
+                          className="p-1 rounded-admin-sm hover:bg-admin-bg-hover transition"
+                        >
+                          <ClipboardCopy className="w-3.5 h-3.5 text-admin-text-muted" />
+                        </button>
+                      </div>
+                    )}
+                    {!creatorContact.email && !creatorContact.phone && (
+                      <p className="text-xs text-admin-text-secondary">Sin datos de contacto registrados.</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-admin-text-secondary">No disponible</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Acciones */}
