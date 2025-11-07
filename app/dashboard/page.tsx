@@ -14,6 +14,7 @@ import { downloadCSV, downloadExcel, downloadJSON, formatUsersForExport, formatR
 import { PieChartComponent } from '@/app/components/charts/PieChartComponent'
 import { BarChartComponent } from '@/app/components/charts/BarChartComponent'
 import { LineChartComponent } from '@/app/components/charts/LineChartComponent'
+import { KPICard } from '@/app/components/KPICard'
 import { RequisitionStatus } from '@/lib/types/requisitions'
 import { useToast } from '@/lib/useToast'
 
@@ -463,8 +464,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Controles: Filtros y Exportación */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+  {/* Controles: Filtros y Exportación */}
+  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Filtro de Fecha */}
           <div className="flex items-center space-x-2">
@@ -546,154 +547,95 @@ export default function DashboardPage() {
         </div>
       )}
 
-  {/* KPI Cards - Usuarios */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Usuarios */}
-        <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-100 text-sm font-medium">Total Usuarios</p>
-              <p className="text-3xl font-bold mt-2">
-                {loadingData ? '...' : stats.totalUsers}
-              </p>
-            </div>
-            <Users className="w-12 h-12 text-gray-200 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-gray-100 text-sm">
-            <TrendingUp className="w-4 h-4 mr-1" />
-            Registrados en el sistema
-          </div>
+      {/* KPI Cards - Usuarios */}
+      <section aria-labelledby="kpis-usuarios">
+        <h2 id="kpis-usuarios" className="sr-only">Indicadores de usuarios</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+          <KPICard
+            title="Total Usuarios"
+            value={stats.totalUsers}
+            loading={loadingData}
+            variant="dark"
+            icon={<Users className="w-10 h-10" />}
+            subtitle={<span className="flex items-center"><TrendingUp className="w-4 h-4 mr-1" /> Registrados en el sistema</span>}
+          />
+          <KPICard
+            title="Usuarios Activos"
+            value={stats.activeUsers}
+            loading={loadingData}
+            variant="accent"
+            icon={<UserCheck className="w-10 h-10" />}
+            percentage={stats.totalUsers > 0 ? (stats.activeUsers / stats.totalUsers) * 100 : null}
+            subtitle={stats.totalUsers > 0 ? 'Porcentaje del total' : undefined}
+          />
+          <KPICard
+            title="Usuarios Inactivos"
+            value={stats.inactiveUsers}
+            loading={loadingData}
+            variant="warning"
+            icon={<UserX className="w-10 h-10" />}
+            subtitle={stats.inactiveUsers > 0 ? 'Requieren atención' : 'Excelente gestión'}
+          />
+          <KPICard
+            title="Roles Configurados"
+            value={stats.totalRoles}
+            loading={loadingData}
+            variant="dark"
+            icon={<Shield className="w-10 h-10" />}
+            subtitle="Sistema de permisos"
+          />
         </div>
+      </section>
 
-        {/* Usuarios Activos */}
-        <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-pink-100 text-sm font-medium">Usuarios Activos</p>
-              <p className="text-3xl font-bold mt-2">
-                {loadingData ? '...' : stats.activeUsers}
-              </p>
-            </div>
-            <UserCheck className="w-12 h-12 text-pink-100 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-pink-100 text-sm">
-            {!loadingData && stats.totalUsers > 0 && (
-              <>
-                <span className="font-semibold">{Math.round((stats.activeUsers / stats.totalUsers) * 100)}%</span>
-                <span className="ml-1">del total</span>
-              </>
-            )}
-          </div>
+      {/* KPI Cards - Requisiciones */}
+      <section aria-labelledby="kpis-requisiciones">
+        <h2 id="kpis-requisiciones" className="sr-only">Indicadores de requisiciones</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
+          <KPICard
+            title="Total Requisiciones"
+            value={requisitionData.total}
+            loading={loadingData}
+            variant="dark"
+            icon={<Briefcase className="w-10 h-10" />}
+            subtitle={<span className="flex items-center"><TrendingUp className="w-4 h-4 mr-1" /> Solicitudes registradas</span>}
+          />
+          <KPICard
+            title="En Proceso"
+            value={requisitionData.processed}
+            loading={loadingData}
+            variant="accent"
+            icon={<Activity className="w-10 h-10" />}
+            percentage={(requisitionData.total - (requisitionData.byStatus['draft'] || 0)) > 0
+              ? (requisitionData.processed / (requisitionData.total - (requisitionData.byStatus['draft'] || 0))) * 100
+              : null}
+            subtitle={(requisitionData.total - (requisitionData.byStatus['draft'] || 0)) > 0 ? 'Del total (sin borradores)' : undefined}
+          />
+          <KPICard
+            title="Aprobadas"
+            value={requisitionData.byStatus['approved'] || 0}
+            loading={loadingData}
+            variant="green"
+            icon={<CheckCircle2 className="w-10 h-10" />}
+            subtitle={(requisitionData.byStatus['approved'] || 0) > 0 ? 'Listas para cubrir' : 'Sin aprobaciones'}
+          />
+          <KPICard
+            title="Rechazadas"
+            value={requisitionData.byStatus['rejected'] || 0}
+            loading={loadingData}
+            variant="red"
+            icon={<XCircle className="w-10 h-10" />}
+            subtitle={(requisitionData.byStatus['rejected'] || 0) > 0 ? 'Revisar causas' : 'Sin rechazos'}
+          />
+          <KPICard
+            title="Borrador"
+            value={requisitionData.byStatus['draft'] || 0}
+            loading={loadingData}
+            variant="neutral"
+            icon={<Clock className="w-10 h-10" />}
+            subtitle={(requisitionData.byStatus['draft'] || 0) > 0 ? 'Por completar' : 'Sin borradores'}
+          />
         </div>
-
-        {/* Usuarios Inactivos */}
-        <div className="bg-gradient-to-br from-neutral-400 to-neutral-500 rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-100 text-sm font-medium">Usuarios Inactivos</p>
-              <p className="text-3xl font-bold mt-2">
-                {loadingData ? '...' : stats.inactiveUsers}
-              </p>
-            </div>
-            <UserX className="w-12 h-12 text-gray-200 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-gray-100 text-sm">
-            {stats.inactiveUsers > 0 && 'Requieren atención'}
-            {stats.inactiveUsers === 0 && 'Excelente gestión'}
-          </div>
-        </div>
-
-        {/* Total Roles */}
-        <div className="bg-gradient-to-br from-neutral-600 to-neutral-700 rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-100 text-sm font-medium">Roles Configurados</p>
-              <p className="text-3xl font-bold mt-2">
-                {loadingData ? '...' : stats.totalRoles}
-              </p>
-            </div>
-            <Shield className="w-12 h-12 text-gray-200 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-gray-100 text-sm">
-            Sistema de permisos
-          </div>
-        </div>
-      </div>
-
-  {/* KPI Cards - Requisiciones */}
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Total Requisiciones */}
-        <div className="bg-gradient-to-br from-brand-dark to-[#003d66] rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-100 text-sm font-medium">Total Requisiciones</p>
-              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : requisitionData.total}</p>
-            </div>
-            <Briefcase className="w-12 h-12 text-gray-200 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-gray-100 text-sm">
-            <TrendingUp className="w-4 h-4 mr-1" />
-            Solicitudes registradas
-          </div>
-        </div>
-        {/* Requisiciones en Proceso (Enviadas + En Revisión) */}
-        <div className="bg-gradient-to-br from-brand-accent to-brand-accentDark rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-pink-100 text-sm font-medium">Requisiciones en Proceso</p>
-              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : requisitionData.processed}</p>
-            </div>
-            <Activity className="w-12 h-12 text-pink-100 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-pink-100 text-sm">
-            {!loadingData && (requisitionData.total - (requisitionData.byStatus['draft'] || 0)) > 0 && (
-              <>
-                <span className="font-semibold">{Math.round((requisitionData.processed / (requisitionData.total - (requisitionData.byStatus['draft'] || 0))) * 100)}%</span>
-                <span className="ml-1">del total (sin borradores)</span>
-              </>
-            )}
-          </div>
-        </div>
-        {/* Aprobadas */}
-        <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm font-medium">Requisiciones Aprobadas</p>
-              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : (requisitionData.byStatus['approved'] || 0)}</p>
-            </div>
-            <CheckCircle2 className="w-12 h-12 text-green-100 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-green-100 text-sm">
-            {(requisitionData.byStatus['approved'] || 0) > 0 ? 'Listas para cubrir' : 'Sin aprobaciones'}
-          </div>
-        </div>
-        {/* Rechazadas */}
-        <div className="bg-gradient-to-br from-red-600 to-red-700 rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-red-100 text-sm font-medium">Requisiciones Rechazadas</p>
-              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : (requisitionData.byStatus['rejected'] || 0)}</p>
-            </div>
-            <XCircle className="w-12 h-12 text-red-100 opacity-80" />
-          </div>
-          <div className="mt-4 flex items-center text-red-100 text-sm">
-            {(requisitionData.byStatus['rejected'] || 0) > 0 ? 'Revisar causas' : 'Sin rechazos'}
-          </div>
-        </div>
-        {/* Borradores (integrado en la misma fila) */}
-        <div className="bg-gradient-to-br from-neutral-500 to-neutral-600 rounded-lg shadow-md p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white/90 text-sm font-medium">Requisiciones en Borrador</p>
-              <p className="text-3xl font-bold mt-2">{loadingData ? '...' : (requisitionData.byStatus['draft'] || 0)}</p>
-            </div>
-            <Clock className="w-12 h-12 text-white/80" />
-          </div>
-          <div className="mt-4 text-white/90 text-sm">
-            {(requisitionData.byStatus['draft'] || 0) > 0 ? 'Por completar' : 'Sin borradores'}
-          </div>
-        </div>
-      </div>
+      </section>
       {/* Accesos Rápidos */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
