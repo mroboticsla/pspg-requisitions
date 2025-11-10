@@ -13,6 +13,8 @@ import AvatarUpload from "../components/AvatarUpload";
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth();
   const router = useRouter();
+  const roleName = profile?.roles?.name?.toLowerCase?.();
+  const canEditIdentity = roleName === 'candidate' || roleName === 'admin' || roleName === 'superadmin';
   
   const [formData, setFormData] = useState({
     first_name: "",
@@ -156,31 +158,34 @@ export default function ProfilePage() {
         throw new Error(`El número de teléfono debe tener ${countryConfig.length} dígitos para ${countryConfig.name}`);
       }
 
-      // Actualizar perfil en la tabla profiles
+      // Actualizar perfil en la tabla profiles respetando restricciones por rol
+      const profileUpdate: Record<string, any> = { phone: fullPhone };
+      if (canEditIdentity) {
+        profileUpdate.first_name = formData.first_name;
+        profileUpdate.last_name = formData.last_name;
+      }
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          phone: fullPhone,
-        })
+        .update(profileUpdate)
         .eq("id", user?.id);
 
       if (profileError) throw profileError;
 
-      // Actualizar display_name en auth.users
-      const displayName = `${formData.first_name} ${formData.last_name}`.trim();
-      const { error: updateUserError } = await supabase.auth.updateUser({
-        data: {
-          display_name: displayName,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-        },
-      });
+      // Actualizar display_name en auth.users solo si está permitido
+      if (canEditIdentity) {
+        const displayName = `${formData.first_name} ${formData.last_name}`.trim();
+        const { error: updateUserError } = await supabase.auth.updateUser({
+          data: {
+            display_name: displayName,
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+          },
+        });
 
-      if (updateUserError) {
-        console.error("Error al actualizar display_name:", updateUserError);
-        // No lanzamos error aquí porque el perfil ya se actualizó
+        if (updateUserError) {
+          console.error("Error al actualizar display_name:", updateUserError);
+          // No lanzamos error aquí porque el perfil ya se actualizó
+        }
       }
 
       // Si se cambió el email y está desbloqueado, actualizar en auth
@@ -249,13 +254,14 @@ export default function ProfilePage() {
           {/* Avatar y nombre */}
           <div className="bg-gradient-to-r from-brand-dark to-brand-accent px-6 py-8">
             <div className="flex items-start gap-6">
-              {/* Avatar con opción de editar */}
+              {/* Avatar con opción de editar (restringido por rol) */}
               <div className="flex-shrink-0">
                 {user && (
                   <AvatarUpload 
                     user={user}
                     currentAvatarUrl={avatarUrl}
                     onAvatarUpdate={handleAvatarUpdate}
+                    disabled={!canEditIdentity}
                   />
                 )}
               </div>
@@ -272,8 +278,14 @@ export default function ProfilePage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="hidden sm:inline">Pasa el cursor sobre tu foto para cambiarla o eliminarla</span>
-                  <span className="sm:hidden">Toca tu foto para editarla</span>
+                  {canEditIdentity ? (
+                    <>
+                      <span className="hidden sm:inline">Pasa el cursor sobre tu foto para cambiarla o eliminarla</span>
+                      <span className="sm:hidden">Toca tu foto para editarla</span>
+                    </>
+                  ) : (
+                    <span>Tu rol no permite cambiar la foto de perfil</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -329,9 +341,10 @@ export default function ProfilePage() {
                   name="first_name"
                   value={formData.first_name}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-accent focus:border-brand-accent"
+                  readOnly={!canEditIdentity}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-accent focus:border-brand-accent ${!canEditIdentity ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                   placeholder="Juan"
-                  required
+                  required={canEditIdentity}
                 />
               </div>
 
@@ -345,9 +358,10 @@ export default function ProfilePage() {
                   name="last_name"
                   value={formData.last_name}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-accent focus:border-brand-accent"
+                  readOnly={!canEditIdentity}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-brand-accent focus:border-brand-accent ${!canEditIdentity ? 'bg-gray-50 cursor-not-allowed' : ''}`}
                   placeholder="Pérez"
-                  required
+                  required={canEditIdentity}
                 />
               </div>
             </div>
@@ -404,6 +418,11 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
+            {!canEditIdentity && (
+              <div className="-mt-4 mb-2 text-xs text-gray-500">
+                Nota: Los usuarios con rol Partner no pueden cambiar su nombre ni la foto de perfil.
+              </div>
+            )}
 
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">

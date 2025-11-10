@@ -12,9 +12,10 @@ interface AvatarUploadProps {
   user: { id: string; email?: string | null };
   currentAvatarUrl?: string | null;
   onAvatarUpdate?: (newAvatarUrl: string) => void;
+  disabled?: boolean;
 }
 
-export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }: AvatarUploadProps) {
+export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate, disabled = false }: AvatarUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl || null);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -29,6 +30,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
   }, [currentAvatarUrl]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -87,6 +89,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
   };
 
   const uploadImageBlob = async (blob: Blob) => {
+    if (disabled) return;
     try {
       setUploading(true);
 
@@ -189,6 +192,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
   };
 
   const handleRemoveAvatar = async () => {
+    if (disabled) return;
     try {
       setUploading(true);
       setShowDeleteConfirm(false);
@@ -239,7 +243,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
   };
 
   return (
-    <div className="relative group">
+    <div className={`relative group ${disabled ? 'opacity-60' : ''}`} aria-disabled={disabled}>
       {/* Avatar Preview con Overlay de Edición */}
       <div className="relative inline-block">
         {avatarUrl ? (
@@ -271,7 +275,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
           </div>
         )}
         
-        {!uploading && (
+        {!uploading && !disabled && (
           <button
             onClick={() => fileInputRef.current?.click()}
             className="absolute inset-0 rounded-full bg-black bg-opacity-0 hover:bg-opacity-60 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer"
@@ -306,7 +310,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
         )}
 
         {/* Botón de eliminar (solo si hay avatar) */}
-        {avatarUrl && !uploading && (
+        {avatarUrl && !uploading && !disabled && (
           <button
             onClick={() => setShowDeleteConfirm(true)}
             type="button"
@@ -326,7 +330,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
         type="file"
         accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
         onChange={handleFileSelect}
-        disabled={uploading}
+        disabled={uploading || disabled}
         className="hidden"
         id="avatar-upload"
       />
@@ -341,16 +345,18 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate }:
       )}
 
       {/* Confirm Delete Modal */}
-      <ConfirmModal
-        isOpen={showDeleteConfirm}
-        title="Eliminar foto de perfil"
-        message="¿Estás seguro de que deseas eliminar tu foto de perfil? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
-        type="danger"
-        onConfirm={handleRemoveAvatar}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
+      {!disabled && (
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          title="Eliminar foto de perfil"
+          message="¿Estás seguro de que deseas eliminar tu foto de perfil? Esta acción no se puede deshacer."
+          confirmText="Eliminar"
+          cancelText="Cancelar"
+          type="danger"
+          onConfirm={handleRemoveAvatar}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </div>
   );
 }
