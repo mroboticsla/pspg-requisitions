@@ -500,6 +500,79 @@ export default function RequisitionDetailPage() {
           )}
         </div>
 
+        {/* Sección superior de contacto (solo partners) */}
+      {(profile?.roles?.name === 'partner') && (() => {
+          // Datos estructurados para evitar duplicación y permitir escalabilidad
+          const emailSubject = encodeURIComponent(`Consulta sobre Requisición ${requisition.id}`);
+          const emailBody = encodeURIComponent(
+            `Hola equipo PSP,\n\nSolicito información sobre la requisición:\n- ID: ${requisition.id}\n- Puesto: ${requisition.puesto_requerido || ''}\n- Empresa: ${companyName || requisition.company_id || ''}\n\nDetalle / Motivo: (agrega aquí)\n\nGracias.\n`
+          );
+          const contacts = [
+            {
+              key: 'support',
+              label: 'Atención al Cliente',
+              email: 'contacto@pspgroup.com.mx',
+              Icon: Mail,
+              description: 'Soporte general y dudas funcionales.'
+            },
+            {
+              key: 'recruiting',
+              label: 'Reclutamiento',
+              email: 'reclutamientopsp@pspgroup.com.mx',
+              Icon: Briefcase,
+              description: 'Seguimiento del proceso y estado de vacantes.'
+            }
+          ];
+          return (
+            <div className="px-admin-md sm:px-admin-lg pt-admin-md">
+              <div className="rounded-admin border border-admin-border-DEFAULT overflow-hidden bg-admin-bg-card">
+                {/* Banda decorativa en colores de marca */}
+                <div className="h-14 sm:h-16 bg-gradient-to-r from-admin-primary to-admin-accent" />
+                {/* Contenido */}
+                <div className="p-admin-lg">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                    <h2 className="text-lg font-semibold text-admin-text-primary flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-admin-primary" />
+                      Información de Contacto
+                    </h2>
+                    <p className="text-[11px] text-admin-text-muted max-w-xl">Incluye siempre ID, empresa y contexto claro para acelerar la respuesta.</p>
+                  </div>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-4" role="list">
+                    {contacts.map(({ key, label, email, Icon, description }) => (
+                      <li key={key} className="group relative rounded-admin border border-admin-border-DEFAULT bg-surface-tertiary p-4 flex items-start gap-3 hover:shadow-sm transition-shadow focus-within:shadow-sm">
+                        <div className="flex-shrink-0 p-2 rounded-admin bg-admin-accent text-white shadow-sm">
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-admin-text-primary leading-tight">{label}</p>
+                          <p className="text-[11px] text-admin-text-muted mb-1 line-clamp-2">{description}</p>
+                          <p className="text-sm text-admin-text-secondary break-all" aria-label={`Email de ${label}`}>{email}</p>
+                          <div className="mt-2 flex gap-2 flex-wrap">
+                            <a
+                              href={`mailto:${email}?subject=${emailSubject}&body=${emailBody}`}
+                              className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-admin bg-admin-accent text-white hover:bg-admin-accentHover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-accent/60 transition-colors font-medium shadow-sm"
+                            >
+                              Enviar correo
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => { navigator.clipboard.writeText(email); success('Correo copiado'); }}
+                              className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-admin border border-admin-border-DEFAULT bg-admin-bg-card hover:bg-admin-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-primary/60 text-admin-text-primary transition-colors"
+                              aria-label={`Copiar correo ${email}`}
+                            >
+                              Copiar
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Acciones */}
         <div className="bg-admin-bg-card rounded-admin shadow-sm border border-admin-border-DEFAULT p-admin-lg">
           <h2 className="text-lg font-semibold text-admin-text-primary mb-4 flex items-center gap-2">
