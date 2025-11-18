@@ -55,10 +55,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    let loadingTimeout: NodeJS.Timeout | null = null
+    // let loadingTimeout: NodeJS.Timeout | null = null // Eliminado para evitar race conditions
     let maxLoadingTimeout: NodeJS.Timeout | null = null
 
     const load = async (isBackground = false) => {
+      let localTimeout: NodeJS.Timeout | undefined
+
       try {
         if (!isBackground) {
           setLoading(true)
@@ -71,8 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Timeout de seguridad para evitar que load() se quede colgado
         const timeoutPromise = new Promise<null>((resolve) => {
-          loadingTimeout = setTimeout(() => {
-            console.warn('AuthProvider: load() timeout alcanzado después de 15s - posible problema de red')
+          localTimeout = setTimeout(() => {
+            if (mounted) {
+              console.warn('AuthProvider: load() timeout alcanzado después de 15s - posible problema de red')
+            }
             resolve(null)
           }, 15000)
         })
@@ -82,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           timeoutPromise
         ])
         
-        if (loadingTimeout) clearTimeout(loadingTimeout)
+        if (localTimeout) clearTimeout(localTimeout)
         
         if (!mounted) return
         
@@ -168,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false
-      if (loadingTimeout) clearTimeout(loadingTimeout)
+      // if (loadingTimeout) clearTimeout(loadingTimeout) // Ya no es necesario, manejado localmente con check de mounted
       if (maxLoadingTimeout) clearTimeout(maxLoadingTimeout)
       subscription?.subscription.unsubscribe()
     }
