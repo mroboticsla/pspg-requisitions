@@ -47,26 +47,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
 
+  const userRef = useRef<User | null>(null)
+
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
   useEffect(() => {
     let mounted = true
     let loadingTimeout: NodeJS.Timeout | null = null
     let maxLoadingTimeout: NodeJS.Timeout | null = null
 
-    const load = async () => {
+    const load = async (isBackground = false) => {
       try {
-        setLoading(true)
-        loadingRef.current = true
+        if (!isBackground) {
+          setLoading(true)
+          loadingRef.current = true
+        }
         
         if (process.env.NODE_ENV === 'development') {
-          console.debug('AuthProvider: Iniciando carga de datos del usuario')
+          console.debug(`AuthProvider: Iniciando carga de datos del usuario (background: ${isBackground})`)
         }
         
         // Timeout de seguridad para evitar que load() se quede colgado
         const timeoutPromise = new Promise<null>((resolve) => {
           loadingTimeout = setTimeout(() => {
-            console.warn('AuthProvider: load() timeout alcanzado después de 8s - posible problema de red')
+            console.warn('AuthProvider: load() timeout alcanzado después de 15s - posible problema de red')
             resolve(null)
-          }, 8000)
+          }, 15000)
         })
         
         const full = await Promise.race([
@@ -95,15 +103,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('AuthProvider: Error en load()', error)
         if (!mounted) return
-        setUser(null)
-        setProfile(null)
+        // Si falla en background, no necesariamente queremos limpiar el usuario inmediatamente
+        // a menos que sea un error crítico. Por seguridad, si no es background, limpiamos.
+        if (!isBackground) {
+          setUser(null)
+          setProfile(null)
+        }
       } finally {
         if (!mounted) return
         if (process.env.NODE_ENV === 'development') {
-          console.debug('AuthProvider: Finalizando carga, setLoading(false)')
+          console.debug('AuthProvider: Finalizando carga')
         }
-        setLoading(false)
-        loadingRef.current = false
+        if (!isBackground) {
+          setLoading(false)
+          loadingRef.current = false
+        }
         lastCheckTime.current = Date.now()
       }
     }
@@ -114,12 +128,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('AuthProvider: Timeout máximo alcanzado (10s), forzando loading = false')
         setLoading(false)
         loadingRef.current = false
-        setUser(null)
-        setProfile(null)
+        // Solo limpiar si realmente estábamos cargando (no background)
+        if (!userRef.current) {
+             setUser(null)
+             setProfile(null)
+        }
       }
     }, 10000)
 
-    load()
+    load(false) // Carga inicial bloqueante
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
@@ -136,8 +153,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-        await load()
+      if (event === 'TOKEN_REFRESHED') {
+        // Refresh en background para no bloquear la UI
+        await load(true)
+      } else if (event === 'INITIAL_SESSION') {
+        // Si ya tenemos usuario (usando ref para evitar closure stale), tratar como refresh en background
+        // Si no tenemos usuario (carga inicial real), bloquear
+        await load(!!userRef.current)
+      } else if (event === 'SIGNED_IN') {
+        // Login explícito: bloqueante, a menos que ya tengamos usuario (raro, pero posible)
+        await load(!!userRef.current) 
       }
     })
 
