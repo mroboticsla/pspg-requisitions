@@ -47,7 +47,7 @@ export default function JobsPage() {
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.company_snapshot?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (!job.metadata?.is_anonymous && job.company_snapshot?.name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
       job.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesType = selectedType === 'all' || job.employment_type === selectedType;
@@ -151,7 +151,7 @@ export default function JobsPage() {
                             </h3>
                             <div className="flex items-center text-gray-600 mb-2">
                               <Building className="h-5 w-5 mr-2 text-brand-accent" />
-                              <span className="font-medium">{job.company_snapshot?.name || 'Empresa Confidencial'}</span>
+                              <span className="font-medium">{job.metadata?.is_anonymous ? 'Empresa Confidencial' : (job.company_snapshot?.name || 'Empresa Confidencial')}</span>
                             </div>
                           </div>
                         </div>

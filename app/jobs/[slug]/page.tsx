@@ -85,6 +85,7 @@ export default function JobDetailsPage() {
 
   const isExpired = job.expiration_date ? new Date(job.expiration_date) < new Date() : false;
   const company = job.company_snapshot || {};
+  const isAnonymous = job.metadata?.is_anonymous;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
@@ -106,7 +107,7 @@ export default function JobDetailsPage() {
               <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 leading-tight">{job.title}</h1>
               <div className="flex items-center text-lg text-gray-600 mb-6">
                 <Building className="w-5 h-5 mr-2 text-brand-accent" />
-                <span className="font-medium">{job.company_snapshot?.name || 'Empresa Confidencial'}</span>
+                <span className="font-medium">{isAnonymous ? 'Empresa Confidencial' : (job.company_snapshot?.name || 'Empresa Confidencial')}</span>
               </div>
               
               <div className="flex flex-wrap gap-3">
@@ -255,7 +256,7 @@ export default function JobDetailsPage() {
               </div>
 
               {/* Company Details Card */}
-              {(company.website || company.phone || company.email || company.address) && (
+              {!isAnonymous && (company.website || company.phone || company.email || company.address) && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="p-6 border-b border-gray-100 bg-gray-50">
                     <h3 className="font-bold text-gray-900">Sobre la Empresa</h3>

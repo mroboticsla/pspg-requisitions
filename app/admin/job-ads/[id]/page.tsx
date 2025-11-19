@@ -40,6 +40,7 @@ export default function JobAdEditorPage() {
     phone: '',
     address: ''
   });
+  const [isAnonymous, setIsAnonymous] = useState(false);
   
   const [selectedRequisitions, setSelectedRequisitions] = useState<string[]>([]);
   const [availableRequisitions, setAvailableRequisitions] = useState<Requisition[]>([]);
@@ -106,6 +107,10 @@ export default function JobAdEditorPage() {
                 phone: ad.company_snapshot.phone || '',
                 address: ad.company_snapshot.address || ''
             });
+        }
+
+        if (ad.metadata?.is_anonymous) {
+            setIsAnonymous(true);
         }
 
         const assignments = await getJobAdAssignments(params.id);
@@ -241,7 +246,8 @@ export default function JobAdEditorPage() {
       const payload: any = {
         ...formData,
         company_snapshot: companySnapshot,
-        requisition_ids: selectedRequisitions
+        requisition_ids: selectedRequisitions,
+        metadata: { ...formData.metadata, is_anonymous: isAnonymous }
       };
 
       if (isNew) {
@@ -528,7 +534,20 @@ export default function JobAdEditorPage() {
                 <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
                   <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Información de la Empresa y Contacto</h2>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-100 rounded-admin">
+                    <input
+                      type="checkbox"
+                      id="isAnonymous"
+                      checked={isAnonymous}
+                      onChange={(e) => setIsAnonymous(e.target.checked)}
+                      className="w-4 h-4 text-admin-accent border-admin-border rounded focus:ring-admin-accent"
+                    />
+                    <label htmlFor="isAnonymous" className="text-sm font-medium text-blue-800 cursor-pointer select-none">
+                      Publicar como anónimo (Ocultar información de la empresa y contacto)
+                    </label>
+                  </div>
+
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-opacity ${isAnonymous ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-admin-text-secondary mb-1">Nombre de la Empresa (Visible en el anuncio)</label>
                       <div className="relative">
