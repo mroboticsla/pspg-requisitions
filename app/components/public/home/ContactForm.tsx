@@ -32,25 +32,44 @@ export const ContactForm: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simular envío del formulario
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-
-    // Reset form after 3 seconds
-    setTimeout(() => {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        subject: '',
-        message: '',
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          phone: phoneNumber // Usar el número formateado del PhoneInput
+        }),
       });
-      setPhoneCountry('MX|+52');
-      setPhoneNumber('');
-      setIsSubmitted(false);
-    }, 3000);
+
+      if (!response.ok) {
+        throw new Error('Error al enviar el formulario');
+      }
+
+      setIsSubmitted(true);
+
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          subject: '',
+          message: '',
+        });
+        setPhoneCountry('MX|+52');
+        setPhoneNumber('');
+        setIsSubmitted(false);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error enviando formulario:', error);
+      alert('Hubo un error al enviar tu mensaje. Por favor intenta nuevamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
