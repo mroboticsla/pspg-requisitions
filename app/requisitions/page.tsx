@@ -52,6 +52,14 @@ export default function MyRequisitionsPage() {
   
   const userRole = (profile as any)?.roles?.name || null;
 
+  const quickFilters: { label: string; value: RequisitionStatus | "" }[] = [
+    { label: "Todas", value: "" },
+    { label: "Enviadas", value: "submitted" },
+    { label: "En Revisión", value: "in_review" },
+    { label: "Aprobadas", value: "approved" },
+    { label: "Borradores", value: "draft" },
+  ];
+
   const companyOptions = useMemo(() => {
     return Object.entries(companyNames)
       .map(([id, name]) => ({ id, name }))
@@ -544,6 +552,23 @@ export default function MyRequisitionsPage() {
         </div>
       </div>
 
+      {/* Filtros Rápidos */}
+      <div className="flex flex-wrap gap-2">
+        {quickFilters.map((filter) => (
+          <button
+            key={filter.label}
+            onClick={() => setStatusFilter(filter.value)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              statusFilter === filter.value
+                ? "bg-brand-accent text-white shadow-sm"
+                : "bg-white border border-admin-border-DEFAULT text-admin-text-secondary hover:bg-surface-secondary"
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       <div className="bg-admin-bg-card rounded-lg shadow-sm border border-admin-border-DEFAULT p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
@@ -660,6 +685,12 @@ export default function MyRequisitionsPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ml-2 ${statusColors[req.status]}`}>
                           {statusLabels[req.status]}
                         </span>
+                        {req.status === 'submitted' && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-400 text-white border border-white">
+                            <span className="w-2 h-2 mr-1 bg-white rounded-full animate-pulse"></span>
+                            Nuevo
+                          </span>
+                        )}
                       </h3>
                       {req.departamento && <p className="text-sm text-admin-text-secondary mt-0.5">{highlightText(req.departamento)}</p>}
                       {req.motivo_puesto && (

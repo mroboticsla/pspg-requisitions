@@ -22,6 +22,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   const [loading, setLoading] = useState(true)
   const [hoverExpand, setHoverExpand] = useState(false)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const [submittedRequisitionsCount, setSubmittedRequisitionsCount] = useState(0)
 
   // Detectar rutas de autenticación
   const AUTH_PREFIXES = ['/auth', '/login', '/register', '/forgot-password', '/change-password']
@@ -60,28 +61,42 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   useEffect(() => {
     if (!user?.id) return
 
-    const fetchUnread = async () => {
-      const { count, error } = await supabase
+    const fetchCounts = async () => {
+      // Contact Requests (Nuevos)
+      const { count: contactCount, error: contactError } = await supabase
         .from('contact_requests')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'new')
       
-      if (!error && count !== null) {
-        setUnreadMessagesCount(count)
+      if (!contactError && contactCount !== null) {
+        setUnreadMessagesCount(contactCount)
+      }
+
+      // Requisitions (Enviadas)
+      const { count: reqCount, error: reqError } = await supabase
+        .from('requisitions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'submitted')
+      
+      if (!reqError && reqCount !== null) {
+        setSubmittedRequisitionsCount(reqCount)
       }
     }
 
-    fetchUnread()
+    fetchCounts()
 
     // Suscripción realtime para actualizar el badge
     const channel = supabase
-      .channel('contact_requests_badge')
+      .channel('sidebar_badges')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'contact_requests' },
-        () => {
-          fetchUnread()
-        }
+        () => fetchCounts()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requisitions' },
+        () => fetchCounts()
       )
       .subscribe()
 
@@ -165,7 +180,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
               collapsed={!expanded} 
               title={item.label} 
               icon={item.icon}
-              badge={item.id === 'contact-requests' ? unreadMessagesCount : undefined}
+              badge={item.id === 'contact-requests' ? unreadMessagesCount : (item.id === 'req-mine' ? submittedRequisitionsCount : undefined)}
             >
               {item.label}
             </SideLink>
@@ -187,7 +202,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                     collapsed={false} 
                     title={ch.label} 
                     icon={ch.icon}
-                    badge={ch.id === 'contact-requests' ? unreadMessagesCount : undefined}
+                    badge={ch.id === 'contact-requests' ? unreadMessagesCount : (ch.id === 'req-mine' ? submittedRequisitionsCount : undefined)}
                   >
                     {ch.label}
                   </SideLink>
@@ -203,7 +218,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                     collapsed={true} 
                     title={ch.label} 
                     icon={ch.icon}
-                    badge={ch.id === 'contact-requests' ? unreadMessagesCount : undefined}
+                    badge={ch.id === 'contact-requests' ? unreadMessagesCount : (ch.id === 'req-mine' ? submittedRequisitionsCount : undefined)}
                   >
                     {ch.label}
                   </SideLink>

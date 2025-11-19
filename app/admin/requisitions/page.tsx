@@ -44,6 +44,14 @@ export default function AdminRequisitionsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<RequisitionStatus | ''>('');
 
+  const quickFilters: { label: string; value: RequisitionStatus | "" }[] = [
+    { label: "Todas", value: "" },
+    { label: "Enviadas", value: "submitted" },
+    { label: "En Revisión", value: "in_review" },
+    { label: "Aprobadas", value: "approved" },
+    { label: "Borradores", value: "draft" },
+  ];
+
   const filteredRequisitions = useMemo(() => {
     return requisitions.filter((req) => {
       const matchesStatus = !statusFilter || req.status === statusFilter;
@@ -207,6 +215,23 @@ export default function AdminRequisitionsPage() {
               </button>
             )}
           </div>
+
+          {/* Filtros Rápidos */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {quickFilters.map((filter) => (
+              <button
+                key={filter.label}
+                onClick={() => setStatusFilter(filter.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  statusFilter === filter.value
+                    ? "bg-brand-accent text-white shadow-sm"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -315,6 +340,12 @@ export default function AdminRequisitionsPage() {
                       >
                         {statusLabels[req.status]}
                       </span>
+                      {req.status === 'submitted' && (
+                        <span className="flex-shrink-0 px-2 py-0.5 inline-flex text-[10px] font-medium rounded-full bg-blue-100 text-blue-800 border border-blue-200 items-center">
+                          <span className="w-1.5 h-1.5 mr-1 bg-blue-600 rounded-full animate-pulse"></span>
+                          Nueva
+                        </span>
+                      )}
                     </div>
                     
                     {/* Info condensada en una línea */}
@@ -344,7 +375,7 @@ export default function AdminRequisitionsPage() {
                   {/* Desktop: Layout horizontal tipo tabla */}
                   <div className="hidden lg:flex lg:items-center lg:gap-4">
                     {/* Columna 1: Estado */}
-                    <div className="w-24 flex-shrink-0">
+                    <div className="w-24 flex-shrink-0 flex flex-col items-start gap-1">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                           statusColors[req.status]
@@ -352,6 +383,12 @@ export default function AdminRequisitionsPage() {
                       >
                         {statusLabels[req.status]}
                       </span>
+                      {req.status === 'submitted' && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                          <span className="w-1.5 h-1.5 mr-1 bg-blue-600 rounded-full animate-pulse"></span>
+                          Nueva
+                        </span>
+                      )}
                     </div>
 
                     {/* Columna 2: Puesto */}
