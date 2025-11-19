@@ -10,6 +10,7 @@ import type { CreateJobAdDTO, JobAdCustomField } from '@/lib/types/job-ads';
 import type { Requisition } from '@/lib/types/requisitions';
 import { ArrowLeft, Save, Plus, Trash2, Wand2 } from 'lucide-react';
 import { RequireRoleClient } from '@/app/components/RequireRole';
+import RichTextEditor from '@/app/components/RichTextEditor';
 
 export default function JobAdEditorPage() {
   const router = useRouter();
@@ -274,11 +275,9 @@ export default function JobAdEditorPage() {
 
               <div>
                 <label className="block text-sm font-medium text-admin-text-secondary mb-1">Descripción Completa</label>
-                <textarea
+                <RichTextEditor
                   value={formData.description || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={6}
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                  onChange={value => setFormData(prev => ({ ...prev, description: value }))}
                 />
               </div>
             </div>
