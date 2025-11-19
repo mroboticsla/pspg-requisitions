@@ -7,6 +7,7 @@ import { Pin, PinOff } from 'lucide-react'
 import { MENU, filterMenu, Role, MenuItem } from './menuConfig'
 import getCurrentUserRole from '@/lib/getCurrentUserRole'
 import { useAuth } from '../../providers/AuthProvider'
+import { supabase } from '@/lib/supabaseClient'
 
 type SidebarProps = {
   className?: string
@@ -20,6 +21,7 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   const [role, setRole] = useState<Role | null>(null)
   const [loading, setLoading] = useState(true)
   const [hoverExpand, setHoverExpand] = useState(false)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
 
   // Detectar rutas de autenticación
   const AUTH_PREFIXES = ['/auth', '/login', '/register', '/forgot-password', '/change-password']
@@ -52,6 +54,40 @@ export default function Sidebar({ className = '' }: SidebarProps) {
         .finally(() => { if (mounted) setLoading(false) })
     }
     return () => { mounted = false }
+  }, [user?.id])
+
+  // Cargar conteo de mensajes no leídos
+  useEffect(() => {
+    if (!user?.id) return
+
+    const fetchUnread = async () => {
+      const { count, error } = await supabase
+        .from('contact_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'new')
+      
+      if (!error && count !== null) {
+        setUnreadMessagesCount(count)
+      }
+    }
+
+    fetchUnread()
+
+    // Suscripción realtime para actualizar el badge
+    const channel = supabase
+      .channel('contact_requests_badge')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'contact_requests' },
+        () => {
+          fetchUnread()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [user?.id])
 
   useEffect(() => {
@@ -123,7 +159,14 @@ export default function Sidebar({ className = '' }: SidebarProps) {
       {items.map(item => (
         <div key={item.id}>
           {item.path ? (
-            <SideLink href={item.path} active={pathname?.startsWith(item.path)} collapsed={!expanded} title={item.label} icon={item.icon}>
+            <SideLink 
+              href={item.path} 
+              active={pathname?.startsWith(item.path)} 
+              collapsed={!expanded} 
+              title={item.label} 
+              icon={item.icon}
+              badge={item.id === 'contact-requests' ? unreadMessagesCount : undefined}
+            >
               {item.label}
             </SideLink>
           ) : (
@@ -137,7 +180,15 @@ export default function Sidebar({ className = '' }: SidebarProps) {
             expanded ? (
               <div className={`ml-2 space-y-1`}>
                 {item.children.map(ch => (
-                  <SideLink key={ch.id} href={ch.path!} active={pathname === ch.path} collapsed={false} title={ch.label} icon={ch.icon}>
+                  <SideLink 
+                    key={ch.id} 
+                    href={ch.path!} 
+                    active={pathname === ch.path} 
+                    collapsed={false} 
+                    title={ch.label} 
+                    icon={ch.icon}
+                    badge={ch.id === 'contact-requests' ? unreadMessagesCount : undefined}
+                  >
                     {ch.label}
                   </SideLink>
                 ))}
@@ -145,7 +196,15 @@ export default function Sidebar({ className = '' }: SidebarProps) {
             ) : (
               <div className="space-y-1">
                 {item.children.map(ch => (
-                  <SideLink key={ch.id} href={ch.path!} active={pathname === ch.path} collapsed={true} title={ch.label} icon={ch.icon}>
+                  <SideLink 
+                    key={ch.id} 
+                    href={ch.path!} 
+                    active={pathname === ch.path} 
+                    collapsed={true} 
+                    title={ch.label} 
+                    icon={ch.icon}
+                    badge={ch.id === 'contact-requests' ? unreadMessagesCount : undefined}
+                  >
                     {ch.label}
                   </SideLink>
                 ))}
@@ -218,19 +277,35 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   )
 }
 
-function SideLink({ href, children, active, collapsed, title, icon: Icon }: { href: string, children: React.ReactNode, active?: boolean, collapsed: boolean, title?: string, icon?: React.ComponentType<React.SVGProps<SVGSVGElement>> }) {
+function SideLink({ href, children, active, collapsed, title, icon: Icon, badge }: { href: string, children: React.ReactNode, active?: boolean, collapsed: boolean, title?: string, icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>, badge?: number }) {
   return (
     <Link
       href={href}
       title={collapsed ? title : undefined}
       className={
-        `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+        `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors relative ${
           active ? 'bg-brand-accent/10 text-brand-dark' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
         } ${collapsed ? 'justify-center' : ''}`
       }
     >
-      {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
-      {!collapsed && <span className="truncate">{children}</span>}
+      <div className="relative flex items-center justify-center">
+        {Icon && <Icon className="w-5 h-5 flex-shrink-0" />}
+        {collapsed && badge !== undefined && badge > 0 && (
+           <span className="absolute -top-2 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+             {badge > 99 ? '99+' : badge}
+           </span>
+        )}
+      </div>
+      {!collapsed && (
+        <div className="flex flex-1 items-center justify-between truncate w-full">
+          <span>{children}</span>
+          {badge !== undefined && badge > 0 && (
+            <span className="ml-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+        </div>
+      )}
     </Link>
   )
 }
