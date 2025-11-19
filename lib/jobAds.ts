@@ -84,10 +84,20 @@ export async function deleteJobAd(id: string): Promise<void> {
   if (error) throw new Error(`Error deleting job ad: ${error.message}`);
 }
 
-export async function getJobAds(filters?: { status?: string; company_id?: string; search?: string }): Promise<JobAd[]> {
+export type JobAdsFilter = {
+  status?: string;
+  company_id?: string;
+  search?: string;
+  location?: string;
+  employment_type?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function getJobAds(filters?: JobAdsFilter): Promise<{ data: JobAd[], count: number }> {
   let query = supabase
     .from('job_ads')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false });
 
   if (filters?.status) query = query.eq('status', filters.status);
@@ -96,9 +106,49 @@ export async function getJobAds(filters?: { status?: string; company_id?: string
       query = query.ilike('title', `%${filters.search}%`);
   }
 
-  const { data, error } = await query;
+  if (filters?.page && filters?.pageSize) {
+    const from = (filters.page - 1) * filters.pageSize;
+    const to = from + filters.pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  const { data, error, count } = await query;
   if (error) throw new Error(`Error fetching job ads: ${error.message}`);
-  return data || [];
+  return { data: data || [], count: count || 0 };
+}
+
+export async function getPublicJobAds(filters: JobAdsFilter = {}): Promise<{ data: JobAd[], count: number }> {
+  const page = filters.page || 1;
+  const pageSize = filters.pageSize || 10;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from('job_ads')
+    .select('*', { count: 'exact' })
+    .eq('status', 'published')
+    .gte('expiration_date', new Date().toISOString())
+    .order('created_at', { ascending: false });
+
+  if (filters.search) {
+    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+  }
+
+  if (filters.location && filters.location !== 'all') {
+    query = query.ilike('location', `%${filters.location}%`);
+  }
+
+  if (filters.employment_type && filters.employment_type !== 'all') {
+    query = query.eq('employment_type', filters.employment_type);
+  }
+
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+  
+  if (error) throw new Error(`Error fetching public job ads: ${error.message}`);
+  
+  return { data: data || [], count: count || 0 };
 }
 
 export async function getJobAdById(id: string): Promise<JobAd | null> {

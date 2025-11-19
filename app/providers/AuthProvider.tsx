@@ -94,8 +94,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (process.env.NODE_ENV === 'development') {
             console.debug('AuthProvider: No hay datos de usuario, limpiando estado')
           }
-          setUser(null)
-          setProfile(null)
+          // MODIFICADO: Si es background check, NO limpiar estado para evitar UX disruptiva
+          if (!isBackground) {
+            setUser(null)
+            setProfile(null)
+          } else {
+            console.warn('AuthProvider: Background check falló en load() - manteniendo sesión local')
+          }
         } else {
           if (process.env.NODE_ENV === 'development') {
             console.debug('AuthProvider: Datos de usuario cargados correctamente')
@@ -200,9 +205,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (!full) {
             // Solo si explícitamente falló la validación, cerramos sesión
-            console.warn('AuthProvider: Sesión inválida detectada en background check')
-            setUser(null)
-            setProfile(null)
+            // MODIFICADO: Si falla el background check, NO cerramos sesión inmediatamente.
+            // Si fue un error de auth real (token inválido), getFullUserData ya llamó a signOut()
+            // y el evento SIGNED_OUT se encargará de limpiar el estado.
+            // Si fue un error de red, mantenemos el estado local para evitar UX disruptiva.
+            console.warn('AuthProvider: Background check falló o retornó null - manteniendo sesión local por resiliencia')
           } else {
             // Actualizar datos silenciosamente
             const u = { id: (full as any).id, email: (full as any).email }
