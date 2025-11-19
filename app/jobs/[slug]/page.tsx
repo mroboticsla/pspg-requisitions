@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PublicNavbar } from '../../components/public/layout/PublicNavbar';
 import { PublicFooter } from '../../components/public/layout/PublicFooter';
-import { MapPin, Briefcase, DollarSign, Clock, Building, ArrowLeft, CheckCircle2, Calendar, Share2, Timer, Globe } from 'lucide-react';
+import { MapPin, Briefcase, DollarSign, Clock, Building, ArrowLeft, CheckCircle2, Calendar, Share2, Timer, Globe, Phone, Mail, ExternalLink } from 'lucide-react';
 import { useToast } from '@/lib/useToast';
 import { getJobAdBySlug } from '@/lib/jobAds';
 import type { JobAd } from '@/lib/types/job-ads';
@@ -84,6 +84,7 @@ export default function JobDetailsPage() {
   }
 
   const isExpired = job.expiration_date ? new Date(job.expiration_date) < new Date() : false;
+  const company = job.company_snapshot || {};
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-sans">
@@ -203,7 +204,7 @@ export default function JobDetailsPage() {
             {/* Right Column: Sidebar */}
             <div className="space-y-6">
               {/* Job Details Card */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-12">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden sticky top-12 z-10">
                 <div className="p-6 border-b border-gray-100 bg-gray-50">
                   <h3 className="font-bold text-gray-900">Detalles de la Vacante</h3>
                 </div>
@@ -230,7 +231,7 @@ export default function JobDetailsPage() {
                   )}
 
                   <div className="flex items-start">
-                    <Globe className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                    <MapPin className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-gray-500">Ubicación</p>
                       <p className="text-gray-900">{job.location || 'No especificada'}</p>
@@ -252,6 +253,62 @@ export default function JobDetailsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Company Details Card */}
+              {(company.website || company.phone || company.email || company.address) && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="p-6 border-b border-gray-100 bg-gray-50">
+                    <h3 className="font-bold text-gray-900">Sobre la Empresa</h3>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    {company.name && (
+                      <div className="font-medium text-lg text-gray-900 mb-2">{company.name}</div>
+                    )}
+                    
+                    {company.website && (
+                      <div className="flex items-start">
+                        <Globe className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Sitio Web</p>
+                          <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noopener noreferrer" className="text-brand-accent hover:underline flex items-center gap-1 break-all">
+                            Visitar sitio <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {company.email && (
+                      <div className="flex items-start">
+                        <Mail className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Contacto</p>
+                          <a href={`mailto:${company.email}`} className="text-gray-900 hover:text-brand-accent transition-colors break-all">{company.email}</a>
+                        </div>
+                      </div>
+                    )}
+
+                    {company.phone && (
+                      <div className="flex items-start">
+                        <Phone className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Teléfono</p>
+                          <p className="text-gray-900">{company.phone}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {company.address && (
+                      <div className="flex items-start">
+                        <Building className="w-5 h-5 text-gray-400 mr-3 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Dirección</p>
+                          <p className="text-gray-900">{company.address}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

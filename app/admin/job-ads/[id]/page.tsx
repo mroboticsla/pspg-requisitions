@@ -8,9 +8,10 @@ import { listRequisitions } from '@/lib/requisitions';
 import { supabase } from '@/lib/supabaseClient';
 import type { CreateJobAdDTO, JobAdCustomField } from '@/lib/types/job-ads';
 import type { Requisition } from '@/lib/types/requisitions';
-import { ArrowLeft, Save, Plus, Trash2, Wand2, Search, Building, Globe, Mail, Phone, MapPin, CheckCircle2, ArrowRight, Filter } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Wand2, Search, Building, Globe, Mail, Phone, MapPin, CheckCircle2, ArrowRight, Filter, X, Eye, Archive, FileText, MoreVertical, AlertTriangle } from 'lucide-react';
 import { RequireRoleClient } from '@/app/components/RequireRole';
 import RichTextEditor from '@/app/components/RichTextEditor';
+import { deleteJobAd } from '@/lib/jobAds';
 
 export default function JobAdEditorPage() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function JobAdEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(1); // 1: Select Requisitions, 2: Edit Details
+  const [showReqModal, setShowReqModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Form State
   const [formData, setFormData] = useState<Partial<CreateJobAdDTO>>({
@@ -213,6 +216,10 @@ export default function JobAdEditorPage() {
         throw new Error('Por favor complete los campos obligatorios (Título, Slug, Empresa, Expiración)');
       }
 
+      if (selectedRequisitions.length === 0) {
+        throw new Error('Debe vincular al menos una requisición aprobada al anuncio');
+      }
+
       // Prepare company snapshot with overrides
       let companySnapshot = formData.company_snapshot || {};
       
@@ -252,6 +259,33 @@ export default function JobAdEditorPage() {
       setSaving(false);
     }
   }
+
+  async function handleDelete() {
+    try {
+      setSaving(true);
+      if (typeof params.id === 'string') {
+        await deleteJobAd(params.id);
+        success('Anuncio eliminado exitosamente');
+        router.push('/admin/job-ads');
+      }
+    } catch (err: any) {
+      error(err.message);
+      setSaving(false);
+    }
+  }
+
+  const handleQuickAction = (action: string) => {
+    if (action === 'delete') {
+      setShowDeleteConfirm(true);
+    } else if (action === 'publish') {
+      setFormData(prev => ({ ...prev, status: 'published' }));
+      // Optionally save immediately
+    } else if (action === 'draft') {
+      setFormData(prev => ({ ...prev, status: 'draft' }));
+    } else if (action === 'archive') {
+      setFormData(prev => ({ ...prev, status: 'archived' }));
+    }
+  };
 
   return (
     <RequireRoleClient allow={['admin', 'superadmin']} redirectTo="/admin/login">
@@ -367,7 +401,7 @@ export default function JobAdEditorPage() {
         {/* Step 2: Edit Details (Existing Form) */}
         {step === 2 && (
           <>
-            <div className="flex items-center justify-between">
+            <div className="sticky top-0 z-20 bg-admin-bg-page/95 backdrop-blur py-4 border-b border-admin-border mb-6 -mx-6 px-6 flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => isNew ? setStep(1) : router.back()} 
@@ -379,19 +413,60 @@ export default function JobAdEditorPage() {
                   <h1 className="text-2xl font-bold text-admin-text-primary">
                     {isNew ? 'Detalles del Anuncio' : 'Editar Anuncio'}
                   </h1>
-                  <p className="text-admin-text-secondary text-sm">
-                    {isNew ? 'Completa la información para publicar' : 'Modifica los detalles de la oferta'}
-                  </p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      formData.status === 'published' ? 'bg-green-100 text-green-800' :
+                      formData.status === 'draft' ? 'bg-gray-100 text-gray-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {formData.status === 'published' ? 'Publicado' :
+                       formData.status === 'draft' ? 'Borrador' : 'Archivado'}
+                    </span>
+                    <span className="text-admin-text-secondary">
+                      {isNew ? 'Crea una nueva oferta de empleo' : 'Modifica los detalles de la oferta'}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-2 px-6 py-2 bg-admin-accent text-white rounded-admin hover:bg-admin-accentHover disabled:opacity-50 transition-colors shadow-sm"
-              >
-                <Save className="w-4 h-4" />
-                {saving ? 'Guardando...' : 'Guardar'}
-              </button>
+              <div className="flex items-center gap-3">
+                {!isNew && (
+                  <div className="flex items-center gap-2 mr-2">
+                    {formData.status !== 'published' && (
+                      <button
+                        onClick={() => handleQuickAction('publish')}
+                        className="p-2 text-admin-text-secondary hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                        title="Publicar"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </button>
+                    )}
+                    {formData.status !== 'draft' && (
+                      <button
+                        onClick={() => handleQuickAction('draft')}
+                        className="p-2 text-admin-text-secondary hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                        title="Convertir a Borrador"
+                      >
+                        <FileText className="w-5 h-5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleQuickAction('delete')}
+                      className="p-2 text-admin-text-secondary hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2 bg-admin-accent text-white rounded-admin hover:bg-admin-accentHover disabled:opacity-50 transition-colors shadow-sm"
+                >
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -661,35 +736,149 @@ export default function JobAdEditorPage() {
 
                 {/* Requisitions */}
                 <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
-                  <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Vincular Requisiciones</h2>
-                  <p className="text-xs text-admin-text-muted">Selecciona las requisiciones aprobadas que originan este anuncio.</p>
+                  <div className="flex items-center justify-between border-b border-admin-border pb-2">
+                    <h2 className="text-lg font-semibold text-admin-text-primary">Requisiciones</h2>
+                    <button
+                      onClick={() => setShowReqModal(true)}
+                      className="text-sm text-admin-accent hover:text-admin-accentHover font-medium transition-colors"
+                    >
+                      Gestionar
+                    </button>
+                  </div>
+                  <p className="text-xs text-admin-text-muted">Requisiciones aprobadas vinculadas a este anuncio.</p>
                   
-                  <div className="max-h-60 overflow-y-auto space-y-2 border border-admin-border rounded-admin p-2 bg-admin-bg-page">
-                    {availableRequisitions.length === 0 ? (
-                      <p className="text-sm text-admin-text-muted text-center py-2">No hay requisiciones aprobadas disponibles.</p>
+                  <div className="space-y-2">
+                    {selectedRequisitions.length === 0 ? (
+                      <div className="p-3 bg-red-50 border border-red-100 rounded-admin text-sm text-red-600 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>Debe vincular al menos una requisición.</span>
+                      </div>
                     ) : (
-                      availableRequisitions.map(req => (
-                        <label key={req.id} className="flex items-start gap-2 p-2 hover:bg-white rounded-admin cursor-pointer transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={selectedRequisitions.includes(req.id)}
-                            onChange={() => handleRequisitionToggle(req.id, req.company_id)}
-                            className="mt-1 rounded border-admin-border text-admin-accent focus:ring-admin-accent"
-                          />
-                          <div className="text-sm">
+                      selectedRequisitions.map(reqId => {
+                        const req = availableRequisitions.find(r => r.id === reqId);
+                        if (!req) return null;
+                        return (
+                          <div key={reqId} className="p-3 bg-admin-bg-page border border-admin-border rounded-admin text-sm">
                             <div className="font-medium text-admin-text-primary">{req.puesto_requerido}</div>
-                            <div className="text-xs text-admin-text-muted">
-                              {companies[req.company_id]?.name || 'Empresa desconocida'} • {new Date(req.created_at).toLocaleDateString()}
+                            <div className="text-xs text-admin-text-muted mt-1">
+                              {companies[req.company_id]?.name} • {new Date(req.created_at).toLocaleDateString()}
                             </div>
                           </div>
-                        </label>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
               </div>
             </div>
           </>
+        )}
+
+        {/* Requisition Selection Modal */}
+        {showReqModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-admin shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+              <div className="p-4 border-b border-admin-border flex items-center justify-between">
+                <h3 className="text-lg font-bold text-admin-text-primary">Gestionar Requisiciones</h3>
+                <button onClick={() => setShowReqModal(false)} className="text-admin-text-secondary hover:text-admin-text-primary">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="p-4 border-b border-admin-border bg-admin-bg-page">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-text-muted" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por puesto o empresa..."
+                    value={reqSearchTerm}
+                    onChange={(e) => setReqSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 rounded-admin border border-admin-border focus:outline-none focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {filteredRequisitions.map(req => {
+                  const isSelected = selectedRequisitions.includes(req.id);
+                  const company = companies[req.company_id];
+                  return (
+                    <div 
+                      key={req.id}
+                      onClick={() => handleRequisitionToggle(req.id, req.company_id)}
+                      className={`relative p-3 rounded-admin border cursor-pointer transition-all hover:shadow-sm ${
+                        isSelected 
+                          ? 'bg-admin-accent/5 border-admin-accent ring-1 ring-admin-accent' 
+                          : 'bg-white border-admin-border hover:border-admin-accent/50'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                            isSelected ? 'bg-admin-accent border-admin-accent text-white' : 'border-admin-text-muted bg-white'
+                          }`}>
+                            {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                          </div>
+                          <div>
+                            <div className="font-medium text-admin-text-primary">{req.puesto_requerido}</div>
+                            <div className="text-xs text-admin-text-muted">
+                              {company?.name} • {req.departamento}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Aprobada</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="p-4 border-t border-admin-border bg-admin-bg-page flex justify-end gap-3">
+                <button
+                  onClick={() => setShowReqModal(false)}
+                  className="px-4 py-2 text-admin-text-secondary hover:text-admin-text-primary transition-colors"
+                >
+                  Cerrar
+                </button>
+                <button
+                  onClick={() => setShowReqModal(false)}
+                  disabled={selectedRequisitions.length === 0}
+                  className="px-4 py-2 bg-admin-accent text-white rounded-admin hover:bg-admin-accentHover disabled:opacity-50 transition-colors"
+                >
+                  Confirmar Selección ({selectedRequisitions.length})
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-admin shadow-xl w-full max-w-md p-6">
+              <div className="flex items-center gap-3 text-red-600 mb-4">
+                <AlertTriangle className="w-8 h-8" />
+                <h3 className="text-lg font-bold">Eliminar Anuncio</h3>
+              </div>
+              <p className="text-admin-text-secondary mb-6">
+                ¿Estás seguro de que deseas eliminar este anuncio? Esta acción no se puede deshacer.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-admin-text-secondary hover:text-admin-text-primary transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 bg-red-600 text-white rounded-admin hover:bg-red-700 transition-colors"
+                >
+                  Eliminar Definitivamente
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </RequireRoleClient>

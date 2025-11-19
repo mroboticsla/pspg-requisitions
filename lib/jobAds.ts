@@ -68,6 +68,22 @@ export async function updateJobAd(id: string, data: UpdateJobAdDTO): Promise<Job
   return jobAd;
 }
 
+export async function deleteJobAd(id: string): Promise<void> {
+  // First delete assignments
+  await supabase
+    .from('job_ad_requisition_assignments')
+    .delete()
+    .eq('job_ad_id', id);
+
+  // Then delete the ad
+  const { error } = await supabase
+    .from('job_ads')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(`Error deleting job ad: ${error.message}`);
+}
+
 export async function getJobAds(filters?: { status?: string; company_id?: string; search?: string }): Promise<JobAd[]> {
   let query = supabase
     .from('job_ads')
