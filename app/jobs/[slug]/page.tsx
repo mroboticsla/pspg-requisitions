@@ -6,7 +6,7 @@ import { PublicNavbar } from '../../components/public/layout/PublicNavbar';
 import { PublicFooter } from '../../components/public/layout/PublicFooter';
 import { MapPin, Briefcase, DollarSign, Clock, Building, ArrowLeft, CheckCircle2, Calendar, Share2, Timer, Globe, Phone, Mail, ExternalLink } from 'lucide-react';
 import { useToast } from '@/lib/useToast';
-import { getJobAdBySlug } from '@/lib/jobAds';
+import { getJobAdBySlug, incrementJobAdView, incrementJobAdApplication } from '@/lib/jobAds';
 import type { JobAd } from '@/lib/types/job-ads';
 
 export default function JobDetailsPage() {
@@ -15,6 +15,7 @@ export default function JobDetailsPage() {
   const { success } = useToast();
   const [job, setJob] = useState<JobAd | null>(null);
   const [loading, setLoading] = useState(true);
+  const viewIncremented = React.useRef(false);
 
   useEffect(() => {
     if (params.slug) {
@@ -27,12 +28,22 @@ export default function JobDetailsPage() {
       setLoading(true);
       const data = await getJobAdBySlug(slug);
       setJob(data);
+      if (data && !viewIncremented.current) {
+        viewIncremented.current = true;
+        incrementJobAdView(data.id);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
   }
+
+  const handleApply = async () => {
+    if (!job) return;
+    incrementJobAdApplication(job.id);
+    router.push('/contact');
+  };
 
   const handleShare = async () => {
     if (!job) return;
@@ -141,7 +152,7 @@ export default function JobDetailsPage() {
                 Compartir
               </button>
               <button 
-                onClick={() => router.push('/contact')}
+                onClick={handleApply}
                 disabled={isExpired}
                 className={`inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-sm font-bold rounded-lg text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent transition-all transform hover:-translate-y-0.5 ${
                   isExpired 
@@ -241,7 +252,7 @@ export default function JobDetailsPage() {
 
                   <div className="pt-6 mt-2">
                     <button 
-                      onClick={() => router.push('/contact')}
+                      onClick={handleApply}
                       disabled={isExpired}
                       className={`w-full py-3 px-4 rounded-lg font-bold text-white shadow-lg transition-all transform hover:-translate-y-0.5 ${
                         isExpired 
@@ -319,7 +330,7 @@ export default function JobDetailsPage() {
       {/* Mobile Sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:hidden z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
         <button 
-          onClick={() => router.push('/contact')}
+          onClick={handleApply}
           disabled={isExpired}
           className={`w-full py-3 rounded-lg font-bold text-white shadow-md ${
             isExpired ? 'bg-gray-400' : 'bg-brand-accent'

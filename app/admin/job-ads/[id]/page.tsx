@@ -12,6 +12,7 @@ import { ArrowLeft, Save, Plus, Trash2, Wand2, Search, Building, Globe, Mail, Ph
 import { RequireRoleClient } from '@/app/components/RequireRole';
 import RichTextEditor from '@/app/components/RichTextEditor';
 import { deleteJobAd } from '@/lib/jobAds';
+import { JobAdActivityChart } from '@/app/components/charts/JobAdActivityChart';
 
 export default function JobAdEditorPage() {
   const router = useRouter();
@@ -443,27 +444,30 @@ export default function JobAdEditorPage() {
                     {formData.status !== 'published' && (
                       <button
                         onClick={() => handleQuickAction('publish')}
-                        className="p-2 text-admin-text-secondary hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
-                        title="Publicar"
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-md transition-colors"
+                        title="Publicar Anuncio"
                       >
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-4 h-4" />
+                        Publicar
                       </button>
                     )}
                     {formData.status !== 'draft' && (
                       <button
                         onClick={() => handleQuickAction('draft')}
-                        className="p-2 text-admin-text-secondary hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
                         title="Convertir a Borrador"
                       >
-                        <FileText className="w-5 h-5" />
+                        <FileText className="w-4 h-4" />
+                        Borrador
                       </button>
                     )}
                     <button
                       onClick={() => handleQuickAction('delete')}
-                      className="p-2 text-admin-text-secondary hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                      title="Eliminar"
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-md transition-colors"
+                      title="Eliminar Anuncio"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar
                     </button>
                   </div>
                 )}
@@ -484,6 +488,12 @@ export default function JobAdEditorPage() {
                 {/* Basic Info */}
                 <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
                   <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Información Básica</h2>
+                  
+                  {!isNew && (
+                    <div className="mb-6">
+                      <JobAdActivityChart jobAdId={params.id as string} />
+                    </div>
+                  )}
                   
                   <div>
                     <label className="block text-sm font-medium text-admin-text-secondary mb-1">Título del Puesto</label>

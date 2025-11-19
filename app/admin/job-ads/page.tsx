@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { 
   Plus, Search, Megaphone, MapPin, Building2, Calendar, 
   Filter, FileText, Eye, CheckCircle, Archive, Clock, AlertCircle,
-  Briefcase, ChevronLeft, ChevronRight
+  Briefcase, ChevronLeft, ChevronRight, Users, BarChart3
 } from 'lucide-react';
-import { getJobAds } from '@/lib/jobAds';
+import { getJobAds, getJobAdStats } from '@/lib/jobAds';
 import type { JobAd, JobAdStatus } from '@/lib/types/job-ads';
 import { useToast } from '@/lib/useToast';
 import { RequireRoleClient } from '@/app/components/RequireRole';
@@ -75,22 +75,30 @@ export default function JobAdsPage() {
   const [stats, setStats] = useState({
     total: 0,
     published: 0,
-    drafts: 0,
-    archived: 0,
-    expiringSoon: 0
+    drafts: 0, // Not used in new requirements but kept for compatibility if needed
+    archived: 0, // Not used in new requirements but kept for compatibility if needed
+    expiringSoon: 0,
+    expired: 0
   });
 
   useEffect(() => {
-    // Fetch stats separately (could be optimized with an RPC)
-    // For now, we can't easily get these counts without multiple queries or an RPC.
-    // I'll skip implementing full stats fetching to save time/complexity unless requested.
-    // I'll just use the totalCount from the main query for "Total".
-    // And maybe I can do a quick count for others if needed, but it's heavy.
-    // Let's just show 0 or placeholders for now, or remove the cards that depend on full data.
-    // Actually, the user didn't ask to remove features.
-    // I'll leave the stats static or simple for now.
-    setStats(prev => ({ ...prev, total: totalCount }));
-  }, [totalCount]);
+    loadStats();
+  }, []);
+
+  async function loadStats() {
+    try {
+      const data = await getJobAdStats();
+      setStats(prev => ({
+        ...prev,
+        total: data.total,
+        published: data.published,
+        expiringSoon: data.expiringSoon,
+        expired: data.expired
+      }));
+    } catch (err) {
+      console.error('Error loading stats:', err);
+    }
+  }
 
   const quickFilters: { label: string; value: JobAdStatus | "" }[] = [
     { label: "Todos", value: "" },
@@ -119,15 +127,32 @@ export default function JobAdsPage() {
           </button>
         </div>
 
-        {/* Stats Cards - Simplified */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
             title="Total Anuncios"
-            value={totalCount}
+            value={stats.total}
             icon={<Briefcase className="w-6 h-6" />}
             variant="dark"
           />
-          {/* Other cards are placeholders as we don't have full data */}
+          <KPICard
+            title="Publicados"
+            value={stats.published}
+            icon={<CheckCircle className="w-6 h-6" />}
+            variant="green"
+          />
+          <KPICard
+            title="Por Vencer (7 días)"
+            value={stats.expiringSoon}
+            icon={<Clock className="w-6 h-6" />}
+            variant="warning"
+          />
+          <KPICard
+            title="Vencidos"
+            value={stats.expired}
+            icon={<AlertCircle className="w-6 h-6" />}
+            variant="red"
+          />
         </div>
 
         {/* Filters */}
@@ -206,8 +231,8 @@ export default function JobAdsPage() {
             {/* Desktop Table Header */}
             <div className="hidden lg:grid lg:grid-cols-12 gap-4 bg-gray-50 px-6 py-3 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
               <div className="col-span-4">Anuncio / Empresa</div>
-              <div className="col-span-2">Ubicación</div>
               <div className="col-span-2">Estado</div>
+              <div className="col-span-2">Métricas</div>
               <div className="col-span-2">Expiración</div>
               <div className="col-span-2 text-right">Acciones</div>
             </div>
@@ -235,8 +260,12 @@ export default function JobAdsPage() {
                     
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        <span>{ad.location || 'Sin ubicación'}</span>
+                        <Eye className="w-3 h-3" />
+                        <span>{ad.views_count || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        <span>{ad.applications_count || 0}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -268,15 +297,21 @@ export default function JobAdsPage() {
                       </div>
                     </div>
 
-                    <div className="col-span-2 text-sm text-gray-600 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {ad.location || 'Sin ubicación'}
-                    </div>
-
                     <div className="col-span-2">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[ad.status]}`}>
                         {statusLabels[ad.status]}
                       </span>
+                    </div>
+
+                    <div className="col-span-2 flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1" title="Visitas">
+                        <Eye className="w-4 h-4 text-gray-400" />
+                        <span>{ad.views_count || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-1" title="Candidatos">
+                        <Users className="w-4 h-4 text-gray-400" />
+                        <span>{ad.applications_count || 0}</span>
+                      </div>
                     </div>
 
                     <div className="col-span-2 text-sm text-gray-600 flex items-center gap-1">
@@ -287,10 +322,10 @@ export default function JobAdsPage() {
                     <div className="col-span-2 flex justify-end">
                       <button
                         onClick={() => router.push(`/admin/job-ads/${ad.id}`)}
-                        className="p-2 rounded-md text-gray-400 hover:text-admin-accent hover:bg-admin-accent/10 transition-colors"
-                        title="Ver detalles"
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-admin-accent bg-admin-accent/5 hover:bg-admin-accent/10 transition-colors text-sm font-medium"
                       >
-                        <Eye className="w-5 h-5" />
+                        <Eye className="w-4 h-4" />
+                        Ver Detalles
                       </button>
                     </div>
                   </div>

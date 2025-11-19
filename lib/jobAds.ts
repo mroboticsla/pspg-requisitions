@@ -202,3 +202,65 @@ export async function getJobAdAssignments(jobAdId: string): Promise<JobAdRequisi
     if (error) throw new Error(`Error fetching assignments: ${error.message}`);
     return data || [];
 }
+
+export async function getJobAdMetrics(jobAdId: string, days: number = 30): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('job_ad_daily_metrics')
+    .select('*')
+    .eq('job_ad_id', jobAdId)
+    .order('date', { ascending: true })
+    .limit(days);
+
+  if (error) throw new Error(`Error fetching metrics: ${error.message}`);
+  return data || [];
+}
+
+export async function incrementJobAdView(id: string): Promise<void> {
+  const { error } = await supabase.rpc('increment_job_ad_view', { ad_id: id });
+  if (error) console.error('Error incrementing view count:', error);
+}
+
+export async function incrementJobAdApplication(id: string): Promise<void> {
+  const { error } = await supabase.rpc('increment_job_ad_application', { ad_id: id });
+  if (error) console.error('Error incrementing application count:', error);
+}
+
+export async function getJobAdStats(): Promise<{
+  total: number;
+  published: number;
+  expiringSoon: number;
+  expired: number;
+}> {
+  const now = new Date();
+  const sevenDaysFromNow = new Date();
+  sevenDaysFromNow.setDate(now.getDate() + 7);
+
+  // We can do this with multiple queries or a single RPC if performance matters.
+  // For now, let's use separate count queries which is simpler to implement without new SQL.
+  
+  const { count: total } = await supabase.from('job_ads').select('*', { count: 'exact', head: true });
+  
+  const { count: published } = await supabase
+    .from('job_ads')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'published');
+
+  const { count: expiringSoon } = await supabase
+    .from('job_ads')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'published')
+    .gt('expiration_date', now.toISOString())
+    .lte('expiration_date', sevenDaysFromNow.toISOString());
+
+  const { count: expired } = await supabase
+    .from('job_ads')
+    .select('*', { count: 'exact', head: true })
+    .lt('expiration_date', now.toISOString());
+
+  return {
+    total: total || 0,
+    published: published || 0,
+    expiringSoon: expiringSoon || 0,
+    expired: expired || 0
+  };
+}

@@ -27,6 +27,8 @@ export interface JobAd {
   status: JobAdStatus;
   published_at?: string;
   expiration_date: string;
+  views_count: number;
+  applications_count: number;
   company_snapshot: any;
   custom_fields: JobAdCustomFieldsSchema;
   metadata?: any;
