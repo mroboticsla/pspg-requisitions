@@ -8,7 +8,7 @@ import { listRequisitions } from '@/lib/requisitions';
 import { supabase } from '@/lib/supabaseClient';
 import type { CreateJobAdDTO, JobAdCustomField } from '@/lib/types/job-ads';
 import type { Requisition } from '@/lib/types/requisitions';
-import { ArrowLeft, Save, Plus, Trash2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Wand2, Search, Building, Globe, Mail, Phone, MapPin, CheckCircle2, ArrowRight, Filter } from 'lucide-react';
 import { RequireRoleClient } from '@/app/components/RequireRole';
 import RichTextEditor from '@/app/components/RichTextEditor';
 
@@ -20,6 +20,7 @@ export default function JobAdEditorPage() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState(1); // 1: Select Requisitions, 2: Edit Details
   
   // Form State
   const [formData, setFormData] = useState<Partial<CreateJobAdDTO>>({
@@ -28,13 +29,37 @@ export default function JobAdEditorPage() {
     expiration_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   });
   
+  // Company & Contact Info State (Editable)
+  const [companyInfo, setCompanyInfo] = useState({
+    name: '',
+    website: '',
+    email: '',
+    phone: '',
+    address: ''
+  });
+  
   const [selectedRequisitions, setSelectedRequisitions] = useState<string[]>([]);
   const [availableRequisitions, setAvailableRequisitions] = useState<Requisition[]>([]);
-  const [companies, setCompanies] = useState<Record<string, string>>({});
+  const [filteredRequisitions, setFilteredRequisitions] = useState<Requisition[]>([]);
+  const [companies, setCompanies] = useState<Record<string, any>>({});
+  const [reqSearchTerm, setReqSearchTerm] = useState('');
 
   useEffect(() => {
+    if (!isNew) setStep(2);
     loadData();
-  }, []);
+  }, [isNew]);
+
+  useEffect(() => {
+    if (reqSearchTerm.trim() === '') {
+      setFilteredRequisitions(availableRequisitions);
+    } else {
+      const term = reqSearchTerm.toLowerCase();
+      setFilteredRequisitions(availableRequisitions.filter(req => 
+        req.puesto_requerido?.toLowerCase().includes(term) ||
+        companies[req.company_id]?.name?.toLowerCase().includes(term)
+      ));
+    }
+  }, [reqSearchTerm, availableRequisitions, companies]);
 
   async function loadData() {
     try {
@@ -43,18 +68,19 @@ export default function JobAdEditorPage() {
       // Load available requisitions (approved only)
       const reqs = await listRequisitions({ status: 'approved' }); 
       setAvailableRequisitions(reqs);
+      setFilteredRequisitions(reqs);
 
-      // Load company names
+      // Load company names and details
       const companyIds = Array.from(new Set(reqs.map(r => r.company_id)));
       if (companyIds.length > 0) {
         const { data: comps } = await supabase
           .from('companies')
-          .select('id, name')
+          .select('*')
           .in('id', companyIds);
         
         if (comps) {
-          const map: Record<string, string> = {};
-          comps.forEach(c => map[c.id] = c.name);
+          const map: Record<string, any> = {};
+          comps.forEach(c => map[c.id] = c);
           setCompanies(map);
         }
       }
@@ -67,6 +93,17 @@ export default function JobAdEditorPage() {
             ...ad,
             expiration_date: ad.expiration_date ? new Date(ad.expiration_date).toISOString().split('T')[0] : ''
         });
+
+        // Load company info from snapshot or fallback to company record
+        if (ad.company_snapshot) {
+            setCompanyInfo({
+                name: ad.company_snapshot.name || '',
+                website: ad.company_snapshot.website || '',
+                email: ad.company_snapshot.email || '',
+                phone: ad.company_snapshot.phone || '',
+                address: ad.company_snapshot.address || ''
+            });
+        }
 
         const assignments = await getJobAdAssignments(params.id);
         setSelectedRequisitions(assignments.map(a => a.requisition_id));
@@ -100,17 +137,25 @@ export default function JobAdEditorPage() {
       // If first selection, set company_id and try to pre-fill data
       if (selectedRequisitions.length === 0) {
         const req = availableRequisitions.find(r => r.id === reqId);
+        const comp = companies[companyId];
+        
         if (req) {
           setFormData(prev => ({
             ...prev,
             company_id: companyId,
             title: prev.title || req.puesto_requerido,
-            location: prev.location || 'Ciudad de México', // Default or fetch from company?
-            // Pre-fill other fields if empty
+            location: prev.location || 'Ciudad de México',
           }));
-          // Trigger slug generation if title was empty
-          if (!formData.title) {
-             // We'll do it in the next render or manually
+          
+          // Pre-fill company info
+          if (comp) {
+            setCompanyInfo({
+                name: comp.name || '',
+                website: comp.website || '',
+                email: comp.email || '',
+                phone: comp.phone || '',
+                address: comp.address || ''
+            });
           }
         }
       }
@@ -119,8 +164,9 @@ export default function JobAdEditorPage() {
     } else {
       const newSelection = selectedRequisitions.filter(id => id !== reqId);
       setSelectedRequisitions(newSelection);
-      // If no requisitions left, maybe clear company_id? 
-      // Better to keep it to avoid losing context, user can change it manually if we add a selector.
+      
+      // If deselecting all, maybe clear company info? 
+      // For now, we keep it to avoid annoyance.
     }
   };
 
@@ -167,16 +213,23 @@ export default function JobAdEditorPage() {
         throw new Error('Por favor complete los campos obligatorios (Título, Slug, Empresa, Expiración)');
       }
 
-      // Fetch company snapshot if needed
-      let companySnapshot = formData.company_snapshot;
-      if (!companySnapshot && formData.company_id) {
-        const { data: comp } = await supabase
-          .from('companies')
-          .select('*')
-          .eq('id', formData.company_id)
-          .single();
-        if (comp) companySnapshot = comp;
+      // Prepare company snapshot with overrides
+      let companySnapshot = formData.company_snapshot || {};
+      
+      // If we have the original company object, start with that
+      if (formData.company_id && companies[formData.company_id]) {
+          companySnapshot = { ...companies[formData.company_id] };
       }
+      
+      // Apply overrides from companyInfo state
+      companySnapshot = {
+          ...companySnapshot,
+          name: companyInfo.name,
+          website: companyInfo.website,
+          email: companyInfo.email,
+          phone: companyInfo.phone,
+          address: companyInfo.address
+      };
 
       const payload: any = {
         ...formData,
@@ -203,253 +256,441 @@ export default function JobAdEditorPage() {
   return (
     <RequireRoleClient allow={['admin', 'superadmin']} redirectTo="/admin/login">
       <div className="space-y-6 pb-20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.back()} className="p-2 hover:bg-admin-bg-hover rounded-full transition-colors">
-              <ArrowLeft className="w-6 h-6 text-admin-text-secondary" />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-admin-text-primary">
-                {isNew ? 'Nuevo Anuncio' : 'Editar Anuncio'}
-              </h1>
-              <p className="text-admin-text-secondary text-sm">
-                {isNew ? 'Crea una nueva oferta de empleo' : 'Modifica los detalles de la oferta'}
-              </p>
+        {/* Step 1: Select Requisitions (Wizard) */}
+        {step === 1 && (
+          <div className="max-w-4xl mx-auto">
+            <div className="mb-8 text-center">
+              <h1 className="text-3xl font-bold text-admin-text-primary mb-2">Crear Nuevo Anuncio</h1>
+              <p className="text-admin-text-secondary">Paso 1: Selecciona las requisiciones aprobadas que deseas publicar</p>
             </div>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-admin-accent text-white rounded-admin hover:bg-admin-accentHover disabled:opacity-50 transition-colors shadow-sm"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Guardando...' : 'Guardar'}
-          </button>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Basic Info */}
-            <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
-              <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Información Básica</h2>
-              
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Título del Puesto</label>
-                <input
-                  type="text"
-                  value={formData.title || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Slug (URL)</label>
-                <div className="flex gap-2">
+            <div className="bg-admin-bg-card rounded-admin shadow-sm border border-admin-border overflow-hidden">
+              <div className="p-4 border-b border-admin-border bg-admin-bg-page flex gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-text-muted" />
                   <input
                     type="text"
-                    value={formData.slug || ''}
-                    onChange={e => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    placeholder="Buscar por puesto o empresa..."
+                    value={reqSearchTerm}
+                    onChange={(e) => setReqSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 rounded-admin border border-admin-border focus:outline-none focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent bg-white"
                   />
-                  <button
-                    onClick={handleGenerateSlug}
-                    className="px-3 py-2 bg-admin-bg-hover text-admin-text-secondary rounded-admin hover:bg-gray-200 transition-colors"
-                    title="Generar desde título"
-                  >
-                    <Wand2 className="w-4 h-4" />
-                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-admin-text-secondary px-3 bg-white border border-admin-border rounded-admin">
+                  <Filter className="w-4 h-4" />
+                  <span>{filteredRequisitions.length} disponibles</span>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Descripción Corta</label>
-                <textarea
-                  value={formData.short_description || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, short_description: e.target.value }))}
-                  rows={2}
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                />
+              <div className="max-h-[500px] overflow-y-auto p-4 space-y-3">
+                {loading ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-admin-accent mx-auto mb-4"></div>
+                    <p className="text-admin-text-secondary">Cargando requisiciones...</p>
+                  </div>
+                ) : filteredRequisitions.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-admin-border rounded-admin">
+                    <p className="text-admin-text-secondary">No se encontraron requisiciones aprobadas.</p>
+                  </div>
+                ) : (
+                  filteredRequisitions.map(req => {
+                    const isSelected = selectedRequisitions.includes(req.id);
+                    const company = companies[req.company_id];
+                    return (
+                      <div 
+                        key={req.id}
+                        onClick={() => handleRequisitionToggle(req.id, req.company_id)}
+                        className={`relative p-4 rounded-admin border cursor-pointer transition-all hover:shadow-md ${
+                          isSelected 
+                            ? 'bg-admin-accent/5 border-admin-accent ring-1 ring-admin-accent' 
+                            : 'bg-white border-admin-border hover:border-admin-accent/50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-start gap-3">
+                            <div className={`mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                              isSelected ? 'bg-admin-accent border-admin-accent text-white' : 'border-admin-text-muted bg-white'
+                            }`}>
+                              {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-admin-text-primary">{req.puesto_requerido}</h3>
+                              <div className="flex items-center gap-2 text-sm text-admin-text-secondary mt-1">
+                                <span className="flex items-center gap-1">
+                                  <Building className="w-3 h-3" />
+                                  {company?.name || 'Empresa desconocida'}
+                                </span>
+                                <span>•</span>
+                                <span>{req.departamento || 'Sin departamento'}</span>
+                                <span>•</span>
+                                <span>{new Date(req.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                              Aprobada
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Descripción Completa</label>
-                <RichTextEditor
-                  value={formData.description || ''}
-                  onChange={value => setFormData(prev => ({ ...prev, description: value }))}
-                />
+              <div className="p-4 border-t border-admin-border bg-admin-bg-page flex justify-between items-center">
+                <button
+                  onClick={() => router.back()}
+                  className="px-4 py-2 text-admin-text-secondary hover:text-admin-text-primary transition-colors"
+                >
+                  Cancelar
+                </button>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-admin-text-secondary">
+                    {selectedRequisitions.length} seleccionada{selectedRequisitions.length !== 1 ? 's' : ''}
+                  </span>
+                  <button
+                    onClick={() => setStep(2)}
+                    disabled={selectedRequisitions.length === 0}
+                    className="flex items-center gap-2 px-6 py-2 bg-admin-accent text-white rounded-admin hover:bg-admin-accentHover disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                  >
+                    Continuar
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Custom Fields */}
-            <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
-              <div className="flex items-center justify-between border-b border-admin-border pb-2">
-                <h2 className="text-lg font-semibold text-admin-text-primary">Secciones Personalizadas</h2>
-                <button
-                  onClick={addCustomField}
-                  className="text-sm text-admin-accent hover:text-admin-accentHover font-medium flex items-center gap-1 transition-colors"
+        {/* Step 2: Edit Details (Existing Form) */}
+        {step === 2 && (
+          <>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => isNew ? setStep(1) : router.back()} 
+                  className="p-2 hover:bg-admin-bg-hover rounded-full transition-colors"
                 >
-                  <Plus className="w-4 h-4" /> Agregar Sección
+                  <ArrowLeft className="w-6 h-6 text-admin-text-secondary" />
                 </button>
+                <div>
+                  <h1 className="text-2xl font-bold text-admin-text-primary">
+                    {isNew ? 'Detalles del Anuncio' : 'Editar Anuncio'}
+                  </h1>
+                  <p className="text-admin-text-secondary text-sm">
+                    {isNew ? 'Completa la información para publicar' : 'Modifica los detalles de la oferta'}
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-6 py-2 bg-admin-accent text-white rounded-admin hover:bg-admin-accentHover disabled:opacity-50 transition-colors shadow-sm"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
 
-              <div className="space-y-4">
-                {formData.custom_fields?.fields.map((field, idx) => (
-                  <div key={idx} className="p-4 bg-admin-bg-page rounded-admin border border-admin-border relative group hover:border-admin-border-hover transition-colors">
-                    <button
-                      onClick={() => removeCustomField(idx)}
-                      className="absolute top-2 right-2 text-admin-text-muted hover:text-admin-danger opacity-0 group-hover:opacity-100 transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <label className="text-xs font-medium text-admin-text-secondary">Título de Sección</label>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main Content */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Basic Info */}
+                <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
+                  <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Información Básica</h2>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Título del Puesto</label>
+                    <input
+                      type="text"
+                      value={formData.title || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Slug (URL)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={formData.slug || ''}
+                        onChange={e => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                        className="flex-1 px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                      />
+                      <button
+                        onClick={handleGenerateSlug}
+                        className="px-3 py-2 bg-admin-bg-hover text-admin-text-secondary rounded-admin hover:bg-gray-200 transition-colors"
+                        title="Generar desde título"
+                      >
+                        <Wand2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Descripción Corta</label>
+                    <textarea
+                      value={formData.short_description || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, short_description: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Descripción Completa</label>
+                    <RichTextEditor
+                      value={formData.description || ''}
+                      onChange={value => setFormData(prev => ({ ...prev, description: value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Company & Contact Info */}
+                <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
+                  <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Información de la Empresa y Contacto</h2>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-admin-text-secondary mb-1">Nombre de la Empresa (Visible en el anuncio)</label>
+                      <div className="relative">
+                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-text-muted" />
                         <input
                           type="text"
-                          value={field.label}
-                          onChange={e => updateCustomField(idx, { label: e.target.value })}
-                          className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
+                          value={companyInfo.name}
+                          onChange={e => setCompanyInfo(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full pl-10 pr-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
                         />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-admin-text-secondary">Tipo</label>
-                        <select
-                          value={field.type}
-                          onChange={e => updateCustomField(idx, { type: e.target.value as any })}
-                          className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
-                        >
-                          <option value="list">Lista (Bullets)</option>
-                          <option value="text">Texto Simple</option>
-                          <option value="richtext">Texto Rico</option>
-                        </select>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-xs font-medium text-admin-text-secondary">Contenido</label>
-                      {field.type === 'list' ? (
-                        <textarea
-                          value={Array.isArray(field.value) ? field.value.join('\n') : field.value}
-                          onChange={e => updateCustomField(idx, { value: e.target.value.split('\n') })}
-                          placeholder="Un elemento por línea"
-                          rows={3}
-                          className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
+                      <label className="block text-sm font-medium text-admin-text-secondary mb-1">Sitio Web</label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-text-muted" />
+                        <input
+                          type="text"
+                          value={companyInfo.website}
+                          onChange={e => setCompanyInfo(prev => ({ ...prev, website: e.target.value }))}
+                          className="w-full pl-10 pr-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
                         />
-                      ) : (
-                        <textarea
-                          value={field.value}
-                          onChange={e => updateCustomField(idx, { value: e.target.value })}
-                          rows={3}
-                          className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-admin-text-secondary mb-1">Email de Contacto</label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-text-muted" />
+                        <input
+                          type="email"
+                          value={companyInfo.email}
+                          onChange={e => setCompanyInfo(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full pl-10 pr-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
                         />
-                      )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-admin-text-secondary mb-1">Teléfono</label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-text-muted" />
+                        <input
+                          type="text"
+                          value={companyInfo.phone}
+                          onChange={e => setCompanyInfo(prev => ({ ...prev, phone: e.target.value }))}
+                          className="w-full pl-10 pr-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-admin-text-secondary mb-1">Dirección</label>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-text-muted" />
+                        <input
+                          type="text"
+                          value={companyInfo.address}
+                          onChange={e => setCompanyInfo(prev => ({ ...prev, address: e.target.value }))}
+                          className="w-full pl-10 pr-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                        />
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
+                </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Status & Dates */}
-            <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
-              <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Publicación</h2>
-              
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Estado</label>
-                <select
-                  value={formData.status}
-                  onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                >
-                  <option value="draft">Borrador</option>
-                  <option value="published">Publicado</option>
-                  <option value="archived">Archivado</option>
-                </select>
-              </div>
+                {/* Custom Fields */}
+                <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
+                  <div className="flex items-center justify-between border-b border-admin-border pb-2">
+                    <h2 className="text-lg font-semibold text-admin-text-primary">Secciones Personalizadas</h2>
+                    <button
+                      onClick={addCustomField}
+                      className="text-sm text-admin-accent hover:text-admin-accentHover font-medium flex items-center gap-1 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" /> Agregar Sección
+                    </button>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Fecha de Expiración</label>
-                <input
-                  type="date"
-                  value={formData.expiration_date || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, expiration_date: e.target.value }))}
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                />
-              </div>
+                  <div className="space-y-4">
+                    {formData.custom_fields?.fields.map((field, idx) => (
+                      <div key={idx} className="p-4 bg-admin-bg-page rounded-admin border border-admin-border relative group hover:border-admin-border-hover transition-colors">
+                        <button
+                          onClick={() => removeCustomField(idx)}
+                          className="absolute top-2 right-2 text-admin-text-muted hover:text-admin-danger opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-3">
+                          <div>
+                            <label className="text-xs font-medium text-admin-text-secondary">Título de Sección</label>
+                            <input
+                              type="text"
+                              value={field.label}
+                              onChange={e => updateCustomField(idx, { label: e.target.value })}
+                              className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-admin-text-secondary">Tipo</label>
+                            <select
+                              value={field.type}
+                              onChange={e => updateCustomField(idx, { type: e.target.value as any })}
+                              className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
+                            >
+                              <option value="list">Lista (Bullets)</option>
+                              <option value="text">Texto Simple</option>
+                              <option value="richtext">Texto Rico</option>
+                            </select>
+                          </div>
+                        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Ubicación</label>
-                <input
-                  type="text"
-                  value={formData.location || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Tipo de Empleo</label>
-                <select
-                  value={formData.employment_type || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, employment_type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                >
-                  <option value="">Seleccionar...</option>
-                  <option value="Tiempo Completo">Tiempo Completo</option>
-                  <option value="Medio Tiempo">Medio Tiempo</option>
-                  <option value="Híbrido">Híbrido</option>
-                  <option value="Remoto">Remoto</option>
-                  <option value="Por Proyecto">Por Proyecto</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-admin-text-secondary mb-1">Rango Salarial</label>
-                <input
-                  type="text"
-                  value={formData.salary_range || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, salary_range: e.target.value }))}
-                  placeholder="Ej: $20,000 - $30,000 MXN"
-                  className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Requisitions */}
-            <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
-              <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Vincular Requisiciones</h2>
-              <p className="text-xs text-admin-text-muted">Selecciona las requisiciones aprobadas que originan este anuncio.</p>
-              
-              <div className="max-h-60 overflow-y-auto space-y-2 border border-admin-border rounded-admin p-2 bg-admin-bg-page">
-                {availableRequisitions.length === 0 ? (
-                  <p className="text-sm text-admin-text-muted text-center py-2">No hay requisiciones aprobadas disponibles.</p>
-                ) : (
-                  availableRequisitions.map(req => (
-                    <label key={req.id} className="flex items-start gap-2 p-2 hover:bg-white rounded-admin cursor-pointer transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedRequisitions.includes(req.id)}
-                        onChange={() => handleRequisitionToggle(req.id, req.company_id)}
-                        className="mt-1 rounded border-admin-border text-admin-accent focus:ring-admin-accent"
-                      />
-                      <div className="text-sm">
-                        <div className="font-medium text-admin-text-primary">{req.puesto_requerido}</div>
-                        <div className="text-xs text-admin-text-muted">
-                          {companies[req.company_id] || 'Empresa desconocida'} • {new Date(req.created_at).toLocaleDateString()}
+                        <div>
+                          <label className="text-xs font-medium text-admin-text-secondary">Contenido</label>
+                          {field.type === 'list' ? (
+                            <textarea
+                              value={Array.isArray(field.value) ? field.value.join('\n') : field.value}
+                              onChange={e => updateCustomField(idx, { value: e.target.value.split('\n') })}
+                              placeholder="Un elemento por línea"
+                              rows={3}
+                              className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
+                            />
+                          ) : (
+                            <textarea
+                              value={field.value}
+                              onChange={e => updateCustomField(idx, { value: e.target.value })}
+                              rows={3}
+                              className="w-full px-2 py-1 text-sm border border-admin-border rounded-admin focus:border-admin-accent outline-none"
+                            />
+                          )}
                         </div>
                       </div>
-                    </label>
-                  ))
-                )}
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Status & Dates */}
+                <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
+                  <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Publicación</h2>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Estado</label>
+                    <select
+                      value={formData.status}
+                      onChange={e => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    >
+                      <option value="draft">Borrador</option>
+                      <option value="published">Publicado</option>
+                      <option value="archived">Archivado</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Fecha de Expiración</label>
+                    <input
+                      type="date"
+                      value={formData.expiration_date || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, expiration_date: e.target.value }))}
+                      className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Ubicación</label>
+                    <input
+                      type="text"
+                      value={formData.location || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Tipo de Empleo</label>
+                    <select
+                      value={formData.employment_type || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, employment_type: e.target.value }))}
+                      className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Tiempo Completo">Tiempo Completo</option>
+                      <option value="Medio Tiempo">Medio Tiempo</option>
+                      <option value="Híbrido">Híbrido</option>
+                      <option value="Remoto">Remoto</option>
+                      <option value="Por Proyecto">Por Proyecto</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Rango Salarial</label>
+                    <input
+                      type="text"
+                      value={formData.salary_range || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, salary_range: e.target.value }))}
+                      placeholder="Ej: $20,000 - $30,000 MXN"
+                      className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Requisitions */}
+                <div className="bg-admin-bg-card p-6 rounded-admin shadow-sm border border-admin-border space-y-4">
+                  <h2 className="text-lg font-semibold text-admin-text-primary border-b border-admin-border pb-2">Vincular Requisiciones</h2>
+                  <p className="text-xs text-admin-text-muted">Selecciona las requisiciones aprobadas que originan este anuncio.</p>
+                  
+                  <div className="max-h-60 overflow-y-auto space-y-2 border border-admin-border rounded-admin p-2 bg-admin-bg-page">
+                    {availableRequisitions.length === 0 ? (
+                      <p className="text-sm text-admin-text-muted text-center py-2">No hay requisiciones aprobadas disponibles.</p>
+                    ) : (
+                      availableRequisitions.map(req => (
+                        <label key={req.id} className="flex items-start gap-2 p-2 hover:bg-white rounded-admin cursor-pointer transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={selectedRequisitions.includes(req.id)}
+                            onChange={() => handleRequisitionToggle(req.id, req.company_id)}
+                            className="mt-1 rounded border-admin-border text-admin-accent focus:ring-admin-accent"
+                          />
+                          <div className="text-sm">
+                            <div className="font-medium text-admin-text-primary">{req.puesto_requerido}</div>
+                            <div className="text-xs text-admin-text-muted">
+                              {companies[req.company_id]?.name || 'Empresa desconocida'} • {new Date(req.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </RequireRoleClient>
   );
