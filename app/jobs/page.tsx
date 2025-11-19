@@ -1,107 +1,58 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PublicNavbar } from '../components/public/layout/PublicNavbar';
 import { PublicFooter } from '../components/public/layout/PublicFooter';
 import { Search, MapPin, Briefcase, DollarSign, Clock, Building } from 'lucide-react';
-
-interface Job {
-  id: number;
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  salary: string;
-  description: string;
-  requirements: string[];
-  posted: string;
-}
-
-const mockJobs: Job[] = [
-  {
-    id: 1,
-    title: 'Gerente de Operaciones',
-    company: 'Empresa Líder en Logística',
-    location: 'Ciudad de México, México',
-    type: 'Tiempo Completo',
-    salary: '$45,000 - $65,000 MXN',
-    description: 'Buscamos un profesional con experiencia en gestión de operaciones logísticas.',
-    requirements: ['5+ años de experiencia', 'Título universitario', 'Liderazgo de equipos'],
-    posted: 'Hace 2 días'
-  },
-  {
-    id: 2,
-    title: 'Director Financiero',
-    company: 'Corporación Internacional',
-    location: 'Ciudad de México, México',
-    type: 'Tiempo Completo',
-    salary: '$80,000 - $110,000 MXN',
-    description: 'Responsable de dirigir la estrategia financiera de la organización.',
-    requirements: ['10+ años de experiencia', 'MBA o CPA', 'Experiencia internacional'],
-    posted: 'Hace 5 días'
-  },
-  {
-    id: 3,
-    title: 'Gerente de Ventas Regional',
-    company: 'Empresa Tecnológica',
-    location: 'Ciudad de México, México / Remoto',
-    type: 'Híbrido',
-    salary: '$55,000 - $75,000 MXN + Comisiones',
-    description: 'Liderarás el equipo de ventas en la región latinoamericana.',
-    requirements: ['7+ años en ventas B2B', 'Gestión de equipos', 'Inglés avanzado'],
-    posted: 'Hace 1 semana'
-  },
-  {
-    id: 4,
-    title: 'Director de Recursos Humanos',
-    company: 'Grupo Empresarial',
-    location: 'Ciudad de México, México',
-    type: 'Tiempo Completo',
-    salary: '$65,000 - $90,000 MXN',
-    description: 'Diseño e implementación de estrategias de talento humano.',
-    requirements: ['8+ años en RRHH', 'Gestión del cambio', 'Certificaciones en RRHH'],
-    posted: 'Hace 3 días'
-  },
-  {
-    id: 5,
-    title: 'Gerente de Marketing Digital',
-    company: 'Agencia de Publicidad',
-    location: 'Ciudad de México, México',
-    type: 'Tiempo Completo',
-    salary: '$40,000 - $60,000 MXN',
-    description: 'Liderar estrategias de marketing digital y gestión de campañas.',
-    requirements: ['5+ años en marketing digital', 'Google Ads & Meta Ads', 'Analytics'],
-    posted: 'Hace 4 días'
-  },
-  {
-    id: 6,
-    title: 'Arquitecto de Soluciones Cloud',
-    company: 'Empresa de TI',
-    location: 'Remoto',
-    type: 'Remoto',
-    salary: '$70,000 - $95,000 MXN',
-    description: 'Diseño de arquitecturas cloud y liderazgo técnico en proyectos.',
-    requirements: ['6+ años en cloud', 'AWS/Azure certificado', 'Liderazgo técnico'],
-    posted: 'Hace 1 día'
-  }
-];
+import { supabase } from '@/lib/supabaseClient';
+import type { JobAd } from '@/lib/types/job-ads';
 
 export default function JobsPage() {
   const router = useRouter();
+  const [jobs, setJobs] = useState<JobAd[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedLocation, setSelectedLocation] = useState('all');
 
-  const filteredJobs = mockJobs.filter((job) => {
+  useEffect(() => {
+    loadJobs();
+  }, []);
+
+  async function loadJobs() {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('job_ads')
+        .select('*')
+        .eq('status', 'published')
+        .gte('expiration_date', new Date().toISOString())
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      setJobs(data || []);
+    } catch (err) {
+      console.error('Error loading jobs:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Extract unique locations and types for filters
+  const locations = Array.from(new Set(jobs.map(j => j.location).filter(Boolean) as string[]));
+  const types = Array.from(new Set(jobs.map(j => j.employment_type).filter(Boolean) as string[]));
+
+  const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchTerm.toLowerCase());
+      job.company_snapshot?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesType = selectedType === 'all' || job.type === selectedType;
+    const matchesType = selectedType === 'all' || job.employment_type === selectedType;
     const matchesLocation =
-      selectedLocation === 'all' || job.location.includes(selectedLocation);
+      selectedLocation === 'all' || (job.location && job.location.includes(selectedLocation));
 
     return matchesSearch && matchesType && matchesLocation;
   });
@@ -146,9 +97,9 @@ export default function JobsPage() {
                       className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-gray-900 transition-all"
                     >
                       <option value="all">Todos los tipos</option>
-                      <option value="Tiempo Completo">Tiempo Completo</option>
-                      <option value="Híbrido">Híbrido</option>
-                      <option value="Remoto">Remoto</option>
+                      {types.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -158,8 +109,9 @@ export default function JobsPage() {
                       className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent text-gray-900 transition-all"
                     >
                       <option value="all">Todas las ubicaciones</option>
-                      <option value="Ciudad de México">Ciudad de México</option>
-                      <option value="Remoto">Remoto</option>
+                      {locations.map(l => (
+                        <option key={l} value={l}>{l}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -178,87 +130,89 @@ export default function JobsPage() {
               </p>
             </div>
 
-            <div className="space-y-6">
-              {filteredJobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 border-l-4 border-brand-accent hover:border-l-8"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex-grow">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="text-2xl font-bold text-brand-dark mb-2 hover:text-brand-accent transition-colors">
-                            {job.title}
-                          </h3>
-                          <div className="flex items-center text-gray-600 mb-2">
-                            <Building className="h-5 w-5 mr-2 text-brand-accent" />
-                            <span className="font-medium">{job.company}</span>
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-accent mx-auto mb-4"></div>
+                <p className="text-gray-500">Cargando ofertas...</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {filteredJobs.map((job) => (
+                  <div
+                    key={job.id}
+                    className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 p-6 border-l-4 border-brand-accent hover:border-l-8"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
+                      <div className="flex-grow">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="text-2xl font-bold text-brand-dark mb-2 hover:text-brand-accent transition-colors">
+                              {job.title}
+                            </h3>
+                            <div className="flex items-center text-gray-600 mb-2">
+                              <Building className="h-5 w-5 mr-2 text-brand-accent" />
+                              <span className="font-medium">{job.company_snapshot?.name || 'Empresa Confidencial'}</span>
+                            </div>
                           </div>
                         </div>
+
+                        <div className="flex flex-wrap gap-4 mb-5">
+                          {job.location && (
+                            <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
+                              <MapPin className="h-4 w-4 mr-2 text-brand-accent" />
+                              <span className="text-sm font-medium">{job.location}</span>
+                            </div>
+                          )}
+                          {job.employment_type && (
+                            <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
+                              <Briefcase className="h-4 w-4 mr-2 text-brand-accent" />
+                              <span className="text-sm font-medium">{job.employment_type}</span>
+                            </div>
+                          )}
+                          {job.salary_range && (
+                            <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
+                              <DollarSign className="h-4 w-4 mr-2 text-brand-accent" />
+                              <span className="text-sm font-medium">{job.salary_range}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
+                            <Clock className="h-4 w-4 mr-2 text-brand-accent" />
+                            <span className="text-sm font-medium">
+                              {new Date(job.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-gray-700 mb-5 leading-relaxed line-clamp-3">
+                          {job.short_description || job.description}
+                        </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-4 mb-5">
-                        <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
-                          <MapPin className="h-4 w-4 mr-2 text-brand-accent" />
-                          <span className="text-sm font-medium">{job.location}</span>
-                        </div>
-                        <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
-                          <Briefcase className="h-4 w-4 mr-2 text-brand-accent" />
-                          <span className="text-sm font-medium">{job.type}</span>
-                        </div>
-                        <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
-                          <DollarSign className="h-4 w-4 mr-2 text-brand-accent" />
-                          <span className="text-sm font-medium">{job.salary}</span>
-                        </div>
-                        <div className="flex items-center text-gray-700 bg-gray-50 px-3 py-2 rounded-lg">
-                          <Clock className="h-4 w-4 mr-2 text-brand-accent" />
-                          <span className="text-sm font-medium">{job.posted}</span>
-                        </div>
+                      <div className="lg:ml-6 mt-4 lg:mt-0">
+                        <button 
+                          onClick={() => router.push(`/jobs/${job.slug}`)}
+                          className="w-full lg:w-auto bg-brand-accent text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-accentDark transition-all duration-300 whitespace-nowrap shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                        >
+                          Ver Detalles
+                        </button>
                       </div>
-
-                      <p className="text-gray-700 mb-5 leading-relaxed">{job.description}</p>
-
-                      <div className="mb-4 bg-gray-50 p-4 rounded-lg">
-                        <h4 className="font-bold text-brand-dark mb-3 flex items-center">
-                          <span className="w-1 h-5 bg-brand-accent mr-2 rounded"></span>
-                          Requisitos principales:
-                        </h4>
-                        <ul className="space-y-2">
-                          {job.requirements.map((req, index) => (
-                            <li key={index} className="text-gray-700 flex items-start">
-                              <span className="text-brand-accent mr-2 font-bold">•</span>
-                              <span>{req}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="lg:ml-6 mt-4 lg:mt-0">
-                      <button 
-                        onClick={() => router.push('/contact')}
-                        className="w-full lg:w-auto bg-brand-accent text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-accentDark transition-all duration-300 whitespace-nowrap shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                      >
-                        Aplicar Ahora
-                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
 
-              {filteredJobs.length === 0 && (
-                <div className="bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
-                  <Search className="h-20 w-20 text-brand-accent mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-brand-dark mb-3">
-                    No se encontraron resultados
-                  </h3>
-                  <p className="text-gray-600 text-lg">
-                    Intenta ajustar tus filtros de búsqueda o términos de búsqueda
-                  </p>
-                </div>
-              )}
-            </div>
+                {filteredJobs.length === 0 && (
+                  <div className="bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
+                    <Search className="h-20 w-20 text-brand-accent mx-auto mb-4" />
+                    <h3 className="text-2xl font-bold text-brand-dark mb-3">
+                      No se encontraron resultados
+                    </h3>
+                    <p className="text-gray-600 text-lg">
+                      Intenta ajustar tus filtros de búsqueda o términos de búsqueda
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -286,3 +240,4 @@ export default function JobsPage() {
     </div>
   );
 }
+
