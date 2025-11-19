@@ -123,17 +123,6 @@ export default function JobAdEditorPage() {
     }
   }
 
-  const handleGenerateSlug = () => {
-    if (!formData.title) return;
-    const slug = formData.title
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    setFormData(prev => ({ ...prev, slug }));
-  };
-
   const handleRequisitionToggle = (reqId: string, companyId: string) => {
     // If selecting a requisition, ensure it matches the current company_id if set
     if (!selectedRequisitions.includes(reqId)) {
@@ -217,8 +206,21 @@ export default function JobAdEditorPage() {
     try {
       setSaving(true);
       
-      if (!formData.title || !formData.slug || !formData.company_id || !formData.expiration_date) {
-        throw new Error('Por favor complete los campos obligatorios (Título, Slug, Empresa, Expiración)');
+      // Auto-generate slug if missing or new
+      let finalSlug = formData.slug;
+      if ((!finalSlug || isNew) && formData.title) {
+         const baseSlug = formData.title
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+         const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+         finalSlug = `${baseSlug}-${uniqueSuffix}`;
+      }
+
+      if (!formData.title || !finalSlug || !formData.company_id || !formData.expiration_date) {
+        throw new Error('Por favor complete los campos obligatorios (Título, Empresa, Expiración)');
       }
 
       if (selectedRequisitions.length === 0) {
@@ -245,6 +247,7 @@ export default function JobAdEditorPage() {
 
       const payload: any = {
         ...formData,
+        slug: finalSlug,
         company_snapshot: companySnapshot,
         requisition_ids: selectedRequisitions,
         metadata: { ...formData.metadata, is_anonymous: isAnonymous }
@@ -490,25 +493,6 @@ export default function JobAdEditorPage() {
                       onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
                       className="w-full px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
                     />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-admin-text-secondary mb-1">Slug (URL)</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={formData.slug || ''}
-                        onChange={e => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                        className="flex-1 px-3 py-2 border border-admin-border rounded-admin focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent outline-none transition-all"
-                      />
-                      <button
-                        onClick={handleGenerateSlug}
-                        className="px-3 py-2 bg-admin-bg-hover text-admin-text-secondary rounded-admin hover:bg-gray-200 transition-colors"
-                        title="Generar desde título"
-                      >
-                        <Wand2 className="w-4 h-4" />
-                      </button>
-                    </div>
                   </div>
 
                   <div>
