@@ -9,8 +9,9 @@ import { RequireRoleClient } from '@/app/components/RequireRole'
 import { FullCandidateProfile } from '@/lib/types/candidates'
 import { getCandidateProfile, analyzeCandidateMatch, MatchResult } from '@/lib/candidates'
 import { Requisition } from '@/lib/types/requisitions'
-import { FileText, ExternalLink, Briefcase, GraduationCap, Award, Globe, ArrowLeft, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { FileText, ExternalLink, Briefcase, GraduationCap, Award, Globe, ArrowLeft, CheckCircle, XCircle, AlertCircle, BarChart2 } from 'lucide-react'
 import ConfirmModal from '@/app/components/ConfirmModal'
+import CompatibilityModal from '@/app/components/CompatibilityModal'
 
 export default function CandidateDetailPage() {
   const { id } = useParams()
@@ -19,8 +20,7 @@ export default function CandidateDetailPage() {
 
   const [candidate, setCandidate] = useState<FullCandidateProfile | null>(null)
   const [requisitions, setRequisitions] = useState<Requisition[]>([])
-  const [selectedReqId, setSelectedReqId] = useState<string>('')
-  const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
+  const [isCompatibilityModalOpen, setIsCompatibilityModalOpen] = useState(false)
   const [busy, setBusy] = useState(true)
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null)
 
@@ -36,18 +36,6 @@ export default function CandidateDetailPage() {
     }
   }, [id])
 
-  useEffect(() => {
-    if (selectedReqId && candidate) {
-      const req = requisitions.find(r => r.id === selectedReqId)
-      if (req) {
-        const result = analyzeCandidateMatch(candidate, req)
-        setMatchResult(result)
-      }
-    } else {
-      setMatchResult(null)
-    }
-  }, [selectedReqId, candidate, requisitions])
-
   const handleExternalLink = (url: string) => {
     const normalizedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`
     setConfirmUrl(normalizedUrl)
@@ -58,6 +46,11 @@ export default function CandidateDetailPage() {
       window.open(confirmUrl, '_blank', 'noopener,noreferrer')
       setConfirmUrl(null)
     }
+  }
+
+  const handleAnalyze = (req: Requisition) => {
+    if (!candidate) return { score: 0, matches: [] }
+    return analyzeCandidateMatch(candidate, req)
   }
 
   const loadData = async () => {
@@ -89,7 +82,7 @@ export default function CandidateDetailPage() {
       const { data: reqs } = await supabase
         .from('requisitions')
         .select('*')
-        .in('status', ['approved', 'submitted', 'in_review']) // Only active ones
+        .eq('status', 'approved') // Only active ones
         .order('created_at', { ascending: false })
       
       setRequisitions(reqs || [])
@@ -414,70 +407,30 @@ export default function CandidateDetailPage() {
 
           </div>
 
-          {/* Right Column: Match Analysis */}
+          {/* Right Column: Actions */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Análisis de Compatibilidad</h2>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-6 space-y-4">
+              <h2 className="text-lg font-bold text-gray-900">Acciones</h2>
               
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Comparar con Requisición</label>
-                <select
-                  value={selectedReqId}
-                  onChange={e => setSelectedReqId(e.target.value)}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent text-sm"
-                >
-                  <option value="">Seleccionar requisición...</option>
-                  {requisitions.map(req => (
-                    <option key={req.id} value={req.id}>
-                      {req.puesto_requerido} ({req.departamento})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {matchResult ? (
-                <div className="space-y-6">
-                  {/* Score Circle */}
-                  <div className="flex flex-col items-center justify-center">
-                    <div className={`relative w-24 h-24 rounded-full flex items-center justify-center border-4 text-2xl font-bold ${
-                      matchResult.score >= 80 ? 'border-green-500 text-green-600' :
-                      matchResult.score >= 50 ? 'border-yellow-500 text-yellow-600' :
-                      'border-red-500 text-red-600'
-                    }`}>
-                      {matchResult.score}%
-                    </div>
-                    <span className="text-sm text-gray-500 mt-2">Coincidencia Estimada</span>
-                  </div>
-
-                  {/* Details */}
-                  <div className="space-y-3">
-                    {matchResult.matches.map((match, idx) => (
-                      <div key={idx} className="flex items-start gap-3 text-sm border-b border-gray-100 pb-2 last:border-0">
-                        {match.status === 'match' && <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />}
-                        {match.status === 'partial' && <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />}
-                        {match.status === 'missing' && <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />}
-                        
-                        <div>
-                          <p className="font-medium text-gray-900">{match.item}</p>
-                          <p className="text-xs text-gray-500">{match.category} {match.details ? `• ${match.details}` : ''}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="bg-blue-50 p-3 rounded-md text-xs text-blue-700">
-                    <strong>Nota:</strong> Este análisis es una sugerencia basada en palabras clave y no debe reemplazar la evaluación humana.
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500 text-sm">
-                  Selecciona una requisición para ver el análisis de compatibilidad.
-                </div>
-              )}
+              <button
+                onClick={() => setIsCompatibilityModalOpen(true)}
+                className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-dark hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent"
+              >
+                <BarChart2 className="w-4 h-4 mr-2" />
+                Analizar Compatibilidad
+              </button>
             </div>
           </div>
         </div>
       </div>
+
+      <CompatibilityModal
+        isOpen={isCompatibilityModalOpen}
+        onClose={() => setIsCompatibilityModalOpen(false)}
+        requisitions={requisitions}
+        onAnalyze={handleAnalyze}
+        candidateName={candidate ? `${candidate.first_name} ${candidate.last_name}` : ''}
+      />
 
       <ConfirmModal
         isOpen={!!confirmUrl}

@@ -164,6 +164,8 @@ export interface MatchResult {
     item: string;
     status: 'match' | 'partial' | 'missing';
     details?: string;
+    reason?: string;
+    candidateValue?: string;
   }[];
 }
 
@@ -181,8 +183,10 @@ export function analyzeCandidateMatch(candidate: FullCandidateProfile, requisiti
     const eduMap: Record<string, string[]> = {
       'bachiller': ['bachiller', 'preparatoria', 'high school'],
       'tecnico': ['técnico', 'tecnico', 'associate'],
-      'universitario': ['licenciatura', 'ingeniería', 'ingenieria', 'bachelor', 'grado'],
+      'universitario': ['licenciatura', 'ingeniería', 'ingenieria', 'bachelor', 'grado', 'profesional'],
+      'profesional': ['licenciatura', 'ingeniería', 'ingenieria', 'bachelor', 'grado', 'profesional'],
       'maestria': ['maestría', 'maestria', 'master'],
+      'especializacion': ['especialización', 'especializacion', 'specialization', 'diplomado'],
       'doctorado': ['doctorado', 'phd']
     };
 
@@ -190,13 +194,37 @@ export function analyzeCandidateMatch(candidate: FullCandidateProfile, requisiti
       if (required && key !== 'detalles' && key !== 'otro') {
         totalPoints += 10;
         const terms = eduMap[key] || [key];
-        const hasDegree = candEdu.some(d => terms.some(t => d.includes(t)));
         
-        if (hasDegree) {
+        // Check structured education list
+        const hasDegreeInList = candEdu.some(d => terms.some(t => d.includes(t)));
+        
+        // Check job_profile booleans
+        let hasDegreeInProfile = false;
+        if (candidate.job_profile) {
+          if (key === 'bachiller' && candidate.job_profile.bachiller) hasDegreeInProfile = true;
+          if (key === 'tecnico' && candidate.job_profile.tecnico) hasDegreeInProfile = true;
+          if (key === 'universitario' && candidate.job_profile.profesional) hasDegreeInProfile = true;
+          if (key === 'profesional' && candidate.job_profile.profesional) hasDegreeInProfile = true;
+          if (key === 'maestria' && candidate.job_profile.especializacion) hasDegreeInProfile = true; // Mapping especializacion to maestria loosely or just as advanced
+          if (key === 'especializacion' && candidate.job_profile.especializacion) hasDegreeInProfile = true;
+        }
+
+        if (hasDegreeInList || hasDegreeInProfile) {
           earnedPoints += 10;
-          matches.push({ category: 'Educación', item: key, status: 'match' });
+          matches.push({ 
+            category: 'Educación', 
+            item: key, 
+            status: 'match',
+            candidateValue: hasDegreeInProfile ? 'Marcado en perfil complementario' : 'Posee título relacionado'
+          });
         } else {
-          matches.push({ category: 'Educación', item: key, status: 'missing' });
+          matches.push({ 
+            category: 'Educación', 
+            item: key, 
+            status: 'missing',
+            reason: 'No se encontró título requerido',
+            candidateValue: candEdu.length > 0 ? candEdu.join(', ') : 'Sin educación registrada'
+          });
         }
       }
     });
@@ -206,17 +234,47 @@ export function analyzeCandidateMatch(candidate: FullCandidateProfile, requisiti
   if (requisition.idiomas?.ingles) {
     totalPoints += 10;
     const english = candidate.languages.find(l => l.language.toLowerCase().includes('ingl') || l.language.toLowerCase().includes('engl'));
-    
+    const hasEnglishInProfile = candidate.job_profile?.idiomaIngles;
+
     if (english) {
       if (['advanced', 'native'].includes(english.proficiency)) {
         earnedPoints += 10;
-        matches.push({ category: 'Idioma', item: 'Inglés', status: 'match', details: english.proficiency });
+        matches.push({ 
+          category: 'Idioma', 
+          item: 'Inglés', 
+          status: 'match', 
+          details: english.proficiency,
+          candidateValue: english.proficiency
+        });
       } else {
         earnedPoints += 5;
-        matches.push({ category: 'Idioma', item: 'Inglés', status: 'partial', details: english.proficiency });
+        matches.push({ 
+          category: 'Idioma', 
+          item: 'Inglés', 
+          status: 'partial', 
+          details: english.proficiency,
+          reason: 'Nivel inferior al ideal',
+          candidateValue: english.proficiency
+        });
       }
+    } else if (hasEnglishInProfile) {
+      // Fallback to job_profile boolean
+      earnedPoints += 5; // Assume at least partial/basic if checked
+      matches.push({ 
+        category: 'Idioma', 
+        item: 'Inglés', 
+        status: 'partial', 
+        details: 'Nivel no especificado',
+        candidateValue: 'Marcado en perfil complementario'
+      });
     } else {
-      matches.push({ category: 'Idioma', item: 'Inglés', status: 'missing' });
+      matches.push({ 
+        category: 'Idioma', 
+        item: 'Inglés', 
+        status: 'missing',
+        reason: 'No registrado en perfil',
+        candidateValue: 'No especificado'
+      });
     }
   }
 
@@ -231,15 +289,91 @@ export function analyzeCandidateMatch(candidate: FullCandidateProfile, requisiti
         totalPoints += 5;
         const candSkill = candidate.skills.find(s => s.skill_name.toLowerCase().includes(tool));
         
+        // Check job_profile
+        let profileLevel: string | null = null;
+        if (candidate.job_profile) {
+          if (['word', 'excel', 'powerpoint'].includes(tool)) {
+            const p = candidate.job_profile.wordExcelPowerPoint;
+            if (p?.avanzado) profileLevel = 'avanzado';
+            else if (p?.intermedio) profileLevel = 'intermedio';
+            else if (p?.basico) profileLevel = 'basico';
+          } else if (tool === 'outlook') {
+            const p = candidate.job_profile.correoElectronico;
+            if (p?.avanzado) profileLevel = 'avanzado';
+            else if (p?.intermedio) profileLevel = 'intermedio';
+            else if (p?.basico) profileLevel = 'basico';
+          }
+        }
+
         if (candSkill) {
           // Simple comparison logic
           earnedPoints += 5; // Assume match if listed for now
-          matches.push({ category: 'Informática', item: tool, status: 'match', details: candSkill.level });
+          matches.push({ 
+            category: 'Informática', 
+            item: tool, 
+            status: 'match', 
+            details: candSkill.level,
+            candidateValue: candSkill.level
+          });
+        } else if (profileLevel) {
+           earnedPoints += 5;
+           matches.push({ 
+            category: 'Informática', 
+            item: tool, 
+            status: 'match', 
+            details: profileLevel,
+            candidateValue: `Perfil: ${profileLevel}`
+          });
         } else {
-          matches.push({ category: 'Informática', item: tool, status: 'missing' });
+          matches.push({ 
+            category: 'Informática', 
+            item: tool, 
+            status: 'missing',
+            reason: 'No listado en habilidades',
+            candidateValue: 'No especificado'
+          });
         }
       }
     });
+
+    // Check Internet & Databases from job_profile as well if requested (though not standard fields in requisition type shown in snippet, let's be safe)
+    if (itSkills.base_datos) {
+       totalPoints += 5;
+       const candSkill = candidate.skills.find(s => s.skill_name.toLowerCase().includes('base de datos') || s.skill_name.toLowerCase().includes('sql'));
+       
+       let profileLevel: string | null = null;
+       if (candidate.job_profile?.baseDatos) {
+          const p = candidate.job_profile.baseDatos;
+          if (p.avanzado) profileLevel = 'avanzado';
+          else if (p.intermedio) profileLevel = 'intermedio';
+          else if (p.basico) profileLevel = 'basico';
+       }
+
+       if (candSkill || profileLevel) {
+         earnedPoints += 5;
+         matches.push({ category: 'Informática', item: 'Base de Datos', status: 'match', candidateValue: profileLevel || candSkill?.level });
+       } else {
+         matches.push({ category: 'Informática', item: 'Base de Datos', status: 'missing', candidateValue: 'No especificado' });
+       }
+    }
+
+    if (itSkills.internet) {
+       totalPoints += 5;
+       let profileLevel: string | null = null;
+       if (candidate.job_profile?.internet) {
+          const p = candidate.job_profile.internet;
+          if (p.avanzado) profileLevel = 'avanzado';
+          else if (p.intermedio) profileLevel = 'intermedio';
+          else if (p.basico) profileLevel = 'basico';
+       }
+
+       if (profileLevel) {
+         earnedPoints += 5;
+         matches.push({ category: 'Informática', item: 'Internet', status: 'match', candidateValue: profileLevel });
+       } else {
+         matches.push({ category: 'Informática', item: 'Internet', status: 'missing', candidateValue: 'No especificado' });
+       }
+    }
 
     // Specific Software
     if (itSkills.software_especifico) {
@@ -249,9 +383,21 @@ export function analyzeCandidateMatch(candidate: FullCandidateProfile, requisiti
         
         if (candSkill) {
           earnedPoints += 10;
-          matches.push({ category: 'Software', item: soft.nombre, status: 'match', details: candSkill.level });
+          matches.push({ 
+            category: 'Software', 
+            item: soft.nombre, 
+            status: 'match', 
+            details: candSkill.level,
+            candidateValue: candSkill.level
+          });
         } else {
-          matches.push({ category: 'Software', item: soft.nombre, status: 'missing' });
+          matches.push({ 
+            category: 'Software', 
+            item: soft.nombre, 
+            status: 'missing',
+            reason: 'Software no encontrado',
+            candidateValue: 'No especificado'
+          });
         }
       });
     }
