@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, useLayoutEffect } from 'react'
 import { Pin, PinOff } from 'lucide-react'
-import { MENU, filterMenu, Role, MenuItem } from './menuConfig'
+import { MENU, filterMenu, filterMenuByModules, Role, MenuItem } from './menuConfig'
 import getCurrentUserRole from '@/lib/getCurrentUserRole'
 import { useAuth } from '../../providers/AuthProvider'
 import { supabase } from '@/lib/supabaseClient'
@@ -156,16 +156,8 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   // Si el rol trae permissions.modules, usamos ese mapa para mostrar/ocultar módulos del sidebar
   const items = (() => {
     const modules = (profile?.roles?.permissions?.modules ?? null) as Record<string, boolean> | null
-    if (!modules || typeof modules !== 'object') return itemsByRole
-    const allow = (id: string) => Boolean(modules[id])
-    const topLevelFiltered: MenuItem[] = []
-    for (const it of itemsByRole) {
-      // Si el ítem no tiene restricción por módulos (id ausente), lo mantenemos
-      if (!it.id) { topLevelFiltered.push(it); continue }
-      // Solo mostramos si el módulo está permitido en permissions.modules
-      if (allow(it.id)) topLevelFiltered.push(it)
-    }
-    return topLevelFiltered
+    const canDo = (profile?.roles?.permissions?.can_do ?? null) as string[] | null
+    return filterMenuByModules(itemsByRole, modules, canDo)
   })()
   const expanded = !collapsed || hoverExpand
 

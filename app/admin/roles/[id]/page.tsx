@@ -8,6 +8,7 @@ import { RequireRoleClient } from '@/app/components/RequireRole'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import { useToast } from '@/lib/useToast'
 import { MENU } from '@/app/components/navigation/menuConfig'
+import RolePermissionEditor from './RolePermissionEditor'
 import { ArrowLeft, Save, Trash2, Shield, AlertTriangle } from 'lucide-react'
 
 interface RoleData {
@@ -35,7 +36,6 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
   const [roleDescription, setRoleDescription] = useState('')
   const [roleModules, setRoleModules] = useState<Record<string, boolean>>({})
   const [roleCanDo, setRoleCanDo] = useState<string[]>([])
-  const [customPerm, setCustomPerm] = useState('')
   const [formErrors, setFormErrors] = useState<{ name?: string }>({})
 
   const isSuper = (profile as any)?.roles?.name === 'superadmin'
@@ -43,23 +43,6 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
 
   // Roles protegidos que no se pueden eliminar ni renombrar
   const PROTECTED_ROLES = ['admin', 'superadmin', 'partner', 'candidate']
-
-  // Módulos disponibles desde el menú
-  const availableModules = useMemo(() => {
-    return MENU.map(m => ({ id: m.id, label: m.label }))
-  }, [])
-
-  // Acciones sugeridas
-  const suggested = [
-    { key: 'manage_administrators', label: 'Gestionar administradores' },
-    { key: 'manage_partners', label: 'Gestionar asociados' },
-    { key: 'manage_candidates', label: 'Gestionar Candidatos' },
-    { key: 'manage_roles', label: 'Gestionar roles' },
-    { key: 'approve_requisitions', label: 'Aprobar requisiciones' },
-    { key: 'create_requisitions', label: 'Crear requisiciones' },
-    { key: 'view_reports', label: 'Ver reportes' },
-    { key: 'export_data', label: 'Exportar datos' },
-  ]
 
   useEffect(() => {
     if (!loading && (!user || !profile)) {
@@ -80,8 +63,7 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
     const loadRole = async () => {
       if (isNew) {
         // Inicializar módulos para nuevo rol
-        const defaultModules = Object.fromEntries(availableModules.map(m => [m.id, false]))
-        setRoleModules(defaultModules)
+        setRoleModules({})
         setLoadingRole(false)
         return
       }
@@ -116,10 +98,7 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
         setRoleCanDo(Array.isArray(p?.can_do) ? p.can_do : [])
         
         const modulesObj = typeof p?.modules === 'object' && p.modules ? p.modules : {}
-        const defaultModules = Object.fromEntries(availableModules.map(m => [m.id, false]))
-        const mergedModules = { ...defaultModules }
-        Object.keys(mergedModules).forEach(k => { mergedModules[k] = Boolean(modulesObj[k]) })
-        setRoleModules(mergedModules)
+        setRoleModules(modulesObj)
         
       } catch (err: any) {
         showError(err.message || String(err))
@@ -259,28 +238,6 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
     }
   }
 
-  const toggleCanDo = (key: string) => {
-    setRoleCanDo(prev => 
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
-    )
-  }
-
-  const toggleModule = (key: string) => {
-    setRoleModules(prev => ({ ...prev, [key]: !prev[key] }))
-  }
-
-  const addCustomPerm = () => {
-    const k = customPerm.trim()
-    if (!k) return
-    if (roleCanDo.includes(k)) return
-    setRoleCanDo(prev => [...prev, k])
-    setCustomPerm('')
-  }
-
-  const removeCustomPerm = (k: string) => {
-    setRoleCanDo(prev => prev.filter(x => x !== k))
-  }
-
   if (loading || loadingRole) return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
@@ -378,121 +335,15 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          {/* Acceso a Módulos */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">
-              Acceso a Módulos
-            </h2>
-            <p className="text-sm text-gray-600">
-              Seleccione los módulos a los que este rol tendrá acceso en el sistema
-            </p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {availableModules.map(module => (
-                <label 
-                  key={module.id} 
-                  className={`
-                    flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all
-                    ${roleModules[module.id] 
-                      ? 'bg-brand-dark/5 border-brand-dark shadow-sm' 
-                      : 'bg-white border-gray-200 hover:border-gray-300'
-                    }
-                  `}
-                >
-                  <input
-                    type="checkbox"
-                    checked={roleModules[module.id] || false}
-                    onChange={() => toggleModule(module.id)}
-                    className="w-5 h-5 text-brand-accent focus:ring-brand-accent border-gray-300 rounded"
-                    disabled={busy}
-                  />
-                  <span className="text-sm font-medium text-gray-700">{module.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Permisos */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 border-b pb-2">
-              Permisos del Sistema
-            </h2>
-            <p className="text-sm text-gray-600">
-              Configure los permisos específicos que este rol tendrá en el sistema
-            </p>
-
-            {/* Permisos Sugeridos */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Permisos Comunes</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {suggested.map(perm => (
-                  <label 
-                    key={perm.key} 
-                    className={`
-                      flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
-                      ${roleCanDo.includes(perm.key)
-                        ? 'bg-emerald-50 border-emerald-300 shadow-sm' 
-                        : 'bg-white border-gray-200 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={roleCanDo.includes(perm.key)}
-                      onChange={() => toggleCanDo(perm.key)}
-                      className="w-4 h-4 text-brand-accent focus:ring-brand-accent border-gray-300 rounded"
-                      disabled={busy}
-                    />
-                    <span className="text-sm text-gray-700">{perm.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Permisos Personalizados */}
-            <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Permisos Personalizados</h3>
-              <div className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  value={customPerm}
-                  onChange={(e) => setCustomPerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomPerm())}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:border-transparent text-sm"
-                  placeholder="nombre_del_permiso"
-                  disabled={busy}
-                />
-                <button
-                  type="button"
-                  onClick={addCustomPerm}
-                  disabled={busy || !customPerm.trim()}
-                  className="px-6 py-2 bg-brand-accent text-white rounded-lg hover:bg-brand-accentDark disabled:opacity-50 transition-colors text-sm font-medium"
-                >
-                  Agregar
-                </button>
-              </div>
-              
-              {roleCanDo.filter(p => !suggested.some(s => s.key === p)).length > 0 && (
-                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  {roleCanDo.filter(p => !suggested.some(s => s.key === p)).map(perm => (
-                    <span
-                      key={perm}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-200"
-                    >
-                      {perm}
-                      <button
-                        onClick={() => removeCustomPerm(perm)}
-                        className="ml-1 text-blue-600 hover:text-blue-800 font-bold"
-                        disabled={busy}
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Editor de Permisos y Menú */}
+          <RolePermissionEditor
+            menuItems={MENU}
+            modules={roleModules}
+            canDo={roleCanDo}
+            onChangeModules={setRoleModules}
+            onChangeCanDo={setRoleCanDo}
+            disabled={busy}
+          />
 
           {/* Acciones */}
           <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
