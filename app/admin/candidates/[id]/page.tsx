@@ -10,6 +10,7 @@ import { FullCandidateProfile } from '@/lib/types/candidates'
 import { getCandidateProfile, analyzeCandidateMatch, MatchResult } from '@/lib/candidates'
 import { Requisition } from '@/lib/types/requisitions'
 import { FileText, ExternalLink, Briefcase, GraduationCap, Award, Globe, ArrowLeft, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import ConfirmModal from '@/app/components/ConfirmModal'
 
 export default function CandidateDetailPage() {
   const { id } = useParams()
@@ -21,6 +22,7 @@ export default function CandidateDetailPage() {
   const [selectedReqId, setSelectedReqId] = useState<string>('')
   const [matchResult, setMatchResult] = useState<MatchResult | null>(null)
   const [busy, setBusy] = useState(true)
+  const [confirmUrl, setConfirmUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!loading && (!user || !profile)) {
@@ -45,6 +47,18 @@ export default function CandidateDetailPage() {
       setMatchResult(null)
     }
   }, [selectedReqId, candidate, requisitions])
+
+  const handleExternalLink = (url: string) => {
+    const normalizedUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`
+    setConfirmUrl(normalizedUrl)
+  }
+
+  const confirmNavigation = () => {
+    if (confirmUrl) {
+      window.open(confirmUrl, '_blank', 'noopener,noreferrer')
+      setConfirmUrl(null)
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -132,24 +146,20 @@ export default function CandidateDetailPage() {
                   </a>
                 )}
                 {candidate.linkedin_url && (
-                  <a 
-                    href={candidate.linkedin_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <button 
+                    onClick={() => handleExternalLink(candidate.linkedin_url!)}
                     className="inline-flex items-center px-3 py-1.5 rounded-md bg-blue-50 text-blue-700 text-sm font-medium hover:bg-blue-100"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" /> LinkedIn
-                  </a>
+                  </button>
                 )}
                 {candidate.portfolio_url && (
-                  <a 
-                    href={candidate.portfolio_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
+                  <button 
+                    onClick={() => handleExternalLink(candidate.portfolio_url!)}
                     className="inline-flex items-center px-3 py-1.5 rounded-md bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200"
                   >
                     <Globe className="w-4 h-4 mr-2" /> Portafolio
-                  </a>
+                  </button>
                 )}
               </div>
 
@@ -468,6 +478,17 @@ export default function CandidateDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmUrl}
+        title="Confirmar navegación"
+        message="¿Desea navegar fuera del sitio web a este enlace externo?"
+        confirmText="Sí, abrir"
+        cancelText="Cancelar"
+        onConfirm={confirmNavigation}
+        onCancel={() => setConfirmUrl(null)}
+        type="warning"
+      />
     </RequireRoleClient>
   )
 }
