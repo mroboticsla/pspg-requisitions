@@ -9,6 +9,7 @@ import PhoneInput, { COUNTRY_CODES, getUnformattedPhone, formatPhoneNumber, comp
 import SessionHistory from "../components/SessionHistory";
 import { SessionMetadata } from "../../lib/sessionTracking";
 import AvatarUpload from "../components/AvatarUpload";
+import ProfessionalProfile from "./ProfessionalProfile";
 
 export default function ProfilePage() {
   const { user, profile, loading } = useAuth();
@@ -16,6 +17,8 @@ export default function ProfilePage() {
   const roleName = profile?.roles?.name?.toLowerCase?.();
   const canEditIdentity = roleName === 'candidate' || roleName === 'admin' || roleName === 'superadmin';
   
+  const [activeTab, setActiveTab] = useState<'personal' | 'professional'>('personal');
+
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -249,6 +252,36 @@ export default function ProfilePage() {
           </p>
         </div>
 
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('personal')}
+              className={`${
+                activeTab === 'personal'
+                  ? 'border-brand-accent text-brand-accent'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Información Personal
+            </button>
+            <button
+              onClick={() => setActiveTab('professional')}
+              className={`${
+                activeTab === 'professional'
+                  ? 'border-brand-accent text-brand-accent'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+            >
+              Perfil Profesional
+            </button>
+          </nav>
+        </div>
+
+        {activeTab === 'professional' ? (
+          <ProfessionalProfile userId={user.id} />
+        ) : (
+          <>
         {/* Tarjeta de perfil */}
         <div className="bg-white shadow-sm rounded-lg overflow-hidden">
           {/* Avatar y nombre */}
@@ -551,6 +584,8 @@ export default function ProfilePage() {
             currentSession={sessionMetadata?.currentSession}
           />
         </div>
+        </>
+        )}
       </div>
     </div>
   );

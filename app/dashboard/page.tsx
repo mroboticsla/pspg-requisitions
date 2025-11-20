@@ -94,6 +94,8 @@ export default function DashboardPage() {
     const roleName = (profile as any)?.roles?.name
     if (roleName === 'partner') {
       router.replace('/dashboard/partner')
+    } else if (roleName === 'candidate') {
+      router.replace('/dashboard/candidate')
     }
   }, [loading, profile, router])
 

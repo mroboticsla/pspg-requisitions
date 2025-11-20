@@ -48,11 +48,11 @@ export const MENU: MenuItem[] = [
       { id: 'partners', label: 'Contactos', path: '/admin/partners', roles: ['superadmin', 'admin'], icon: Users },
     ]
   },
-  { id: 'candidates', 
-    label: 'Candidatos', 
-    roles: ['superadmin','admin'], children: [
-      { id: 'users', label: 'Listado de Candidatos', path: '/admin/users', roles: ['superadmin', 'admin'], icon: UserIcon },
-    ] 
+  { 
+    id: 'candidates', 
+    label: 'Gestión de Candidatos', 
+    path: '/admin/candidates',
+    icon: UserIcon 
   },
   {   
     id: 'access', 
