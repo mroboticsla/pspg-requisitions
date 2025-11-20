@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense, useRef } from 'react'
 import { useAuth } from '../providers/AuthProvider'
 import { useSafeRouter } from '../../lib/useSafeRouter'
 import { useSearchParams } from 'next/navigation'
@@ -34,6 +34,9 @@ function RequisitionFormContent() {
   const [editingStatus, setEditingStatus] = useState<RequisitionComplete['status'] | null>(null)
   const [redirecting, setRedirecting] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
+  
+  // Ref para controlar la carga única de la requisición
+  const loadedRequisitionId = useRef<string | null>(null)
 
   // Obtener rol del usuario desde el profile
   const userRole = (profile as any)?.roles?.name || null
@@ -229,8 +232,14 @@ function RequisitionFormContent() {
     // No ejecutar si no hay usuario, está redirigiendo, o no hay ID de requisición
     if (!user || !profile || redirecting || !editRequisitionId) return
     
+    // Evitar recargas infinitas si ya se cargó esta requisición
+    if (loadedRequisitionId.current === editRequisitionId) return
+
     const loadExistingRequisition = async () => {
       try {
+        // Marcar como cargado inmediatamente para evitar loops
+        loadedRequisitionId.current = editRequisitionId
+        
         setLoadingRequisition(true)
         
         const requisition = await getRequisitionById(editRequisitionId) as RequisitionComplete

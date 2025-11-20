@@ -76,6 +76,7 @@ export async function createRequisition(
         funciones_principales: data.funciones_principales,
         formacion_academica: data.formacion_academica,
         otros_estudios: data.otros_estudios,
+        idiomas: data.idiomas,
         idioma_ingles: data.idioma_ingles,
         habilidad_informatica: data.habilidad_informatica,
         habilidades_tecnicas: data.habilidades_tecnicas,
