@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   FullCandidateProfile, 
   CandidateExperience, 
@@ -49,6 +49,7 @@ export default function ProfessionalProfileSections({ userId, onSectionChange }:
 
   useEffect(() => {
     loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   // Intersection Observer para scroll spy

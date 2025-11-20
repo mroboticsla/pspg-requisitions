@@ -205,6 +205,7 @@ export interface Requisition {
   formacion_academica?: FormacionAcademica;
   otros_estudios?: string;
   idiomas?: Idiomas;
+  idioma_ingles?: boolean;
   
   // HABILIDAD INFORMÁTICA
   habilidad_informatica?: HabilidadInformatica;
@@ -253,6 +254,7 @@ export interface CreateRequisitionData {
   formacion_academica?: FormacionAcademica;
   otros_estudios?: string;
   idiomas?: Idiomas;
+  idioma_ingles?: boolean;
   habilidad_informatica?: HabilidadInformatica;
   habilidades_tecnicas?: HabilidadesTecnicas;
   custom_responses?: Record<string, Record<string, any>>; // { section_id: { campo: valor } }
