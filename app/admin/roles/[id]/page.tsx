@@ -53,7 +53,7 @@ export default function RoleEditPage({ params }: { params: { id: string } }) {
   const suggested = [
     { key: 'manage_administrators', label: 'Gestionar administradores' },
     { key: 'manage_partners', label: 'Gestionar asociados' },
-    { key: 'manage_users', label: 'Gestionar usuarios' },
+    { key: 'manage_candidates', label: 'Gestionar Candidatos' },
     { key: 'manage_roles', label: 'Gestionar roles' },
     { key: 'approve_requisitions', label: 'Aprobar requisiciones' },
     { key: 'create_requisitions', label: 'Crear requisiciones' },

@@ -13,7 +13,7 @@ export type MenuItem = {
 }
 
 export const MENU: MenuItem[] = [
-  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', roles: ['superadmin', 'admin', 'partner'], icon: LayoutDashboard },
+  { id: 'dashboard', label: 'Dashboard', path: '/dashboard', roles: ['superadmin', 'admin', 'partner', 'candidate'], icon: LayoutDashboard },
   { id: 'contact-requests', label: 'Buzón Web', path: '/admin/contact-requests', roles: ['superadmin', 'admin'], icon: Inbox },
   {
     id: 'jobs',
@@ -22,6 +22,15 @@ export const MENU: MenuItem[] = [
     children: [
       { id: 'job-ads', label: 'Gestión de Anuncios', path: '/admin/job-ads', roles: ['superadmin', 'admin'], icon: Megaphone },
     ]
+  },
+  { 
+    id: 'candidates', 
+    roles: ['superadmin','admin'], 
+    label: 'Gestión de Candidatos', 
+    children: [
+      { id: 'candidates-admin', label: 'Gestión de Candidatos', path: '/admin/candidates', roles: ['superadmin', 'admin'], icon: Users },
+    ],
+    icon: UserIcon 
   },
   {
     id: 'requisitions', 
@@ -47,12 +56,6 @@ export const MENU: MenuItem[] = [
       { id: 'companies', label: 'Empresas', path: '/admin/companies', roles: ['superadmin', 'admin'], icon: Building2 },
       { id: 'partners', label: 'Contactos', path: '/admin/partners', roles: ['superadmin', 'admin'], icon: Users },
     ]
-  },
-  { 
-    id: 'candidates', 
-    label: 'Gestión de Candidatos', 
-    path: '/admin/candidates',
-    icon: UserIcon 
   },
   {   
     id: 'access', 
