@@ -36,7 +36,7 @@ const CountryFlag = ({ countryCode }: { countryCode: string }) => {
 
 // Lista de códigos de país comunes con sus formatos
 export const COUNTRY_CODES = [
-  { code: "+52", country: "MX", name: "México", format: "(###) ###-####", length: 10 },
+  { code: "+52", country: "MX", name: "México", format: "## ### ####", length: 10 },
   { code: "+1", country: "US", name: "Estados Unidos", format: "(###) ###-####", length: 10 },
   { code: "+1", country: "CA", name: "Canadá", format: "(###) ###-####", length: 10 },
   { code: "+54", country: "AR", name: "Argentina", format: "## ####-####", length: 10 },
@@ -99,16 +99,40 @@ export const formatPhoneNumber = (value: string, countryValue: string): string =
   // Limitar al número máximo de dígitos para ese país
   const limitedDigits = digits.substring(0, country.length);
   
+  // Determinar el formato a usar
+  let format = country.format;
+
+  // Lógica específica para México (MX)
+  if (country.country === "MX") {
+    // Áreas de 2 dígitos: 55 (CDMX), 33 (Guadalajara), 81 (Monterrey)
+    const twoDigitAreas = ["55", "33", "81"];
+    if (twoDigitAreas.some(area => limitedDigits.startsWith(area))) {
+      format = "## #### ####";
+    } else {
+      format = "### ### ####";
+    }
+  }
+  
+  // Lógica específica para Argentina (AR)
+  if (country.country === "AR") {
+    // Buenos Aires usa 11 (2 dígitos), el resto usa 3 o 4 dígitos
+    if (limitedDigits.startsWith("11")) {
+      format = "## #### ####";
+    } else {
+      format = "### ### ####";
+    }
+  }
+  
   // Aplicar el formato
   let formatted = "";
   let digitIndex = 0;
   
-  for (let i = 0; i < country.format.length && digitIndex < limitedDigits.length; i++) {
-    if (country.format[i] === "#") {
+  for (let i = 0; i < format.length && digitIndex < limitedDigits.length; i++) {
+    if (format[i] === "#") {
       formatted += limitedDigits[digitIndex];
       digitIndex++;
     } else {
-      formatted += country.format[i];
+      formatted += format[i];
     }
   }
   
