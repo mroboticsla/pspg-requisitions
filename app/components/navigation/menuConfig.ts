@@ -69,6 +69,13 @@ export const MENU: MenuItem[] = [
     ]
   },
   { id: 'profile', label: 'Mi perfil', path: '/profile', icon: UserIcon },
+  { 
+    id: 'my-resume', 
+    label: 'Mi CV', 
+    path: '/candidate/resume', 
+    icon: FileText, 
+    roles: ['candidate', 'admin', 'superadmin'] 
+  },
 ]
 
 export function filterMenu(items: MenuItem[], role: Role | null): MenuItem[] {

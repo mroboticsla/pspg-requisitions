@@ -161,14 +161,23 @@ export default function Sidebar({ className = '' }: SidebarProps) {
   })()
   const expanded = !collapsed || hoverExpand
 
+  // Función para adaptar el path según el rol del usuario
+  const adaptPath = (path: string, itemId: string): string => {
+    // Si es el item de perfil y el usuario es candidato, redirigir a /candidate/profile
+    if (itemId === 'profile' && role === 'candidate') {
+      return '/candidate/profile';
+    }
+    return path;
+  };
+
   const Nav = (
     <nav className="space-y-1 overflow-hidden">
       {items.map(item => (
         <div key={item.id}>
           {item.path ? (
             <SideLink 
-              href={item.path} 
-              active={pathname?.startsWith(item.path)} 
+              href={adaptPath(item.path, item.id)} 
+              active={pathname?.startsWith(adaptPath(item.path, item.id))} 
               collapsed={!expanded} 
               title={item.label} 
               icon={item.icon}
@@ -189,8 +198,8 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                 {item.children.map(ch => (
                   <SideLink 
                     key={ch.id} 
-                    href={ch.path!} 
-                    active={pathname === ch.path} 
+                    href={adaptPath(ch.path!, ch.id)} 
+                    active={pathname === adaptPath(ch.path!, ch.id)} 
                     collapsed={false} 
                     title={ch.label} 
                     icon={ch.icon}
@@ -205,8 +214,8 @@ export default function Sidebar({ className = '' }: SidebarProps) {
                 {item.children.map(ch => (
                   <SideLink 
                     key={ch.id} 
-                    href={ch.path!} 
-                    active={pathname === ch.path} 
+                    href={adaptPath(ch.path!, ch.id)} 
+                    active={pathname === adaptPath(ch.path!, ch.id)} 
                     collapsed={true} 
                     title={ch.label} 
                     icon={ch.icon}

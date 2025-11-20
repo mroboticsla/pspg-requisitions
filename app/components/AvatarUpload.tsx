@@ -13,9 +13,10 @@ interface AvatarUploadProps {
   currentAvatarUrl?: string | null;
   onAvatarUpdate?: (newAvatarUrl: string) => void;
   disabled?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate, disabled = false }: AvatarUploadProps) {
+export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate, disabled = false, size = 'md' }: AvatarUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(currentAvatarUrl || null);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -242,6 +243,15 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate, d
     return email.charAt(0).toUpperCase();
   };
 
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'sm': return 'w-16 h-16';
+      case 'lg': return 'w-32 h-32 sm:w-40 sm:h-40';
+      case 'md':
+      default: return 'w-28 h-28 sm:w-32 sm:h-32';
+    }
+  };
+
   return (
     <div className={`relative group ${disabled ? 'opacity-60' : ''}`} aria-disabled={disabled}>
       {/* Avatar Preview con Overlay de Edición */}
@@ -250,10 +260,10 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate, d
           <img
             src={avatarUrl}
             alt="Avatar"
-            className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-white shadow-lg"
+            className={`${getSizeClasses()} rounded-full object-cover border-4 border-white shadow-lg`}
           />
         ) : (
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg overflow-hidden">
+          <div className={`${getSizeClasses()} rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center border-4 border-white shadow-lg overflow-hidden`}>
             {/* Avatar genérico SVG */}
             <svg 
               className="w-full h-full text-indigo-300" 
