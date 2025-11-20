@@ -206,37 +206,201 @@ export default function CandidateDetailPage() {
               </div>
             </div>
 
-            {/* Skills & Languages */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Job Profile - Additional Information */}
+            {candidate.job_profile && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Award className="w-5 h-5 text-gray-400" /> Habilidades
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {candidate.skills.map(skill => (
-                    <span key={skill.id} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                      {skill.skill_name} <span className="opacity-60 ml-1">({skill.level})</span>
-                    </span>
-                  ))}
-                  {candidate.skills.length === 0 && <p className="text-gray-500 italic text-sm">Sin habilidades</p>}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-gray-400" /> Idiomas
-                </h2>
-                <div className="space-y-2">
-                  {candidate.languages.map(lang => (
-                    <div key={lang.id} className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">{lang.language}</span>
-                      <span className="text-gray-500">{lang.proficiency}</span>
+                <h2 className="text-lg font-semibold text-gray-900 mb-6">Información Complementaria</h2>
+                
+                {/* Formación Académica */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Formación Académica</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {candidate.job_profile.bachiller && <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-100">Bachiller</span>}
+                    {candidate.job_profile.tecnico && <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-100">Técnico</span>}
+                    {candidate.job_profile.profesional && <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-100">Profesional</span>}
+                    {candidate.job_profile.especializacion && <span className="px-2.5 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-100">Especialización</span>}
+                    {candidate.job_profile.estudianteUniversitario && <span className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-100">Estudiante Universitario</span>}
+                    {!candidate.job_profile.bachiller && !candidate.job_profile.tecnico && !candidate.job_profile.profesional && !candidate.job_profile.especializacion && !candidate.job_profile.estudianteUniversitario && (
+                      <span className="text-gray-500 italic text-sm">No especificado</span>
+                    )}
+                  </div>
+                  {candidate.job_profile.otrosEstudios && (
+                    <div className="mt-2">
+                      <span className="text-xs font-medium text-gray-600">Otros estudios: </span>
+                      <span className="text-xs text-gray-700">{candidate.job_profile.otrosEstudios}</span>
                     </div>
-                  ))}
-                  {candidate.languages.length === 0 && <p className="text-gray-500 italic text-sm">Sin idiomas</p>}
+                  )}
+                </div>
+
+                {/* Idiomas Adicionales del Job Profile */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Idiomas (Perfil Complementario)</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {candidate.job_profile.idiomaEspanol && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100">Español</span>}
+                    {candidate.job_profile.idiomaIngles && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100">Inglés</span>}
+                    {candidate.job_profile.idiomaFrances && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100">Francés</span>}
+                    {candidate.job_profile.idiomaAleman && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100">Alemán</span>}
+                    {candidate.job_profile.idiomaPortugues && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100">Portugués</span>}
+                    {candidate.job_profile.idiomaItaliano && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100">Italiano</span>}
+                    {candidate.job_profile.idiomaMandarin && <span className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-medium rounded-full border border-purple-100">Mandarín</span>}
+                    {!candidate.job_profile.idiomaEspanol && !candidate.job_profile.idiomaIngles && !candidate.job_profile.idiomaFrances && !candidate.job_profile.idiomaAleman && !candidate.job_profile.idiomaPortugues && !candidate.job_profile.idiomaItaliano && !candidate.job_profile.idiomaMandarin && (
+                      <span className="text-gray-500 italic text-sm">No especificado</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Habilidades Informáticas */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Habilidades Informáticas</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    {/* Sistemas Operativos */}
+                    <div>
+                      <span className="font-medium text-gray-600">Sistemas Operativos:</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {candidate.job_profile.sistemaOperativo?.windows && <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">Windows</span>}
+                        {candidate.job_profile.sistemaOperativo?.linux && <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">Linux</span>}
+                        {candidate.job_profile.sistemaOperativo?.macos && <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">macOS</span>}
+                        {candidate.job_profile.sistemaOperativo?.otros && <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">Otros</span>}
+                        {!candidate.job_profile.sistemaOperativo?.windows && !candidate.job_profile.sistemaOperativo?.linux && !candidate.job_profile.sistemaOperativo?.macos && !candidate.job_profile.sistemaOperativo?.otros && (
+                          <span className="text-gray-400 italic text-xs">No especificado</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Office */}
+                    <div>
+                      <span className="font-medium text-gray-600">Office (Word/Excel/PowerPoint):</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {candidate.job_profile.wordExcelPowerPoint?.basico && <span className="px-2 py-0.5 bg-yellow-50 text-yellow-700 text-xs rounded border border-yellow-100">Básico</span>}
+                        {candidate.job_profile.wordExcelPowerPoint?.intermedio && <span className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded border border-orange-100">Intermedio</span>}
+                        {candidate.job_profile.wordExcelPowerPoint?.avanzado && <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded border border-green-100">Avanzado</span>}
+                        {!candidate.job_profile.wordExcelPowerPoint?.basico && !candidate.job_profile.wordExcelPowerPoint?.intermedio && !candidate.job_profile.wordExcelPowerPoint?.avanzado && (
+                          <span className="text-gray-400 italic text-xs">No especificado</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bases de Datos */}
+                    <div>
+                      <span className="font-medium text-gray-600">Bases de Datos:</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {candidate.job_profile.baseDatos?.basico && <span className="px-2 py-0.5 bg-yellow-50 text-yellow-700 text-xs rounded border border-yellow-100">Básico</span>}
+                        {candidate.job_profile.baseDatos?.intermedio && <span className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded border border-orange-100">Intermedio</span>}
+                        {candidate.job_profile.baseDatos?.avanzado && <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded border border-green-100">Avanzado</span>}
+                        {!candidate.job_profile.baseDatos?.basico && !candidate.job_profile.baseDatos?.intermedio && !candidate.job_profile.baseDatos?.avanzado && (
+                          <span className="text-gray-400 italic text-xs">No especificado</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Internet */}
+                    <div>
+                      <span className="font-medium text-gray-600">Internet:</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {candidate.job_profile.internet?.basico && <span className="px-2 py-0.5 bg-yellow-50 text-yellow-700 text-xs rounded border border-yellow-100">Básico</span>}
+                        {candidate.job_profile.internet?.intermedio && <span className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded border border-orange-100">Intermedio</span>}
+                        {candidate.job_profile.internet?.avanzado && <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded border border-green-100">Avanzado</span>}
+                        {!candidate.job_profile.internet?.basico && !candidate.job_profile.internet?.intermedio && !candidate.job_profile.internet?.avanzado && (
+                          <span className="text-gray-400 italic text-xs">No especificado</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Correo Electrónico */}
+                    <div>
+                      <span className="font-medium text-gray-600">Correo Electrónico:</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {candidate.job_profile.correoElectronico?.basico && <span className="px-2 py-0.5 bg-yellow-50 text-yellow-700 text-xs rounded border border-yellow-100">Básico</span>}
+                        {candidate.job_profile.correoElectronico?.intermedio && <span className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded border border-orange-100">Intermedio</span>}
+                        {candidate.job_profile.correoElectronico?.avanzado && <span className="px-2 py-0.5 bg-green-50 text-green-700 text-xs rounded border border-green-100">Avanzado</span>}
+                        {!candidate.job_profile.correoElectronico?.basico && !candidate.job_profile.correoElectronico?.intermedio && !candidate.job_profile.correoElectronico?.avanzado && (
+                          <span className="text-gray-400 italic text-xs">No especificado</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {candidate.job_profile.otroEspecifique && (
+                    <div className="mt-3">
+                      <span className="text-xs font-medium text-gray-600">Otras habilidades: </span>
+                      <span className="text-xs text-gray-700">{candidate.job_profile.otroEspecifique}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Habilidades y Conocimientos Técnicos */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Habilidades y Conocimientos Técnicos</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      {candidate.job_profile.informacion ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-gray-300" />
+                      )}
+                      <span className={candidate.job_profile.informacion ? 'text-gray-700' : 'text-gray-400'}>
+                        Manejo de información confidencial
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {candidate.job_profile.maquinariaEquipos ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-gray-300" />
+                      )}
+                      <span className={candidate.job_profile.maquinariaEquipos ? 'text-gray-700' : 'text-gray-400'}>
+                        Manejo de maquinaria/equipos
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {candidate.job_profile.decisiones ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-gray-300" />
+                      )}
+                      <span className={candidate.job_profile.decisiones ? 'text-gray-700' : 'text-gray-400'}>
+                        Toma de decisiones
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {candidate.job_profile.supervisionPersonal ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-gray-300" />
+                      )}
+                      <span className={candidate.job_profile.supervisionPersonal ? 'text-gray-700' : 'text-gray-400'}>
+                        Supervisión de personal
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Responsabilidades y Supervisión */}
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Tipo de responsabilidad:</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {candidate.job_profile.responsabilidades?.confidencial && <span className="px-2 py-0.5 bg-red-50 text-red-700 text-xs rounded border border-red-100">Confidencial</span>}
+                        {candidate.job_profile.responsabilidades?.restringida && <span className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded border border-orange-100">Restringida</span>}
+                        {!candidate.job_profile.responsabilidades?.confidencial && !candidate.job_profile.responsabilidades?.restringida && (
+                          <span className="text-gray-400 italic text-xs">No especificado</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Tipo de supervisión:</span>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {candidate.job_profile.supervision?.directa && <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-100">Directa</span>}
+                        {candidate.job_profile.supervision?.indirecta && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs rounded border border-indigo-100">Indirecta</span>}
+                        {!candidate.job_profile.supervision?.directa && !candidate.job_profile.supervision?.indirecta && (
+                          <span className="text-gray-400 italic text-xs">No especificado</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
           </div>
 
