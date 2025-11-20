@@ -1,10 +1,9 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import getFullUserData from '../../lib/getFullUserData'
-import { updateLastAction } from '../../lib/sessionTracking'
 
 type Role = {
   id: string
@@ -43,8 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const loadingRef = useRef(true)
-  const lastCheckTime = useRef<number>(Date.now())
-  const pathname = usePathname()
   const router = useRouter()
 
   const userRef = useRef<User | null>(null)
@@ -55,12 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true
-    // let loadingTimeout: NodeJS.Timeout | null = null // Eliminado para evitar race conditions
-    let maxLoadingTimeout: NodeJS.Timeout | null = null
 
     const load = async (isBackground = false) => {
-      let localTimeout: NodeJS.Timeout | undefined
-
       try {
         if (!isBackground) {
           setLoading(true)
@@ -71,22 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.debug(`AuthProvider: Iniciando carga de datos del usuario (background: ${isBackground})`)
         }
         
-        // Timeout de seguridad para evitar que load() se quede colgado
-        const timeoutPromise = new Promise<null>((resolve) => {
-          localTimeout = setTimeout(() => {
-            if (mounted) {
-              console.warn('AuthProvider: load() timeout alcanzado después de 15s - posible problema de red')
-            }
-            resolve(null)
-          }, 15000)
-        })
-        
-        const full = await Promise.race([
-          getFullUserData(),
-          timeoutPromise
-        ])
-        
-        if (localTimeout) clearTimeout(localTimeout)
+        const full = await getFullUserData()
         
         if (!mounted) return
         
@@ -94,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (process.env.NODE_ENV === 'development') {
             console.debug('AuthProvider: No hay datos de usuario, limpiando estado')
           }
-          // MODIFICADO: Si es background check, NO limpiar estado para evitar UX disruptiva
+          // Si es background check, NO limpiar estado para evitar UX disruptiva si es solo un error de red
           if (!isBackground) {
             setUser(null)
             setProfile(null)
@@ -112,8 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('AuthProvider: Error en load()', error)
         if (!mounted) return
-        // Si falla en background, no necesariamente queremos limpiar el usuario inmediatamente
-        // a menos que sea un error crítico. Por seguridad, si no es background, limpiamos.
         if (!isBackground) {
           setUser(null)
           setProfile(null)
@@ -127,23 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false)
           loadingRef.current = false
         }
-        lastCheckTime.current = Date.now()
       }
     }
-
-    // Timeout máximo absoluto
-    maxLoadingTimeout = setTimeout(() => {
-      if (mounted && loadingRef.current) {
-        console.error('AuthProvider: Timeout máximo alcanzado (10s), forzando loading = false')
-        setLoading(false)
-        loadingRef.current = false
-        // Solo limpiar si realmente estábamos cargando (no background)
-        if (!userRef.current) {
-             setUser(null)
-             setProfile(null)
-        }
-      }
-    }, 10000)
 
     load(false) // Carga inicial bloqueante
 
@@ -166,72 +127,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Refresh en background para no bloquear la UI
         await load(true)
       } else if (event === 'INITIAL_SESSION') {
-        // Si ya tenemos usuario (usando ref para evitar closure stale), tratar como refresh en background
-        // Si no tenemos usuario (carga inicial real), bloquear
         await load(!!userRef.current)
       } else if (event === 'SIGNED_IN') {
-        // Login explícito: bloqueante, a menos que ya tengamos usuario (raro, pero posible)
         await load(!!userRef.current) 
       }
     })
 
     return () => {
       mounted = false
-      // if (loadingTimeout) clearTimeout(loadingTimeout) // Ya no es necesario, manejado localmente con check de mounted
-      if (maxLoadingTimeout) clearTimeout(maxLoadingTimeout)
       subscription?.subscription.unsubscribe()
     }
   }, [])
-
-  // Efecto para re-validar la sesión de forma NO bloqueante
-  useEffect(() => {
-    if (loadingRef.current) return
-    
-    const now = Date.now()
-    const timeSinceLastCheck = now - lastCheckTime.current
-    const REVALIDATE_THRESHOLD = 5 * 60 * 1000 // 5 minutos
-
-    if (timeSinceLastCheck > REVALIDATE_THRESHOLD) {
-      if (process.env.NODE_ENV === 'development') {
-        console.debug(`AuthProvider: Re-validando sesión (background) después de ${Math.round(timeSinceLastCheck / 1000 / 60)} minutos`)
-      }
-      
-      lastCheckTime.current = now
-      
-      // Re-verificar la sesión en segundo plano (sin setLoading(true))
-      const revalidate = async () => {
-        try {
-          const full = await getFullUserData()
-          
-          if (!full) {
-            // Solo si explícitamente falló la validación, cerramos sesión
-            // MODIFICADO: Si falla el background check, NO cerramos sesión inmediatamente.
-            // Si fue un error de auth real (token inválido), getFullUserData ya llamó a signOut()
-            // y el evento SIGNED_OUT se encargará de limpiar el estado.
-            // Si fue un error de red, mantenemos el estado local para evitar UX disruptiva.
-            console.warn('AuthProvider: Background check falló o retornó null - manteniendo sesión local por resiliencia')
-          } else {
-            // Actualizar datos silenciosamente
-            const u = { id: (full as any).id, email: (full as any).email }
-            setUser(u)
-            setProfile((full as any).profile)
-          }
-        } catch (error) {
-          console.error('Error al re-validar sesión en background:', error)
-          // No cerramos sesión por error de red en background check
-        }
-      }
-      
-      revalidate()
-    } else {
-      lastCheckTime.current = now
-      if (user?.id) {
-        updateLastAction(user.id).catch(error => {
-          console.error('Error al actualizar última acción:', error)
-        })
-      }
-    }
-  }, [pathname, user])
 
   const signOut = async () => {
     await supabase.auth.signOut()
