@@ -21,6 +21,29 @@ import { useToast } from '@/lib/useToast'
 type ProfileRow = { id: string, first_name?: string, last_name?: string, is_active?: boolean, roles?: any, created_at?: string }
 type RoleRow = { id: string, name: string, permissions?: any }
 
+// Constants moved outside component to avoid dependency issues
+const COLORS = ['#FF1556', '#00253F', '#94a3b8', '#cbd5e1', '#e2e8f0', '#f1f5f9']
+
+const statusColors: Record<RequisitionStatus, string> = {
+  draft: '#94a3b8',
+  submitted: '#3b82f6',
+  in_review: '#f59e0b',
+  approved: '#10b981',
+  rejected: '#ef4444',
+  cancelled: '#6b7280',
+  filled: '#8b5cf6',
+}
+
+const statusLabels: Record<RequisitionStatus, string> = {
+  draft: 'Borrador',
+  submitted: 'Enviada',
+  in_review: 'En Revisión',
+  approved: 'Aprobada',
+  rejected: 'Rechazada',
+  cancelled: 'Cancelada',
+  filled: 'Cubierta',
+}
+
 type DashboardStats = {
   totalUsers: number
   activeUsers: number
@@ -303,9 +326,6 @@ export default function DashboardPage() {
     return data
   }, [allUsers, dateRange])
 
-  // Colores para el gráfico de pastel - Usando paleta de marca
-  const COLORS = ['#FF1556', '#00253F', '#94a3b8', '#cbd5e1', '#e2e8f0', '#f1f5f9']
-
   // Datos para gráfico de barras de estados de requisiciones
   const requisitionStatusChartData = useMemo(() => {
     const entries = Object.entries(requisitionData.byStatus)
@@ -319,26 +339,6 @@ export default function DashboardPage() {
   }, [requisitionData])
 
   // Distribución (pie) por estado para usar el componente compartido
-  const statusColors: Record<RequisitionStatus, string> = {
-    draft: '#94a3b8',
-    submitted: '#3b82f6',
-    in_review: '#f59e0b',
-    approved: '#10b981',
-    rejected: '#ef4444',
-    cancelled: '#6b7280',
-    filled: '#8b5cf6',
-  }
-
-  const statusLabels: Record<RequisitionStatus, string> = {
-    draft: 'Borrador',
-    submitted: 'Enviada',
-    in_review: 'En Revisión',
-    approved: 'Aprobada',
-    rejected: 'Rechazada',
-    cancelled: 'Cancelada',
-    filled: 'Cubierta',
-  }
-
   const statusDistribution = useMemo(() => {
     const entries = Object.entries(requisitionData.byStatus) as [RequisitionStatus, number][]
     const data = entries.map(([status, value]) => ({

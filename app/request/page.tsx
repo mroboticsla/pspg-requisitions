@@ -221,9 +221,6 @@ function RequisitionFormContent() {
     // No ejecutar si no hay usuario, está redirigiendo, o no hay ID de requisición
     if (!user || !profile || redirecting || !editRequisitionId) return
     
-    // Prevenir múltiples cargas simultáneas
-    if (loadingRequisition) return
-
     const loadExistingRequisition = async () => {
       try {
         setLoadingRequisition(true)
@@ -379,7 +376,7 @@ function RequisitionFormContent() {
     }
 
     loadExistingRequisition()
-  }, [editRequisitionId, user, profile, redirecting]) // Dependencias optimizadas
+  }, [editRequisitionId, user, profile, redirecting, error, router, userRole, warning]) // Dependencias optimizadas
 
   const handleCustomResponse = (sectionId: string, fieldName: string, value: any) => {
     setCustomResponses(prev => ({

@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { listRequisitions } from "@/lib/requisitions";
@@ -166,7 +167,7 @@ export default function MyRequisitionsPage() {
     }
 
     return withScores.map(({ r }) => r);
-  }, [requisitions, statusFilter, companyFilter, tipoFilter, debouncedSearch, companyNames]);
+  }, [requisitions, statusFilter, companyFilter, tipoFilter, companyNames, normalizeForMatch, searchTokens]);
 
   const loadData = useCallback(async () => {
     if (!profile?.id) return;
@@ -273,7 +274,7 @@ export default function MyRequisitionsPage() {
       // Utilizar replaceState para no llenar el historial
       window.history.replaceState(null, '', url);
     }
-  }, [searchTerm]);
+  }, [searchTerm, statusFilter, companyFilter, tipoFilter]);
 
   const handleClearFilters = useCallback(() => {
     setSearchTerm("");
@@ -423,7 +424,14 @@ export default function MyRequisitionsPage() {
             </div>
             {shareQR && (
               <div className="flex items-center gap-4">
-                <img src={shareQR} alt="QR de búsqueda" className="w-40 h-40 border border-admin-border-DEFAULT rounded" />
+                <Image 
+                  src={shareQR} 
+                  alt="QR de búsqueda" 
+                  width={160} 
+                  height={160} 
+                  className="border border-admin-border-DEFAULT rounded" 
+                  unoptimized
+                />
                 <p className="text-xs text-admin-text-secondary">
                   Escanea el código QR para abrir esta misma búsqueda.
                 </p>

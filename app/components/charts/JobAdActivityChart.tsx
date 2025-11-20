@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -54,11 +54,7 @@ export function JobAdActivityChart({ jobAdId }: { jobAdId: string }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    loadMetrics();
-  }, [jobAdId]);
-
-  async function loadMetrics() {
+  const loadMetrics = useCallback(async () => {
     // Generate last 14 days
     const last14Days = Array.from({ length: 14 }, (_, i) => {
       const d = new Date();
@@ -101,7 +97,11 @@ export function JobAdActivityChart({ jobAdId }: { jobAdId: string }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [jobAdId]);
+
+  useEffect(() => {
+    loadMetrics();
+  }, [loadMetrics]);
 
   const showSpinner = loading || !isReady;
   const hasData = data.length > 0;

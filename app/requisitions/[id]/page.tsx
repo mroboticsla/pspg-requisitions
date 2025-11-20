@@ -280,7 +280,7 @@ export default function RequisitionDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [requisitionId, error]);
+  }, [requisitionId, error, isAdminRole]);
 
   useEffect(() => {
     loadRequisition();

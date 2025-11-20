@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Plus, Search, Megaphone, MapPin, Building2, Calendar, 
@@ -38,15 +38,7 @@ export default function JobAdsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const pageSize = 10;
 
-  useEffect(() => {
-    // Debounce search
-    const timer = setTimeout(() => {
-      loadAds();
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [page, searchTerm, statusFilter]);
-
-  async function loadAds() {
+  const loadAds = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -75,7 +67,15 @@ export default function JobAdsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, searchTerm, statusFilter, error]);
+
+  useEffect(() => {
+    // Debounce search
+    const timer = setTimeout(() => {
+      loadAds();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [loadAds]);
 
   const [stats, setStats] = useState({
     total: 0,
@@ -87,25 +87,24 @@ export default function JobAdsPage() {
   });
 
   useEffect(() => {
+    async function loadStats() {
+      try {
+        const data = await getJobAdStats();
+        setStats(prev => ({
+          ...prev,
+          total: data.total,
+          published: data.published,
+          draft: data.draft,
+          archived: data.archived,
+          expiringSoon: data.expiringSoon,
+          expired: data.expired
+        }));
+      } catch (err) {
+        console.error('Error loading stats:', err);
+      }
+    }
     loadStats();
   }, []);
-
-  async function loadStats() {
-    try {
-      const data = await getJobAdStats();
-      setStats(prev => ({
-        ...prev,
-        total: data.total,
-        published: data.published,
-        draft: data.draft,
-        archived: data.archived,
-        expiringSoon: data.expiringSoon,
-        expired: data.expired
-      }));
-    } catch (err) {
-      console.error('Error loading stats:', err);
-    }
-  }
 
   const quickFilters: { label: string; value: JobAdStatus | 'expiring_soon' | 'expired' | "" }[] = [
     { label: "Todos", value: "" },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useToast } from '@/lib/useToast';
 import { createJobAd, updateJobAd, getJobAdById, getJobAdAssignments } from '@/lib/jobAds';
@@ -49,24 +49,7 @@ export default function JobAdEditorPage() {
   const [companies, setCompanies] = useState<Record<string, any>>({});
   const [reqSearchTerm, setReqSearchTerm] = useState('');
 
-  useEffect(() => {
-    if (!isNew) setStep(2);
-    loadData();
-  }, [isNew]);
-
-  useEffect(() => {
-    if (reqSearchTerm.trim() === '') {
-      setFilteredRequisitions(availableRequisitions);
-    } else {
-      const term = reqSearchTerm.toLowerCase();
-      setFilteredRequisitions(availableRequisitions.filter(req => 
-        req.puesto_requerido?.toLowerCase().includes(term) ||
-        companies[req.company_id]?.name?.toLowerCase().includes(term)
-      ));
-    }
-  }, [reqSearchTerm, availableRequisitions, companies]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -122,7 +105,26 @@ export default function JobAdEditorPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [isNew, params.id, error]);
+
+  useEffect(() => {
+    if (!isNew) setStep(2);
+    loadData();
+  }, [isNew, loadData]);
+
+  useEffect(() => {
+    if (reqSearchTerm.trim() === '') {
+      setFilteredRequisitions(availableRequisitions);
+    } else {
+      const term = reqSearchTerm.toLowerCase();
+      setFilteredRequisitions(availableRequisitions.filter(req => 
+        req.puesto_requerido?.toLowerCase().includes(term) ||
+        companies[req.company_id]?.name?.toLowerCase().includes(term)
+      ));
+    }
+  }, [reqSearchTerm, availableRequisitions, companies]);
+
+
 
   const handleRequisitionToggle = (reqId: string, companyId: string) => {
     // If selecting a requisition, ensure it matches the current company_id if set

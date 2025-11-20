@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { PublicNavbar } from '../components/public/layout/PublicNavbar';
 import { PublicFooter } from '../components/public/layout/PublicFooter';
@@ -23,15 +23,7 @@ export default function JobsPage() {
   // Common employment types
   const employmentTypes = ['Tiempo completo', 'Medio tiempo', 'Contrato', 'Freelance', 'Pasantía', 'Híbrido', 'Remoto'];
 
-  useEffect(() => {
-    // Debounce search
-    const timer = setTimeout(() => {
-      loadJobs(1, true);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm, selectedType, locationSearch]);
-
-  async function loadJobs(pageNum: number, reset: boolean = false) {
+  const loadJobs = useCallback(async (pageNum: number, reset: boolean = false) => {
     try {
       setLoading(true);
       const { data, count } = await getPublicJobAds({
@@ -55,7 +47,15 @@ export default function JobsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [pageSize, searchTerm, selectedType, locationSearch]);
+
+  useEffect(() => {
+    // Debounce search
+    const timer = setTimeout(() => {
+      loadJobs(1, true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [loadJobs]);
 
   const handleLoadMore = () => {
     loadJobs(page + 1, false);
