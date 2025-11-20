@@ -203,7 +203,7 @@ export function analyzeCandidateMatch(candidate: FullCandidateProfile, requisiti
   }
 
   // 2. Language Match (English)
-  if (requisition.idioma_ingles) {
+  if (requisition.idiomas?.ingles) {
     totalPoints += 10;
     const english = candidate.languages.find(l => l.language.toLowerCase().includes('ingl') || l.language.toLowerCase().includes('engl'));
     
