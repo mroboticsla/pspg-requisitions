@@ -9,9 +9,10 @@ import { RequireRoleClient } from '@/app/components/RequireRole'
 import { FullCandidateProfile } from '@/lib/types/candidates'
 import { getCandidateProfile, analyzeCandidateMatch, MatchResult } from '@/lib/candidates'
 import { Requisition } from '@/lib/types/requisitions'
-import { FileText, ExternalLink, Briefcase, GraduationCap, Award, Globe, ArrowLeft, CheckCircle, XCircle, AlertCircle, BarChart2 } from 'lucide-react'
+import { FileText, ExternalLink, Briefcase, GraduationCap, Award, Globe, ArrowLeft, CheckCircle, XCircle, AlertCircle, BarChart2, Download } from 'lucide-react'
 import ConfirmModal from '@/app/components/ConfirmModal'
 import CompatibilityModal from '@/app/components/CompatibilityModal'
+import { downloadCandidatePDF } from '@/lib/exportUtils'
 
 export default function CandidateDetailPage() {
   const { id } = useParams()
@@ -418,6 +419,14 @@ export default function CandidateDetailPage() {
               >
                 <BarChart2 className="w-4 h-4 mr-2" />
                 Analizar Compatibilidad
+              </button>
+
+              <button
+                onClick={() => candidate && downloadCandidatePDF(candidate)}
+                className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-accent"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Exportar PDF
               </button>
             </div>
           </div>
