@@ -146,7 +146,8 @@ export default function JobAdsPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard
-            title="Total Anuncios"
+            title="Total"
+            subtitle="Mostrar todos los anuncios"
             value={stats.total}
             icon={<Briefcase className="w-6 h-6" />}
             variant="dark"
@@ -155,6 +156,7 @@ export default function JobAdsPage() {
           />
           <KPICard
             title="Publicados"
+            subtitle="Anuncios en curso"
             value={stats.published}
             percentage={calculatePercentage(stats.published)}
             icon={<CheckCircle className="w-6 h-6" />}
@@ -174,6 +176,7 @@ export default function JobAdsPage() {
           />
           <KPICard
             title="Por Vencer (7 días)"
+            subtitle="Anuncios próximos a vencer"
             value={stats.expiringSoon}
             percentage={calculatePercentage(stats.expiringSoon)}
             icon={<Clock className="w-6 h-6" />}
