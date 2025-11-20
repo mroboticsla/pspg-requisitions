@@ -31,7 +31,7 @@ export default function JobAdsPage() {
   const [ads, setAds] = useState<JobAd[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<JobAdStatus | ''>('');
+  const [statusFilter, setStatusFilter] = useState<JobAdStatus | JobAdStatus[] | 'expiring_soon' | 'expired' | ''>('');
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -49,11 +49,24 @@ export default function JobAdsPage() {
   async function loadAds() {
     try {
       setLoading(true);
+      
+      let apiStatus: string | string[] | undefined = undefined;
+      let apiExpiration: 'expiring_soon' | 'expired' | undefined = undefined;
+
+      if (statusFilter === 'expiring_soon') {
+        apiExpiration = 'expiring_soon';
+      } else if (statusFilter === 'expired') {
+        apiExpiration = 'expired';
+      } else {
+        apiStatus = statusFilter || undefined;
+      }
+
       const { data, count } = await getJobAds({
         page,
         pageSize,
         search: searchTerm,
-        status: statusFilter || undefined
+        status: apiStatus,
+        expiration_status: apiExpiration
       });
       setAds(data);
       setTotalCount(count);
@@ -64,19 +77,11 @@ export default function JobAdsPage() {
     }
   }
 
-  // Stats are now harder to calculate client-side because we don't have all ads.
-  // We might need a separate API call for stats or just remove them/simplify them.
-  // For now, let's keep them but they will only reflect the current page if we use 'ads'.
-  // Ideally we should have a getJobAdsStats() function.
-  // I'll comment out the stats calculation based on 'ads' and maybe just show total count.
-  // Or I can fetch stats separately.
-  // Let's fetch stats separately in a useEffect.
-  
   const [stats, setStats] = useState({
     total: 0,
     published: 0,
-    drafts: 0, // Not used in new requirements but kept for compatibility if needed
-    archived: 0, // Not used in new requirements but kept for compatibility if needed
+    draft: 0,
+    archived: 0,
     expiringSoon: 0,
     expired: 0
   });
@@ -92,6 +97,8 @@ export default function JobAdsPage() {
         ...prev,
         total: data.total,
         published: data.published,
+        draft: data.draft,
+        archived: data.archived,
         expiringSoon: data.expiringSoon,
         expired: data.expired
       }));
@@ -100,14 +107,23 @@ export default function JobAdsPage() {
     }
   }
 
-  const quickFilters: { label: string; value: JobAdStatus | "" }[] = [
+  const quickFilters: { label: string; value: JobAdStatus | 'expiring_soon' | 'expired' | "" }[] = [
     { label: "Todos", value: "" },
     { label: "Publicados", value: "published" },
     { label: "Borradores", value: "draft" },
     { label: "Archivados", value: "archived" },
+    { label: "Próximos a vencer", value: "expiring_soon" },
+    { label: "Vencidos", value: "expired" },
   ];
 
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  const calculatePercentage = (value: number) => {
+    if (stats.total === 0) return 0;
+    return (value / stats.total) * 100;
+  };
+
+  const unpublishedCount = stats.draft + stats.archived;
 
   return (
     <RequireRoleClient allow={['admin', 'superadmin']} redirectTo="/admin/login">
@@ -134,24 +150,36 @@ export default function JobAdsPage() {
             value={stats.total}
             icon={<Briefcase className="w-6 h-6" />}
             variant="dark"
+            onClick={() => { setStatusFilter(''); setPage(1); }}
+            className="cursor-pointer hover:ring-2 hover:ring-admin-accent/50 transition-all"
           />
           <KPICard
             title="Publicados"
             value={stats.published}
+            percentage={calculatePercentage(stats.published)}
             icon={<CheckCircle className="w-6 h-6" />}
             variant="green"
+            onClick={() => { setStatusFilter('published'); setPage(1); }}
+            className="cursor-pointer hover:ring-2 hover:ring-green-500/50 transition-all"
+          />
+          <KPICard
+            title="Sin Publicar"
+            value={unpublishedCount}
+            percentage={calculatePercentage(unpublishedCount)}
+            subtitle="Borradores y Archivados"
+            icon={<Archive className="w-6 h-6" />}
+            variant="neutral"
+            onClick={() => { setStatusFilter(['draft', 'archived']); setPage(1); }}
+            className="cursor-pointer hover:ring-2 hover:ring-gray-500/50 transition-all"
           />
           <KPICard
             title="Por Vencer (7 días)"
             value={stats.expiringSoon}
+            percentage={calculatePercentage(stats.expiringSoon)}
             icon={<Clock className="w-6 h-6" />}
             variant="warning"
-          />
-          <KPICard
-            title="Vencidos"
-            value={stats.expired}
-            icon={<AlertCircle className="w-6 h-6" />}
-            variant="red"
+            onClick={() => { setStatusFilter('expiring_soon'); setPage(1); }}
+            className="cursor-pointer hover:ring-2 hover:ring-yellow-500/50 transition-all"
           />
         </div>
 
@@ -189,6 +217,15 @@ export default function JobAdsPage() {
                 {filter.label}
               </button>
             ))}
+             {/* Add a visual indicator for "Sin Publicar" filter if active */}
+             {Array.isArray(statusFilter) && statusFilter.includes('draft') && statusFilter.includes('archived') && (
+                <button
+                  onClick={() => { setStatusFilter(['draft', 'archived']); setPage(1); }}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors bg-admin-accent text-white shadow-sm"
+                >
+                  Sin Publicar
+                </button>
+             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -205,8 +242,8 @@ export default function JobAdsPage() {
 
             <div>
               <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value as JobAdStatus | ''); setPage(1); }}
+                value={Array.isArray(statusFilter) ? '' : statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value as any); setPage(1); }}
                 className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-admin-accent/20 focus:border-admin-accent text-sm"
               >
                 <option value="">Todos los estados</option>
@@ -215,6 +252,8 @@ export default function JobAdsPage() {
                     {label}
                   </option>
                 ))}
+                <option value="expiring_soon">Próximos a vencer</option>
+                <option value="expired">Vencidos</option>
               </select>
             </div>
           </div>

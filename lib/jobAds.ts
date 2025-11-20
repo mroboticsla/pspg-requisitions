@@ -85,13 +85,14 @@ export async function deleteJobAd(id: string): Promise<void> {
 }
 
 export type JobAdsFilter = {
-  status?: string;
+  status?: string | string[];
   company_id?: string;
   search?: string;
   location?: string;
   employment_type?: string;
   page?: number;
   pageSize?: number;
+  expiration_status?: 'expiring_soon' | 'expired';
 }
 
 export async function getJobAds(filters?: JobAdsFilter): Promise<{ data: JobAd[], count: number }> {
@@ -100,7 +101,26 @@ export async function getJobAds(filters?: JobAdsFilter): Promise<{ data: JobAd[]
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false });
 
-  if (filters?.status) query = query.eq('status', filters.status);
+  if (filters?.expiration_status) {
+    const now = new Date();
+    if (filters.expiration_status === 'expiring_soon') {
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(now.getDate() + 7);
+      query = query
+        .eq('status', 'published')
+        .gt('expiration_date', now.toISOString())
+        .lte('expiration_date', sevenDaysFromNow.toISOString());
+    } else if (filters.expiration_status === 'expired') {
+      query = query.lt('expiration_date', now.toISOString());
+    }
+  } else if (filters?.status) {
+    if (Array.isArray(filters.status)) {
+      query = query.in('status', filters.status);
+    } else {
+      query = query.eq('status', filters.status);
+    }
+  }
+
   if (filters?.company_id) query = query.eq('company_id', filters.company_id);
   if (filters?.search) {
       query = query.ilike('title', `%${filters.search}%`);
@@ -228,6 +248,8 @@ export async function incrementJobAdApplication(id: string): Promise<void> {
 export async function getJobAdStats(): Promise<{
   total: number;
   published: number;
+  draft: number;
+  archived: number;
   expiringSoon: number;
   expired: number;
 }> {
@@ -245,6 +267,16 @@ export async function getJobAdStats(): Promise<{
     .select('*', { count: 'exact', head: true })
     .eq('status', 'published');
 
+  const { count: draft } = await supabase
+    .from('job_ads')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'draft');
+
+  const { count: archived } = await supabase
+    .from('job_ads')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'archived');
+
   const { count: expiringSoon } = await supabase
     .from('job_ads')
     .select('*', { count: 'exact', head: true })
@@ -260,6 +292,8 @@ export async function getJobAdStats(): Promise<{
   return {
     total: total || 0,
     published: published || 0,
+    draft: draft || 0,
+    archived: archived || 0,
     expiringSoon: expiringSoon || 0,
     expired: expired || 0
   };

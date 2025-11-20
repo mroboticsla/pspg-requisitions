@@ -13,6 +13,7 @@ type KPICardProps = {
   percentage?: number | null
   ariaLabel?: string
   className?: string
+  onClick?: () => void
 }
 
 const variantClasses: Record<NonNullable<KPICardProps['variant']>, string> = {
@@ -33,16 +34,21 @@ export function KPICard({
   variant = 'dark',
   percentage = null,
   ariaLabel,
-  className
+  className,
+  onClick
 }: KPICardProps) {
   return (
     <div
+      onClick={onClick}
       className={clsx(
         'relative rounded-xl shadow-md p-4 sm:p-5 bg-gradient-to-br transition-colors focus-within:ring-2 ring-offset-2 ring-brand-accent/40',
         variantClasses[variant],
-        className
+        className,
+        onClick && 'cursor-pointer hover:opacity-90'
       )}
       aria-label={ariaLabel || title}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
