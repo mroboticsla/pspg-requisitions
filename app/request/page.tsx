@@ -131,12 +131,20 @@ function RequisitionFormContent() {
     profesional: false,
     especializacion: false,
     estudianteUniversitario: false,
+    idiomaEspanol: false,
     idiomaIngles: false,
+    idiomaFrances: false,
+    idiomaAleman: false,
+    idiomaPortugues: false,
+    idiomaItaliano: false,
+    idiomaMandarin: false,
     otrosEstudios: '',
     
     // Habilidad informática requerida
       sistemaOperativo: { 
-        windows: false, 
+        windows: false,
+        linux: false,
+        macos: false,
         otros: false 
       },
     wordExcelPowerPoint: { basico: false, intermedio: false, avanzado: false },
@@ -314,7 +322,13 @@ function RequisitionFormContent() {
           profesional: (requisition.formacion_academica as any)?.profesional || false,
           especializacion: (requisition.formacion_academica as any)?.especializacion || false,
           estudianteUniversitario: (requisition.formacion_academica as any)?.estudianteUniversitario || false,
-          idiomaIngles: requisition.idioma_ingles || false,
+          idiomaEspanol: (requisition.idiomas as any)?.espanol || false,
+          idiomaIngles: (requisition.idiomas as any)?.ingles || false,
+          idiomaFrances: (requisition.idiomas as any)?.frances || false,
+          idiomaAleman: (requisition.idiomas as any)?.aleman || false,
+          idiomaPortugues: (requisition.idiomas as any)?.portugues || false,
+          idiomaItaliano: (requisition.idiomas as any)?.italiano || false,
+          idiomaMandarin: (requisition.idiomas as any)?.mandarin || false,
           otrosEstudios: requisition.otros_estudios || '',
           
           
@@ -341,6 +355,8 @@ function RequisitionFormContent() {
           // Mapear sistema operativo si existe
           sistemaOperativo: {
             windows: !!requisition.habilidad_informatica?.sistema_operativo?.windows,
+            linux: !!requisition.habilidad_informatica?.sistema_operativo?.linux,
+            macos: !!requisition.habilidad_informatica?.sistema_operativo?.macos,
             otros: !!requisition.habilidad_informatica?.sistema_operativo?.otros,
           },
           otroEspecifique: requisition.habilidad_informatica?.software_especifico?.[0]?.nombre || '',
@@ -503,7 +519,15 @@ function RequisitionFormContent() {
           estudianteUniversitario: formData.estudianteUniversitario,
         },
         otros_estudios: formData.otrosEstudios,
-        idioma_ingles: formData.idiomaIngles,
+        idiomas: {
+          espanol: formData.idiomaEspanol,
+          ingles: formData.idiomaIngles,
+          frances: formData.idiomaFrances,
+          aleman: formData.idiomaAleman,
+          portugues: formData.idiomaPortugues,
+          italiano: formData.idiomaItaliano,
+          mandarin: formData.idiomaMandarin,
+        },
         habilidad_informatica: {
           word: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           excel: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
@@ -513,6 +537,8 @@ function RequisitionFormContent() {
           base_datos: (formData.baseDatos.basico ? 'basico' : formData.baseDatos.intermedio ? 'intermedio' : formData.baseDatos.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           sistema_operativo: {
             windows: !!formData.sistemaOperativo.windows,
+            linux: !!formData.sistemaOperativo.linux,
+            macos: !!formData.sistemaOperativo.macos,
             otros: !!formData.sistemaOperativo.otros,
           },
           software_especifico: formData.otroEspecifique ? [{ nombre: formData.otroEspecifique, nivel: 'basico' as const }] : undefined,
@@ -600,7 +626,15 @@ function RequisitionFormContent() {
           estudianteUniversitario: formData.estudianteUniversitario,
         },
         otros_estudios: formData.otrosEstudios,
-        idioma_ingles: formData.idiomaIngles,
+        idiomas: {
+          espanol: formData.idiomaEspanol,
+          ingles: formData.idiomaIngles,
+          frances: formData.idiomaFrances,
+          aleman: formData.idiomaAleman,
+          portugues: formData.idiomaPortugues,
+          italiano: formData.idiomaItaliano,
+          mandarin: formData.idiomaMandarin,
+        },
         habilidad_informatica: {
           word: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           excel: (formData.wordExcelPowerPoint.basico ? 'basico' : formData.wordExcelPowerPoint.intermedio ? 'intermedio' : formData.wordExcelPowerPoint.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
@@ -610,6 +644,8 @@ function RequisitionFormContent() {
           base_datos: (formData.baseDatos.basico ? 'basico' : formData.baseDatos.intermedio ? 'intermedio' : formData.baseDatos.avanzado ? 'avanzado' : undefined) as 'basico' | 'intermedio' | 'avanzado' | undefined,
           sistema_operativo: {
             windows: !!formData.sistemaOperativo.windows,
+            linux: !!formData.sistemaOperativo.linux,
+            macos: !!formData.sistemaOperativo.macos,
             otros: !!formData.sistemaOperativo.otros,
           },
           software_especifico: formData.otroEspecifique ? [{ nombre: formData.otroEspecifique, nivel: 'basico' as const }] : undefined,

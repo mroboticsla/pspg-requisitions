@@ -131,6 +131,19 @@ export interface FormacionAcademica {
 export type NivelHabilidad = 'basico' | 'intermedio' | 'avanzado' | 'experto';
 
 /**
+ * Idiomas
+ */
+export interface Idiomas {
+  espanol?: boolean;
+  ingles?: boolean;
+  frances?: boolean;
+  aleman?: boolean;
+  portugues?: boolean;
+  italiano?: boolean;
+  mandarin?: boolean;
+}
+
+/**
  * Habilidades informáticas
  */
 export interface HabilidadInformatica {
@@ -142,6 +155,8 @@ export interface HabilidadInformatica {
   base_datos?: NivelHabilidad;
   sistema_operativo?: {
     windows?: boolean;
+    linux?: boolean;
+    macos?: boolean;
     otros?: boolean;
   };
   software_especifico?: {
@@ -189,7 +204,7 @@ export interface Requisition {
   // PERFIL DEL PUESTO
   formacion_academica?: FormacionAcademica;
   otros_estudios?: string;
-  idioma_ingles?: boolean;
+  idiomas?: Idiomas;
   
   // HABILIDAD INFORMÁTICA
   habilidad_informatica?: HabilidadInformatica;
@@ -237,7 +252,7 @@ export interface CreateRequisitionData {
   funciones_principales?: string[];
   formacion_academica?: FormacionAcademica;
   otros_estudios?: string;
-  idioma_ingles?: boolean;
+  idiomas?: Idiomas;
   habilidad_informatica?: HabilidadInformatica;
   habilidades_tecnicas?: HabilidadesTecnicas;
   custom_responses?: Record<string, Record<string, any>>; // { section_id: { campo: valor } }

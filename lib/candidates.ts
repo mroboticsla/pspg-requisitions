@@ -45,6 +45,7 @@ export async function getCandidateProfile(userId: string): Promise<FullCandidate
     summary: null,
     linkedin_url: null,
     portfolio_url: null,
+    job_profile: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };

@@ -4,11 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   FullCandidateProfile, 
   CandidateExperience, 
-  CandidateEducation, 
-  CandidateSkill, 
-  CandidateLanguage,
-  SkillLevel,
-  LanguageProficiency
+  CandidateEducation,
+  JobProfileData,
+  initialJobProfileData
 } from '@/lib/types/candidates';
 import { 
   getCandidateProfile, 
@@ -19,14 +17,11 @@ import {
   addEducation,
   updateEducation,
   deleteEducation,
-  addSkill,
-  deleteSkill,
-  addLanguage,
-  deleteLanguage,
   uploadResume
 } from '@/lib/candidates';
 import { useToast } from '@/lib/useToast';
 import { Plus, Trash2, Edit2, Upload, FileText, ExternalLink, X } from 'lucide-react';
+import JobProfileForm from '@/app/components/JobProfileForm';
 
 interface Props {
   userId: string;
@@ -44,12 +39,6 @@ export default function ProfessionalProfile({ userId }: Props) {
   
   const [showEduForm, setShowEduForm] = useState(false);
   const [editingEdu, setEditingEdu] = useState<CandidateEducation | null>(null);
-
-  const [newSkill, setNewSkill] = useState('');
-  const [newSkillLevel, setNewSkillLevel] = useState<SkillLevel>('intermediate');
-
-  const [newLang, setNewLang] = useState('');
-  const [newLangProf, setNewLangProf] = useState<LanguageProficiency>('intermediate');
 
   useEffect(() => {
     loadProfile();
@@ -71,13 +60,28 @@ export default function ProfessionalProfile({ userId }: Props) {
   const handleSummarySave = async () => {
     if (!profile) return;
     try {
-      await updateCandidateProfile(userId, { 
+      console.log('Guardando información general...', { userId, data: {
         summary: profile.summary,
         linkedin_url: profile.linkedin_url,
         portfolio_url: profile.portfolio_url
-      } as any);
-      success('Información general actualizada');
+      }});
+      
+      const result = await updateCandidateProfile(userId, { 
+        summary: profile.summary,
+        linkedin_url: profile.linkedin_url,
+        portfolio_url: profile.portfolio_url
+      });
+      
+      console.log('Resultado:', result);
+      
+      if (result.error) {
+        console.error('Error de Supabase:', result.error);
+        error(`Error al guardar: ${result.error.message}`);
+      } else {
+        success('Información general actualizada');
+      }
     } catch (err) {
+      console.error('Error al guardar información:', err);
       error('Error al guardar información');
     }
   };
@@ -186,55 +190,58 @@ export default function ProfessionalProfile({ userId }: Props) {
     }
   };
 
-  // --- Skills Handlers ---
-  const handleAddSkill = async () => {
-    if (!newSkill.trim()) return;
+  // --- Job Profile (Complementary Info) Handlers ---
+  const handleJobProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    if (!profile) return;
+    
+    const { name, value, type } = e.target as HTMLInputElement;
+    const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
+    
+    setProfile({
+      ...profile,
+      job_profile: {
+        ...(profile.job_profile || initialJobProfileData),
+        [name]: type === 'checkbox' ? checked : value
+      }
+    });
+  };
+
+  const handleJobProfileNestedChange = (section: string, field: string, checked: boolean) => {
+    if (!profile) return;
+    
+    setProfile({
+      ...profile,
+      job_profile: {
+        ...(profile.job_profile || initialJobProfileData),
+        [section]: {
+          ...((profile.job_profile?.[section as keyof JobProfileData] || {}) as any),
+          [field]: checked
+        }
+      }
+    });
+  };
+
+  const handleSaveJobProfile = async () => {
+    if (!profile) return;
+    
     try {
-      await addSkill({
-        profile_id: userId,
-        skill_name: newSkill.trim(),
-        level: newSkillLevel
+      console.log('Guardando job profile...', { userId, job_profile: profile.job_profile });
+      
+      const result = await updateCandidateProfile(userId, { 
+        job_profile: profile.job_profile 
       });
-      setNewSkill('');
-      loadProfile();
-      success('Habilidad agregada');
+      
+      console.log('Resultado:', result);
+      
+      if (result.error) {
+        console.error('Error de Supabase:', result.error);
+        error(`Error al guardar: ${result.error.message}`);
+      } else {
+        success('Información complementaria actualizada');
+      }
     } catch (err) {
-      error('Error al agregar habilidad');
-    }
-  };
-
-  const handleDeleteSkill = async (id: string) => {
-    try {
-      await deleteSkill(id);
-      loadProfile();
-    } catch (err) {
-      error('Error al eliminar habilidad');
-    }
-  };
-
-  // --- Language Handlers ---
-  const handleAddLanguage = async () => {
-    if (!newLang.trim()) return;
-    try {
-      await addLanguage({
-        profile_id: userId,
-        language: newLang.trim(),
-        proficiency: newLangProf
-      });
-      setNewLang('');
-      loadProfile();
-      success('Idioma agregado');
-    } catch (err) {
-      error('Error al agregar idioma');
-    }
-  };
-
-  const handleDeleteLanguage = async (id: string) => {
-    try {
-      await deleteLanguage(id);
-      loadProfile();
-    } catch (err) {
-      error('Error al eliminar idioma');
+      console.error('Error al guardar información complementaria:', err);
+      error('Error al guardar información complementaria');
     }
   };
 
@@ -245,38 +252,38 @@ export default function ProfessionalProfile({ userId }: Props) {
     <div className="space-y-8">
       {/* 1. Resumen y CV */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen Profesional</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Acerca de Ti</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-4">
+            <div className="md:col-span-2 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Acerca de ti</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">¿Cómo te describes en el trabajo?</label>
               <textarea
-                rows={4}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent"
-                placeholder="Describe tu perfil profesional, objetivos y fortalezas..."
-                value={profile.summary || ''}
-                onChange={e => setProfile({ ...profile, summary: e.target.value })}
+              rows={4}
+              className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2"
+              placeholder="Describe tu perfil profesional, objetivos y fortalezas..."
+              value={profile.summary || ''}
+              onChange={e => setProfile({ ...profile, summary: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
-                <input
-                  type="url"
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent"
-                  value={profile.linkedin_url || ''}
-                  onChange={e => setProfile({ ...profile, linkedin_url: e.target.value })}
-                />
+              <label className="block text-sm font-medium text-gray-700 mb-1">LinkedIn URL</label>
+              <input
+                type="url"
+                className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2"
+                value={profile.linkedin_url || ''}
+                onChange={e => setProfile({ ...profile, linkedin_url: e.target.value })}
+              />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Portafolio / Web</label>
-                <input
-                  type="url"
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent"
-                  value={profile.portfolio_url || ''}
-                  onChange={e => setProfile({ ...profile, portfolio_url: e.target.value })}
-                />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Portafolio / Web</label>
+              <input
+                type="url"
+                className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2"
+                value={profile.portfolio_url || ''}
+                onChange={e => setProfile({ ...profile, portfolio_url: e.target.value })}
+              />
               </div>
             </div>
             <button
@@ -285,7 +292,7 @@ export default function ProfessionalProfile({ userId }: Props) {
             >
               Guardar Información General
             </button>
-          </div>
+            </div>
 
           <div className="border-t md:border-t-0 md:border-l border-gray-200 pt-6 md:pt-0 md:pl-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Curriculum Vitae (PDF)</label>
@@ -334,7 +341,32 @@ export default function ProfessionalProfile({ userId }: Props) {
         </div>
       </div>
 
-      {/* 2. Experiencia Laboral */}
+      {/* 2. Información Complementaria para Análisis de Compatibilidad */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Resumen de Experiencia Laboral</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Esta información ayuda a analizar tu compatibilidad con las ofertas de trabajo disponibles
+          </p>
+        </div>
+        
+        <JobProfileForm
+          data={profile.job_profile || initialJobProfileData}
+          onChange={handleJobProfileChange}
+          onNestedChange={handleJobProfileNestedChange}
+        />
+        
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={handleSaveJobProfile}
+            className="px-4 py-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent transition-colors text-sm font-medium"
+          >
+            Guardar Información Complementaria
+          </button>
+        </div>
+      </div>
+
+      {/* 3. Experiencia Laboral */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Experiencia Laboral</h3>
@@ -347,40 +379,40 @@ export default function ProfessionalProfile({ userId }: Props) {
         </div>
 
         {showExpForm && (
-          <form onSubmit={handleSaveExperience} className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <form onSubmit={handleSaveExperience} className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Empresa</label>
-                <input required name="company" defaultValue={editingExp?.company} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+              <input required name="company" defaultValue={editingExp?.company} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Cargo</label>
-                <input required name="position" defaultValue={editingExp?.position} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+              <input required name="position" defaultValue={editingExp?.position} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Fecha Inicio</label>
-                <input required type="date" name="start_date" defaultValue={editingExp?.start_date} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+              <input required type="date" name="start_date" defaultValue={editingExp?.start_date} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Fecha Fin</label>
-                <input type="date" name="end_date" defaultValue={editingExp?.end_date || ''} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
+              <input type="date" name="end_date" defaultValue={editingExp?.end_date || ''} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
               </div>
             </div>
             <div className="mb-4">
               <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="is_current" defaultChecked={editingExp?.is_current} className="rounded border-gray-300 text-brand-accent" />
-                Trabajo actual
+              <input type="checkbox" name="is_current" defaultChecked={editingExp?.is_current} className="rounded border border-gray-300 text-brand-accent focus:ring-brand-accent" />
+              Trabajo actual
               </label>
             </div>
             <div className="mb-4">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
-              <textarea name="description" rows={3} defaultValue={editingExp?.description || ''} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+              <textarea name="description" rows={3} defaultValue={editingExp?.description || ''} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setShowExpForm(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
               <button type="submit" className="px-3 py-1.5 text-sm bg-brand-dark text-white rounded-md hover:bg-brand-accent">Guardar</button>
             </div>
-          </form>
+            </form>
         )}
 
         <div className="space-y-4">
@@ -406,7 +438,7 @@ export default function ProfessionalProfile({ userId }: Props) {
         </div>
       </div>
 
-      {/* 3. Educación */}
+      {/* 4. Educación */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Educación</h3>
@@ -419,42 +451,42 @@ export default function ProfessionalProfile({ userId }: Props) {
         </div>
 
         {showEduForm && (
-          <form onSubmit={handleSaveEducation} className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <form onSubmit={handleSaveEducation} className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Institución</label>
-                <input required name="institution" defaultValue={editingEdu?.institution} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Institución</label>
+              <input required name="institution" defaultValue={editingEdu?.institution} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Título / Grado</label>
-                <input required name="degree" defaultValue={editingEdu?.degree} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Título / Grado</label>
+              <input required name="degree" defaultValue={editingEdu?.degree} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Campo de Estudio</label>
-                <input required name="field_of_study" defaultValue={editingEdu?.field_of_study || ''} className="w-full rounded-md border-gray-300 text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Campo de Estudio</label>
+              <input required name="field_of_study" defaultValue={editingEdu?.field_of_study || ''} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Inicio</label>
-                  <input required type="date" name="start_date" defaultValue={editingEdu?.start_date} className="w-full rounded-md border-gray-300 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Fin</label>
-                  <input type="date" name="end_date" defaultValue={editingEdu?.end_date || ''} className="w-full rounded-md border-gray-300 text-sm" />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Inicio</label>
+                <input required type="date" name="start_date" defaultValue={editingEdu?.start_date} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fin</label>
+                <input type="date" name="end_date" defaultValue={editingEdu?.end_date || ''} className="w-full rounded-md border border-gray-300 shadow-sm focus:border-brand-accent focus:ring-brand-accent px-3 py-2" />
+              </div>
               </div>
             </div>
             <div className="mb-4">
               <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" name="is_current" defaultChecked={editingEdu?.is_current} className="rounded border-gray-300 text-brand-accent" />
-                Cursando actualmente
+              <input type="checkbox" name="is_current" defaultChecked={editingEdu?.is_current} className="rounded border border-gray-300 text-brand-accent focus:ring-brand-accent" />
+              Cursando actualmente
               </label>
             </div>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setShowEduForm(false)} className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
               <button type="submit" className="px-3 py-1.5 text-sm bg-brand-dark text-white rounded-md hover:bg-brand-accent">Guardar</button>
             </div>
-          </form>
+            </form>
         )}
 
         <div className="space-y-4">
@@ -476,94 +508,6 @@ export default function ProfessionalProfile({ userId }: Props) {
           {profile.education.length === 0 && !showEduForm && (
             <p className="text-sm text-gray-500 italic text-center py-4">No has agregado educación.</p>
           )}
-        </div>
-      </div>
-
-      {/* 4. Habilidades e Idiomas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Habilidades */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Habilidades</h3>
-          
-          <div className="flex gap-2 mb-4">
-            <input 
-              value={newSkill}
-              onChange={e => setNewSkill(e.target.value)}
-              placeholder="Ej. React, Excel..."
-              className="flex-1 rounded-md border-gray-300 text-sm"
-            />
-            <select 
-              value={newSkillLevel}
-              onChange={e => setNewSkillLevel(e.target.value as SkillLevel)}
-              className="rounded-md border-gray-300 text-sm"
-            >
-              <option value="beginner">Básico</option>
-              <option value="intermediate">Intermedio</option>
-              <option value="advanced">Avanzado</option>
-              <option value="expert">Experto</option>
-            </select>
-            <button 
-              onClick={handleAddSkill}
-              disabled={!newSkill.trim()}
-              className="p-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent disabled:opacity-50"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {profile.skills.map(skill => (
-              <span key={skill.id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                {skill.skill_name} <span className="opacity-60">({skill.level})</span>
-                <button onClick={() => handleDeleteSkill(skill.id)} className="ml-1 hover:text-red-600"><X className="w-3 h-3" /></button>
-              </span>
-            ))}
-            {profile.skills.length === 0 && <p className="text-sm text-gray-500 italic w-full text-center">Sin habilidades registradas</p>}
-          </div>
-        </div>
-
-        {/* Idiomas */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Idiomas</h3>
-          
-          <div className="flex gap-2 mb-4">
-            <input 
-              value={newLang}
-              onChange={e => setNewLang(e.target.value)}
-              placeholder="Ej. Inglés..."
-              className="flex-1 rounded-md border-gray-300 text-sm"
-            />
-            <select 
-              value={newLangProf}
-              onChange={e => setNewLangProf(e.target.value as LanguageProficiency)}
-              className="rounded-md border-gray-300 text-sm"
-            >
-              <option value="basic">Básico</option>
-              <option value="intermediate">Intermedio</option>
-              <option value="advanced">Avanzado</option>
-              <option value="native">Nativo</option>
-            </select>
-            <button 
-              onClick={handleAddLanguage}
-              disabled={!newLang.trim()}
-              className="p-2 bg-brand-dark text-white rounded-md hover:bg-brand-accent disabled:opacity-50"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {profile.languages.map(lang => (
-              <div key={lang.id} className="flex justify-between items-center p-2 bg-gray-50 rounded-md text-sm">
-                <span className="font-medium text-gray-700">{lang.language}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-gray-500 text-xs uppercase">{lang.proficiency}</span>
-                  <button onClick={() => handleDeleteLanguage(lang.id)} className="text-gray-400 hover:text-red-600"><X className="w-4 h-4" /></button>
-                </div>
-              </div>
-            ))}
-            {profile.languages.length === 0 && <p className="text-sm text-gray-500 italic text-center">Sin idiomas registrados</p>}
-          </div>
         </div>
       </div>
     </div>
