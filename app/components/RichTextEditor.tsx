@@ -3,7 +3,7 @@
 import { useEditor, EditorContent } from '@tiptap/react';
 import { useEffect } from 'react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
+// import Underline from '@tiptap/extension-underline';
 import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Strikethrough } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -18,7 +18,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
         code: false,
         codeBlock: false,
       }),
-      Underline,
+      // Underline,
     ],
     content: value,
     onUpdate: ({ editor }) => {
