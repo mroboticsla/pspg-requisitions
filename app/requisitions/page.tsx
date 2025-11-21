@@ -35,7 +35,7 @@ const statusColors: Record<RequisitionStatus, string> = {
 
 export default function MyRequisitionsPage() {
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const { error, success } = useToast();
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [companyNames, setCompanyNames] = useState<Record<string, string>>({});
@@ -170,7 +170,13 @@ export default function MyRequisitionsPage() {
   }, [requisitions, statusFilter, companyFilter, tipoFilter, companyNames, normalizeForMatch, searchTokens]);
 
   const loadData = useCallback(async () => {
-    if (!profile?.id) return;
+    if (authLoading) return;
+
+    if (!profile?.id) {
+      setLoading(false);
+      router.push('/auth');
+      return;
+    }
 
     try {
       setLoading(true);
@@ -225,7 +231,7 @@ export default function MyRequisitionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.id, userRole, error]);
+  }, [profile?.id, userRole, error, authLoading, router]);
 
   useEffect(() => {
     loadData();

@@ -19,6 +19,7 @@ import ConfirmModal from '@/app/components/ConfirmModal';
 import { CURRENCIES, type CurrencyValue } from '@/app/components/CurrencyInput';
 import type { FormField } from '@/lib/types/requisitions';
 import { supabase } from '@/lib/supabaseClient';
+import { getCurrentUserRole } from '@/lib/getCurrentUserRole';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -201,6 +202,31 @@ export default function RequisitionDetailPage() {
     try {
       setLoading(true);
       const data = await getRequisitionById(requisitionId);
+
+      // Validación de permisos
+      if (data) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        
+        if (!currentUser) {
+          throw new Error('Debe iniciar sesión para visualizar esta requisición.');
+        }
+
+        const role = await getCurrentUserRole();
+        const isAdmin = role === 'admin' || role === 'superadmin';
+        const isCreator = data.created_by === currentUser.id;
+
+        if (!isAdmin && !isCreator) {
+          // Verificar acceso a la empresa
+          const { data: hasAccess } = await supabase.rpc('user_has_company_access', {
+            p_company_id: data.company_id
+          });
+
+          if (!hasAccess) {
+            throw new Error('No tiene permisos para visualizar esta requisición.');
+          }
+        }
+      }
+
       setRequisition(data);
       // Cargar nombre de la empresa si procede
       if (data?.company_id) {
