@@ -23,8 +23,11 @@ export function RequireRoleClient({ allow, permission, fallback = null, redirect
   
   // Extraer el nombre del rol del perfil cargado en memoria
   const role = profile?.roles?.name as AppRole | undefined
-  const permissions = profile?.roles?.permissions as { can_do?: string[] } | undefined
-  const canDo = permissions?.can_do || []
+  
+  const canDo = React.useMemo(() => {
+    const permissions = profile?.roles?.permissions as { can_do?: string[] } | undefined
+    return permissions?.can_do || []
+  }, [profile])
   
   const pathname = usePathname()
 

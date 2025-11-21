@@ -277,6 +277,7 @@ export default function SecurityMonitorPage() {
           </table>
         </div>
       </div>
+      </div>
     </RequireRoleClient>
   );
 }
