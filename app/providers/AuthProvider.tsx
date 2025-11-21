@@ -64,7 +64,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.debug(`AuthProvider: Iniciando carga de datos del usuario (background: ${isBackground})`)
         }
         
-        const full = await getFullUserData()
+        // Timeout de seguridad de 15 segundos para evitar que la UI se quede pegada en "Verificando permisos..."
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Auth timeout')), 15000)
+        )
+        
+        // Usar Promise.race para forzar un fallo si getFullUserData se cuelga
+        const full = await Promise.race([
+          getFullUserData(),
+          timeoutPromise
+        ]) as any
         
         if (!mounted) return
         
