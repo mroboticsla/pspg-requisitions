@@ -13,6 +13,7 @@ import type { Requisition, RequisitionStatus, RequisitionStats } from '@/lib/typ
 import { FileText, Eye, Users, Calendar, Briefcase, Download, Filter, Edit } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useToast } from '@/lib/useToast';
+import { RequireRoleClient } from '@/app/components/RequireRole';
 
 const statusLabels: Record<RequisitionStatus, string> = {
   draft: 'Borrador',
@@ -100,7 +101,8 @@ export default function AdminRequisitionsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <RequireRoleClient permission="view_requisitions">
+      <div className="space-y-6">
       <div className="space-y-4 p-4 sm:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -446,5 +448,6 @@ export default function AdminRequisitionsPage() {
         </div>
       </div>
     </div>
+    </RequireRoleClient>
   );
 }

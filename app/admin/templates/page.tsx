@@ -18,6 +18,7 @@ import type { FormTemplate } from '@/lib/types/requisitions';
 import { FileText, Plus, Edit, Trash2, Copy, CheckCircle, Building2, AlertCircle } from 'lucide-react';
 import ConfirmModal from '@/app/components/ConfirmModal';
 import { useToast } from '@/lib/useToast';
+import { RequireRoleClient } from '@/app/components/RequireRole';
 
 interface CompanyWithTemplate {
   id: string;
@@ -203,7 +204,8 @@ export default function TemplatesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <RequireRoleClient permission="manage_templates">
+      <div className="space-y-6">
       <div className="space-y-4 p-4 sm:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -574,5 +576,6 @@ export default function TemplatesPage() {
         type="danger"
       />
     </div>
+    </RequireRoleClient>
   );
 }

@@ -115,7 +115,7 @@ export default function CandidatesAdminPage() {
   }, [candidates, search])
 
   return (
-    <RequireRoleClient allow={['superadmin', 'admin', 'partner']}>
+    <RequireRoleClient permission="manage_candidates">
       <div className="space-y-6">
         <div className="space-y-4 p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

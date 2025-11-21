@@ -138,7 +138,7 @@ export default function CompaniesAdminPage() {
 
   // Renderizar contenido según el rol
   return (
-    <RequireRoleClient allow={['superadmin', 'admin']}>
+    <RequireRoleClient permission="manage_companies">
       <div className="space-y-6">
         {/* Lista de empresas */}
         <div className="space-y-4 p-4 sm:p-6">

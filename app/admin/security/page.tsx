@@ -5,6 +5,7 @@ import { Shield, Activity, Ban, CheckCircle, XCircle, Unlock } from "lucide-reac
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { RequireRoleClient } from "@/app/components/RequireRole";
 
 type SecurityLog = {
   ip: string;
@@ -33,16 +34,6 @@ export default function SecurityMonitorPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [unblockIP, setUnblockIP] = useState("");
   const [unblocking, setUnblocking] = useState(false);
-
-  // Verificar que el usuario sea superadmin
-  useEffect(() => {
-    if (!loading && profile) {
-      const roleName = String(profile.roles?.name || "").toLowerCase();
-      if (roleName !== "superadmin") {
-        router.replace("/admin");
-      }
-    }
-  }, [loading, profile, router]);
 
   // Cargar estadísticas de seguridad
   const loadStats = async () => {
@@ -77,8 +68,11 @@ export default function SecurityMonitorPage() {
   };
 
   useEffect(() => {
-    if (!loading && profile?.roles?.name === "superadmin") {
-      loadStats();
+    if (!loading && profile) {
+      const permissions = profile.roles?.permissions as any;
+      if (permissions?.can_do?.includes('view_security_logs')) {
+        loadStats();
+      }
     }
   }, [loading, profile]);
 
@@ -132,13 +126,9 @@ export default function SecurityMonitorPage() {
     );
   }
 
-  const roleName = String(profile?.roles?.name || "").toLowerCase();
-  if (roleName !== "superadmin") {
-    return null;
-  }
-
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <RequireRoleClient permission="view_security_logs">
+      <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Shield className="h-8 w-8 text-admin-primary" />
@@ -287,6 +277,6 @@ export default function SecurityMonitorPage() {
           </table>
         </div>
       </div>
-    </div>
+    </RequireRoleClient>
   );
 }

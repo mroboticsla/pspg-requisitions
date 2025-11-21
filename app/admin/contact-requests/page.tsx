@@ -138,7 +138,7 @@ export default function ContactRequestsPage() {
   };
 
   return (
-    <RequireRoleClient allow={['admin', 'superadmin']}>
+    <RequireRoleClient permission="manage_contact_requests">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

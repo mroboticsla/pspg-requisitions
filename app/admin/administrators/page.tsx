@@ -324,7 +324,7 @@ export default function AdministratorsPage() {
 
   // Renderizar contenido según el rol
   return (
-    <RequireRoleClient allow={['superadmin']}>
+    <RequireRoleClient permission="manage_administrators">
       <div className="space-y-6">
         {/* Lista de administradores */}
         <div className="space-y-4 p-4 sm:p-6">

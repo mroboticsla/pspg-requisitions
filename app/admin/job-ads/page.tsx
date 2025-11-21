@@ -125,7 +125,7 @@ export default function JobAdsPage() {
   const unpublishedCount = stats.draft + stats.archived;
 
   return (
-    <RequireRoleClient allow={['admin', 'superadmin']} redirectTo="/admin/login">
+    <RequireRoleClient permission="manage_job_ads" redirectTo="/admin/login">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

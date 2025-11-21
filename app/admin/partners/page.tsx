@@ -294,7 +294,7 @@ export default function PartnersPage() {
   )
 
   return (
-    <RequireRoleClient allow={['superadmin', 'admin']}>
+    <RequireRoleClient permission="manage_partners">
       <div className="space-y-6">
         <div className="space-y-4 p-4 sm:p-6">
           {/* Header */}

@@ -104,7 +104,7 @@ export default function RolesAdminPage() {
   )
 
   return (
-    <RequireRoleClient allow={['superadmin']}>
+    <RequireRoleClient permission="manage_roles">
       <div className="space-y-6">
         <div className="space-y-4 p-4 sm:p-6">
           {/* Header */}

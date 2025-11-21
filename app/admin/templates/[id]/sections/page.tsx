@@ -22,6 +22,7 @@ import type {
   FormField,
   FieldType,
 } from '@/lib/types/requisitions';
+import { RequireRoleClient } from '@/app/components/RequireRole';
 
 export default function TemplateSectionsPage() {
   const params = useParams();
@@ -206,16 +207,14 @@ export default function TemplateSectionsPage() {
     );
   }
 
-  if (!template) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-red-500">Plantilla no encontrada</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <RequireRoleClient permission="manage_templates">
+      {!template ? (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <p className="text-red-500">Plantilla no encontrada</p>
+        </div>
+      ) : (
+        <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -557,5 +556,7 @@ export default function TemplateSectionsPage() {
         )}
       </div>
     </div>
+      )}
+    </RequireRoleClient>
   );
 }

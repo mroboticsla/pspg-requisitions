@@ -17,11 +17,12 @@ export default function AdminPage() {
       return
     }
 
-    // Obtener el rol del usuario desde profile.roles
-    const userRole = profile.roles?.name
+    // Verificar permisos en lugar de roles fijos
+    const permissions = profile.roles?.permissions as any
+    const canViewDashboard = permissions?.can_do?.includes('view_dashboard')
 
-    // Si el usuario es admin o superadmin, redirigir al dashboard
-    if (userRole === 'admin' || userRole === 'superadmin') {
+    // Si el usuario tiene permiso de ver dashboard, redirigir
+    if (canViewDashboard) {
       router.replace('/dashboard')
       return
     }
