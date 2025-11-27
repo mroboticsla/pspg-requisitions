@@ -138,11 +138,36 @@ export function formatRolesForExport(roles: any[]): ExportData {
 /**
  * Genera y descarga un PDF con el perfil del candidato
  */
-export function downloadCandidatePDF(candidate: FullCandidateProfile): void {
+export async function downloadCandidatePDF(candidate: FullCandidateProfile): Promise<void> {
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.width
   const margin = 20
   let yPos = 20
+
+  // Add Logo
+  try {
+    const logoUrl = '/images/logo-web-dark.png'
+    const img = new Image()
+    img.src = logoUrl
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+    })
+    
+    const logoWidth = 50
+    const logoHeight = (img.height * logoWidth) / img.width
+    doc.addImage(img, 'PNG', margin, yPos, logoWidth, logoHeight)
+    
+    // Add separator line
+    yPos += logoHeight + 5
+    doc.setDrawColor(200, 200, 200) // Gray
+    doc.setLineWidth(0.5)
+    doc.line(margin, yPos, pageWidth - margin, yPos)
+    
+    yPos += 10
+  } catch (error) {
+    console.error('Error adding logo to PDF:', error)
+  }
 
   // Helper para texto con salto de línea
   const addText = (text: string, fontSize: number, fontStyle: 'normal' | 'bold' | 'italic' = 'normal', color: string = '#000000') => {
