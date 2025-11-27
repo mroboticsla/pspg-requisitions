@@ -141,8 +141,64 @@ export function formatRolesForExport(roles: any[]): ExportData {
 export async function downloadCandidatePDF(candidate: FullCandidateProfile): Promise<void> {
   const doc = new jsPDF()
   const pageWidth = doc.internal.pageSize.width
+  const pageHeight = doc.internal.pageSize.height
   const margin = 20
   let yPos = 20
+
+  // Load Watermark Image
+  let watermarkDataUrl: string | null = null
+  let watermarkDims: { width: number, height: number } | null = null
+
+  try {
+    const wmUrl = '/images/2iso.png'
+    const img = new Image()
+    img.src = wmUrl
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+    })
+
+    // Create canvas to flatten transparency to white (avoids grey box in PDF)
+    const canvas = document.createElement('canvas')
+    canvas.width = img.width
+    canvas.height = img.height
+    const ctx = canvas.getContext('2d')
+    if (ctx) {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0)
+      watermarkDataUrl = canvas.toDataURL('image/jpeg', 0.8)
+      watermarkDims = { width: img.width, height: img.height }
+    }
+  } catch (error) {
+    console.error('Error loading watermark:', error)
+  }
+
+  // Helper to draw watermark
+  const drawnPages = new Set<number>()
+  const drawWatermark = () => {
+    const pageNum = doc.getCurrentPageInfo().pageNumber
+    if (drawnPages.has(pageNum)) return
+    
+    if (watermarkDataUrl && watermarkDims) {
+       try {
+        doc.saveGraphicsState()
+        doc.setGState(new (doc as any).GState({ opacity: 0.1 }))
+        const imgWidth = 160 // Doubled size
+        const imgHeight = (watermarkDims.height * imgWidth) / watermarkDims.width
+        const x = (pageWidth - imgWidth) / 2
+        const y = (pageHeight - imgHeight) / 2
+        doc.addImage(watermarkDataUrl, 'JPEG', x, y, imgWidth, imgHeight)
+        doc.restoreGraphicsState()
+      } catch (e) {
+        console.error('Error adding watermark:', e)
+      }
+    }
+    drawnPages.add(pageNum)
+  }
+
+  // Draw on first page
+  drawWatermark()
 
   // Add Logo
   try {
@@ -228,7 +284,8 @@ export async function downloadCandidatePDF(candidate: FullCandidateProfile): Pro
         2: { cellWidth: 30 },
         3: { cellWidth: 'auto' }
       },
-      margin: { left: margin, right: margin }
+      margin: { left: margin, right: margin },
+      willDrawPage: () => drawWatermark()
     })
 
     yPos = (doc as any).lastAutoTable.finalY + 10
@@ -239,6 +296,7 @@ export async function downloadCandidatePDF(candidate: FullCandidateProfile): Pro
     // Check if we need a new page
     if (yPos > 250) {
       doc.addPage()
+      drawWatermark()
       yPos = 20
     }
 
@@ -259,7 +317,8 @@ export async function downloadCandidatePDF(candidate: FullCandidateProfile): Pro
       theme: 'grid',
       headStyles: { fillColor: [26, 54, 93] },
       styles: { fontSize: 9, cellPadding: 3 },
-      margin: { left: margin, right: margin }
+      margin: { left: margin, right: margin },
+      willDrawPage: () => drawWatermark()
     })
 
     yPos = (doc as any).lastAutoTable.finalY + 10
@@ -269,6 +328,7 @@ export async function downloadCandidatePDF(candidate: FullCandidateProfile): Pro
   if (candidate.job_profile) {
     if (yPos > 250) {
       doc.addPage()
+      drawWatermark()
       yPos = 20
     }
 
@@ -381,7 +441,8 @@ export async function downloadCandidatePDF(candidate: FullCandidateProfile): Pro
           0: { cellWidth: 50, fontStyle: 'bold' },
           1: { cellWidth: 'auto' }
         },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin },
+        willDrawPage: () => drawWatermark()
       })
     }
   }
@@ -390,6 +451,8 @@ export async function downloadCandidatePDF(candidate: FullCandidateProfile): Pro
   const pageCount = (doc as any).internal.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
+    // Watermark logic removed from here to avoid drawing on top
+    
     doc.setFontSize(8)
     doc.setTextColor(150)
     doc.text(
