@@ -11,8 +11,8 @@ import ToastContainer from './components/ToastContainer'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'PSPG Requisiciones',
-  description: 'Plataforma interna para la gestión y aprobación de requisiciones de nuevo personal para PSP Group',
+  title: 'PSP Group',
+  description: 'Da el Siguiente Paso en tu Carrera Profesional con PSP Group',
   icons: {
     icon: [
       '/favicon.ico',
