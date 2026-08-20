@@ -43,7 +43,7 @@ async function addPolicy() {
             EXISTS (
               SELECT 1 FROM public.profiles p
               JOIN public.roles r ON p.role_id = r.id
-              WHERE p.id = auth.uid()
+              WHERE p.id = (select auth.uid())
               AND r.name IN ('admin', 'superadmin')
             )
           );
@@ -59,7 +59,7 @@ async function addPolicy() {
             EXISTS (
               SELECT 1 FROM public.profiles p
               JOIN public.roles r ON p.role_id = r.id
-              WHERE p.id = auth.uid()
+              WHERE p.id = (select auth.uid())
               AND r.name IN ('admin', 'superadmin')
             )
           );

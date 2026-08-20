@@ -38,18 +38,25 @@ AND schemaname = 'public'
 ORDER BY policyname;
 
 -- 4. Si es necesario, agregar política para que usuarios vean su propio perfil
+-- No crear una segunda política SELECT si ya existe una combinada (lint 0006).
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
-    WHERE tablename = 'profiles' 
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'profiles'
+    AND policyname IN ('profiles_select', 'Admins can view all profiles, users can view their own.')
+  ) THEN
+    RAISE NOTICE 'Ya existe una política SELECT combinada en profiles; no se crea duplicado';
+  ELSIF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'profiles'
     AND policyname = 'Users can view own profile'
   ) THEN
     CREATE POLICY "Users can view own profile"
     ON public.profiles FOR SELECT
     TO authenticated
-    USING (id = auth.uid());
-    
+    USING (id = (select auth.uid()));
+
     RAISE NOTICE 'Política "Users can view own profile" creada exitosamente';
   ELSE
     RAISE NOTICE 'Política "Users can view own profile" ya existe';
@@ -59,17 +66,23 @@ END $$;
 -- 5. Si es necesario, agregar política para que usuarios actualicen su propio perfil
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
-    WHERE tablename = 'profiles' 
+  IF EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'profiles'
+    AND policyname IN ('profiles_update', 'Users can update their own profile.')
+  ) THEN
+    RAISE NOTICE 'Ya existe una política UPDATE en profiles; no se crea duplicado';
+  ELSIF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'profiles'
     AND policyname = 'Users can update own profile'
   ) THEN
     CREATE POLICY "Users can update own profile"
     ON public.profiles FOR UPDATE
     TO authenticated
-    USING (id = auth.uid())
-    WITH CHECK (id = auth.uid());
-    
+    USING (id = (select auth.uid()))
+    WITH CHECK (id = (select auth.uid()));
+
     RAISE NOTICE 'Política "Users can update own profile" creada exitosamente';
   ELSE
     RAISE NOTICE 'Política "Users can update own profile" ya existe';

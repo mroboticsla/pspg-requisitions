@@ -67,28 +67,66 @@ ALTER TABLE job_ads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_ad_requisition_assignments ENABLE ROW LEVEL SECURITY;
 
 -- Policies for job_ads
+-- One SELECT policy (published OR admin) avoids multiple_permissive_policies.
+-- Admin writes are split out of FOR ALL so they don't add a second SELECT.
 
--- Public can view published ads
-CREATE POLICY "Public can view published job ads"
+DROP POLICY IF EXISTS "Public can view published job ads" ON job_ads;
+DROP POLICY IF EXISTS "Admins can manage job ads" ON job_ads;
+DROP POLICY IF EXISTS "job_ads_select" ON job_ads;
+DROP POLICY IF EXISTS "Admins can manage job ads (insert)" ON job_ads;
+DROP POLICY IF EXISTS "Admins can manage job ads (update)" ON job_ads;
+DROP POLICY IF EXISTS "Admins can manage job ads (delete)" ON job_ads;
+DROP POLICY IF EXISTS "Admins can manage assignments" ON job_ad_requisition_assignments;
+
+CREATE POLICY "job_ads_select"
 ON job_ads FOR SELECT
 TO anon, authenticated
-USING (status = 'published');
+USING (
+  status = 'published'
+  OR EXISTS (
+    SELECT 1 FROM profiles
+    JOIN roles ON profiles.role_id = roles.id
+    WHERE profiles.id = (select auth.uid())
+    AND roles.name IN ('admin', 'superadmin')
+  )
+);
 
--- Admins and Superadmins have full access
--- Using a subquery to check role based on the project's RBAC structure
-CREATE POLICY "Admins can manage job ads"
-ON job_ads FOR ALL
+CREATE POLICY "Admins can manage job ads (insert)"
+ON job_ads FOR INSERT
+TO authenticated
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    JOIN roles ON profiles.role_id = roles.id
+    WHERE profiles.id = (select auth.uid())
+    AND roles.name IN ('admin', 'superadmin')
+  )
+);
+
+CREATE POLICY "Admins can manage job ads (update)"
+ON job_ads FOR UPDATE
 TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM profiles
     JOIN roles ON profiles.role_id = roles.id
-    WHERE profiles.id = auth.uid()
+    WHERE profiles.id = (select auth.uid())
     AND roles.name IN ('admin', 'superadmin')
   )
 );
 
--- Policies for assignments
+CREATE POLICY "Admins can manage job ads (delete)"
+ON job_ads FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    JOIN roles ON profiles.role_id = roles.id
+    WHERE profiles.id = (select auth.uid())
+    AND roles.name IN ('admin', 'superadmin')
+  )
+);
+
 CREATE POLICY "Admins can manage assignments"
 ON job_ad_requisition_assignments FOR ALL
 TO authenticated
@@ -96,7 +134,7 @@ USING (
   EXISTS (
     SELECT 1 FROM profiles
     JOIN roles ON profiles.role_id = roles.id
-    WHERE profiles.id = auth.uid()
+    WHERE profiles.id = (select auth.uid())
     AND roles.name IN ('admin', 'superadmin')
   )
 );
