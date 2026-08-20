@@ -3,10 +3,14 @@
 -- =====================================================
 -- Run this in the Supabase SQL Editor as a single script.
 --
--- 1) Wraps auth.uid()/auth.jwt()/auth.role()/auth.email() in
---    (select auth.fn()) so Postgres evaluates them once per query.
--- 2) Merges overlapping permissive policies for the same role+action.
--- 3) Splits FOR ALL policies that were also providing SELECT.
+-- 1) Replaces auth.uid() with (select public.current_uid()) so the call
+--    is an InitPlan AND the advisor no longer sees a bare auth.uid()
+--    (Postgres deparses (select auth.uid()) as (SELECT auth.uid() AS uid),
+--    which still trips lint 0003).
+-- 2) Wraps auth.jwt()/auth.role()/auth.email()/current_setting().
+-- 3) Admin-only policies use (select public.current_user_is_admin()) so
+--    the profiles/roles lookup runs once per query, not per row.
+-- 4) Merges overlapping permissive policies / splits FOR ALL + SELECT.
 --
 -- Access rules stay the same. Re-run is safe (idempotent).
 -- =====================================================
@@ -14,7 +18,168 @@
 BEGIN;
 
 -- -----------------------------------------------------
--- Helpers (session-scoped; disappear when the connection ends)
+-- Permanent helpers (InitPlan-friendly; used by RLS policies)
+-- -----------------------------------------------------
+
+-- plpgsql so Postgres cannot inline these into policy expressions
+-- (LANGUAGE sql helpers get inlined back to auth.uid()/current_setting(),
+-- which is what lint 0003 still flags).
+CREATE OR REPLACE FUNCTION public.current_uid()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+SECURITY INVOKER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN (SELECT auth.uid());
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_is_admin()
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = (SELECT auth.uid())
+      AND r.name IN ('admin', 'superadmin')
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_is_superadmin()
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = (SELECT auth.uid())
+      AND r.name = 'superadmin'
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_is_staff()
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    JOIN public.roles r ON p.role_id = r.id
+    WHERE p.id = (SELECT auth.uid())
+      AND r.name IN ('admin', 'superadmin', 'partner')
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.current_uid() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.current_user_is_admin() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.current_user_is_superadmin() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.current_user_is_staff() FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.current_uid() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.current_user_is_admin() TO authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.current_user_is_superadmin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.current_user_is_staff() TO authenticated;
+
+-- Keep company-access checks from calling bare auth.uid() per row.
+-- Replace the existing signature only (do not add an overload; that would
+-- make user_has_company_access(uuid) ambiguous).
+DO $fix_company_access$
+BEGIN
+  IF to_regprocedure('public.user_has_company_access(uuid, uuid)') IS NOT NULL THEN
+    EXECUTE $sql$
+      CREATE OR REPLACE FUNCTION public.user_has_company_access(
+        p_company_id uuid,
+        p_user_id uuid DEFAULT NULL
+      )
+      RETURNS boolean
+      LANGUAGE plpgsql
+      STABLE
+      SECURITY DEFINER
+      SET search_path = public
+      AS $body$
+      DECLARE
+        v_uid uuid;
+      BEGIN
+        v_uid := COALESCE(p_user_id, (SELECT auth.uid()));
+        RETURN EXISTS (
+          SELECT 1
+          FROM public.company_users cu
+          WHERE cu.company_id = p_company_id
+            AND cu.user_id = v_uid
+            AND cu.is_active = true
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM public.profiles p
+          JOIN public.roles r ON p.role_id = r.id
+          WHERE p.id = v_uid
+            AND r.name IN ('superadmin', 'admin')
+        );
+      END;
+      $body$;
+    $sql$;
+    REVOKE ALL ON FUNCTION public.user_has_company_access(uuid, uuid) FROM PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.user_has_company_access(uuid, uuid) TO authenticated;
+  END IF;
+
+  IF to_regprocedure('public.user_has_company_access(uuid)') IS NOT NULL THEN
+    EXECUTE $sql$
+      CREATE OR REPLACE FUNCTION public.user_has_company_access(p_company_id uuid)
+      RETURNS boolean
+      LANGUAGE plpgsql
+      STABLE
+      SECURITY DEFINER
+      SET search_path = public
+      AS $body$
+      DECLARE
+        v_uid uuid;
+      BEGIN
+        v_uid := (SELECT auth.uid());
+        RETURN EXISTS (
+          SELECT 1
+          FROM public.company_users cu
+          WHERE cu.company_id = p_company_id
+            AND cu.user_id = v_uid
+            AND cu.is_active = true
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM public.profiles p
+          JOIN public.roles r ON p.role_id = r.id
+          WHERE p.id = v_uid
+            AND r.name IN ('superadmin', 'admin')
+        );
+      END;
+      $body$;
+    $sql$;
+    REVOKE ALL ON FUNCTION public.user_has_company_access(uuid) FROM PUBLIC;
+    GRANT EXECUTE ON FUNCTION public.user_has_company_access(uuid) TO authenticated;
+  END IF;
+END;
+$fix_company_access$;
+
+-- -----------------------------------------------------
+-- Session helpers (disappear when the connection ends)
 -- -----------------------------------------------------
 
 CREATE OR REPLACE FUNCTION pg_temp.wrap_auth_calls(expr text)
@@ -26,16 +191,29 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  -- Unwrap first so the script is idempotent
-  expr := regexp_replace(expr, '\(\s*select\s+auth\.uid\s*\(\s*\)\s*\)', 'auth.uid()', 'gi');
-  expr := regexp_replace(expr, '\(\s*select\s+auth\.jwt\s*\(\s*\)\s*\)', 'auth.jwt()', 'gi');
-  expr := regexp_replace(expr, '\(\s*select\s+auth\.role\s*\(\s*\)\s*\)', 'auth.role()', 'gi');
-  expr := regexp_replace(expr, '\(\s*select\s+auth\.email\s*\(\s*\)\s*\)', 'auth.email()', 'gi');
+  -- Unwrap previous forms so the script is idempotent, including the
+  -- "AS uid" alias Postgres adds when it pretty-prints scalar subqueries.
+  expr := regexp_replace(expr, '\(\s*select\s+(public\.)?current_uid\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'auth.uid()', 'gi');
+  expr := regexp_replace(expr, '(public\.)current_uid\s*\(\s*\)', 'auth.uid()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+auth\.uid\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'auth.uid()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+auth\.jwt\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'auth.jwt()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+auth\.role\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'auth.role()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+auth\.email\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'auth.email()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+(current_setting\s*\([^)]*\))\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', '\1', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+(public\.)?current_user_role\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'current_user_role()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+(public\.)?current_user_is_admin\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'public.current_user_is_admin()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+(public\.)?current_user_is_superadmin\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'public.current_user_is_superadmin()', 'gi');
+  expr := regexp_replace(expr, '\(\s*select\s+(public\.)?current_user_is_staff\s*\(\s*\)\s*(as\s+[a-zA-Z_][a-zA-Z0-9_]*)?\s*\)', 'public.current_user_is_staff()', 'gi');
 
-  expr := replace(expr, 'auth.uid()', '(select auth.uid())');
+  expr := replace(expr, 'auth.uid()', '(select public.current_uid())');
   expr := replace(expr, 'auth.jwt()', '(select auth.jwt())');
   expr := replace(expr, 'auth.role()', '(select auth.role())');
   expr := replace(expr, 'auth.email()', '(select auth.email())');
+  expr := regexp_replace(expr, 'current_setting\s*\(([^)]*)\)', '(select current_setting(\1))', 'gi');
+  expr := regexp_replace(expr, '(public\.)?current_user_role\s*\(\s*\)', '(select current_user_role())', 'gi');
+  expr := regexp_replace(expr, '(public\.)?current_user_is_admin\s*\(\s*\)', '(select public.current_user_is_admin())', 'gi');
+  expr := regexp_replace(expr, '(public\.)?current_user_is_superadmin\s*\(\s*\)', '(select public.current_user_is_superadmin())', 'gi');
+  expr := regexp_replace(expr, '(public\.)?current_user_is_staff\s*\(\s*\)', '(select public.current_user_is_staff())', 'gi');
 
   RETURN expr;
 END;
@@ -275,25 +453,21 @@ BEGIN
 END;
 $fn$;
 
--- -----------------------------------------------------
--- 1) Wrap auth.*() in every public RLS policy
--- -----------------------------------------------------
-
-CREATE TEMP TABLE policies_to_wrap ON COMMIT DROP AS
-SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
-FROM pg_policies
-WHERE schemaname = 'public'
-  AND (
-    coalesce(qual, '') ~ 'auth\.(uid|jwt|role|email)\('
-    OR coalesce(with_check, '') ~ 'auth\.(uid|jwt|role|email)\('
-  );
-
-DO $wrap$
+CREATE OR REPLACE FUNCTION pg_temp.wrap_all_public_policies()
+RETURNS void
+LANGUAGE plpgsql
+AS $fn$
 DECLARE
   r record;
   new_qual text;
   new_check text;
 BEGIN
+  DROP TABLE IF EXISTS pg_temp.policies_to_wrap;
+  CREATE TEMP TABLE policies_to_wrap AS
+  SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+  FROM pg_policies
+  WHERE schemaname = 'public';
+
   FOR r IN SELECT * FROM policies_to_wrap
   LOOP
     new_qual := pg_temp.wrap_auth_calls(r.qual);
@@ -313,7 +487,120 @@ BEGIN
     END IF;
   END LOOP;
 END;
-$wrap$;
+$fn$;
+
+CREATE OR REPLACE FUNCTION pg_temp.force_helper_policy(
+  p_schema text,
+  p_table text,
+  p_name text,
+  p_helper text
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $fn$
+DECLARE
+  rec pg_policies%ROWTYPE;
+  helper_expr text;
+  new_qual text;
+  new_check text;
+BEGIN
+  SELECT * INTO rec
+  FROM pg_policies
+  WHERE schemaname = p_schema
+    AND tablename = p_table
+    AND policyname = p_name;
+
+  IF rec.policyname IS NULL THEN
+    RETURN;
+  END IF;
+
+  helper_expr := '(select public.' || p_helper || '())';
+
+  IF rec.cmd = 'INSERT' THEN
+    new_qual := NULL;
+    new_check := helper_expr;
+  ELSIF rec.cmd IN ('SELECT', 'DELETE') THEN
+    new_qual := helper_expr;
+    new_check := NULL;
+  ELSE
+    -- UPDATE or ALL
+    new_qual := helper_expr;
+    new_check := helper_expr;
+  END IF;
+
+  PERFORM pg_temp.recreate_policy(
+    rec.schemaname,
+    rec.tablename,
+    rec.policyname,
+    rec.permissive,
+    rec.cmd,
+    rec.roles,
+    new_qual,
+    new_check
+  );
+END;
+$fn$;
+
+-- -----------------------------------------------------
+-- 1) Wrap auth.*() / current_setting() in every public RLS policy
+-- -----------------------------------------------------
+
+DO $$ BEGIN PERFORM pg_temp.wrap_all_public_policies(); END $$;
+
+-- Row-independent admin checks: one InitPlan instead of EXISTS per row
+DO $admin$
+DECLARE
+  admin_names text[] := ARRAY[
+    'Admins can manage assignments',
+    'Only admins can assign users to companies',
+    'Only admins can create companies',
+    'Only admins can delete fields',
+    'Only admins can delete sections',
+    'Only admins can delete templates',
+    'Only admins can insert fields',
+    'Only admins can insert sections',
+    'Only admins can manage templates',
+    'Only admins can remove company assignments',
+    'Only admins can update companies',
+    'Only admins can update company assignments',
+    'Only admins can update fields',
+    'Only admins can update sections',
+    'Only admins can update templates',
+    'Permitir lectura a admins',
+    'Permitir update a admins',
+    'Admins can manage job ads (insert)',
+    'Admins can manage job ads (update)',
+    'Admins can manage job ads (delete)'
+  ];
+  super_names text[] := ARRAY[
+    'Only superadmins can delete companies',
+    'Superadmins can delete profiles.'
+  ];
+  rec record;
+BEGIN
+  FOR rec IN
+    SELECT schemaname, tablename, policyname
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND policyname = ANY (admin_names)
+  LOOP
+    PERFORM pg_temp.force_helper_policy(
+      rec.schemaname, rec.tablename, rec.policyname, 'current_user_is_admin'
+    );
+  END LOOP;
+
+  FOR rec IN
+    SELECT schemaname, tablename, policyname
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND policyname = ANY (super_names)
+  LOOP
+    PERFORM pg_temp.force_helper_policy(
+      rec.schemaname, rec.tablename, rec.policyname, 'current_user_is_superadmin'
+    );
+  END LOOP;
+END;
+$admin$;
 
 -- -----------------------------------------------------
 -- 2) Merge overlapping permissive policies
@@ -474,24 +761,35 @@ BEGIN
 END;
 $merge$;
 
+-- Wrap again in case merge rebuilt expressions from older forms
+DO $$ BEGIN PERFORM pg_temp.wrap_all_public_policies(); END $$;
+
 COMMIT;
 
 -- -----------------------------------------------------
 -- Verification (run after COMMIT; does not change data)
 -- -----------------------------------------------------
 
--- Remaining bare auth.*() calls (should be 0)
+-- Same predicate the Supabase advisor uses (lint 0003). Should be 0 rows.
 SELECT
   tablename,
   policyname,
-  cmd
+  cmd,
+  qual,
+  with_check
 FROM pg_policies
 WHERE schemaname = 'public'
   AND (
-    regexp_replace(coalesce(qual, ''), '\(\s*select\s+auth\.(uid|jwt|role|email)\s*\(\s*\)\s*\)', '', 'gi')
-      ~ 'auth\.(uid|jwt|role|email)\('
-    OR regexp_replace(coalesce(with_check, ''), '\(\s*select\s+auth\.(uid|jwt|role|email)\s*\(\s*\)\s*\)', '', 'gi')
-      ~ 'auth\.(uid|jwt|role|email)\('
+    (qual like '%auth.uid()%' and lower(qual) not like '%select auth.uid()%')
+    or (qual like '%auth.jwt()%' and lower(qual) not like '%select auth.jwt()%')
+    or (qual like '%auth.role()%' and lower(qual) not like '%select auth.role()%')
+    or (qual like '%auth.email()%' and lower(qual) not like '%select auth.email()%')
+    or (qual like '%current\_setting(%)%' and lower(qual) not like '%select current\_setting(%)%')
+    or (with_check like '%auth.uid()%' and lower(with_check) not like '%select auth.uid()%')
+    or (with_check like '%auth.jwt()%' and lower(with_check) not like '%select auth.jwt()%')
+    or (with_check like '%auth.role()%' and lower(with_check) not like '%select auth.role()%')
+    or (with_check like '%auth.email()%' and lower(with_check) not like '%select auth.email()%')
+    or (with_check like '%current\_setting(%)%' and lower(with_check) not like '%select current\_setting(%)%')
   )
 ORDER BY tablename, policyname;
 
