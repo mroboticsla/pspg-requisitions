@@ -8,6 +8,7 @@ import { RequireRoleClient } from '@/app/components/RequireRole'
 import { useToast } from '@/lib/useToast'
 import { Search, FileText, Eye, Briefcase, GraduationCap } from 'lucide-react'
 import { FullCandidateProfile } from '@/lib/types/candidates'
+import { openResumeUrl } from '@/lib/storageUrls'
 
 interface CandidateRow {
   id: string
@@ -171,7 +172,11 @@ export default function CandidatesAdminPage() {
                           <div className="flex items-center gap-2">
                             {candidate.candidate_profile?.resume_url && (
                               <a
-                                href={candidate.candidate_profile.resume_url}
+                                href={candidate.candidate_profile.resume_url || '#'}
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  void openResumeUrl(candidate.candidate_profile?.resume_url)
+                                }}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-2 text-gray-400 hover:text-red-600"

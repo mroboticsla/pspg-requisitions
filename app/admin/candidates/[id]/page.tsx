@@ -13,6 +13,7 @@ import { FileText, ExternalLink, Briefcase, GraduationCap, Award, Globe, ArrowLe
 import ConfirmModal from '@/app/components/ConfirmModal'
 import CompatibilityModal from '@/app/components/CompatibilityModal'
 import { downloadCandidatePDF } from '@/lib/exportUtils'
+import { openResumeUrl, rewritePublicStorageUrl } from '@/lib/storageUrls'
 
 export default function CandidateDetailPage() {
   const { id } = useParams()
@@ -114,7 +115,7 @@ export default function CandidateDetailPage() {
             <div className="flex-shrink-0">
               {candidate.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={candidate.avatar_url} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-4 border-gray-100" />
+                <img src={rewritePublicStorageUrl(candidate.avatar_url) || candidate.avatar_url} alt="Avatar" className="w-24 h-24 rounded-full object-cover border-4 border-gray-100" />
               ) : (
                 <div className="w-24 h-24 rounded-full bg-brand-dark flex items-center justify-center text-white text-3xl font-bold">
                   {candidate.first_name?.[0]}{candidate.last_name?.[0]}
@@ -132,7 +133,11 @@ export default function CandidateDetailPage() {
               <div className="flex flex-wrap gap-3 mt-4">
                 {candidate.resume_url && (
                   <a 
-                    href={candidate.resume_url} 
+                    href={candidate.resume_url || '#'} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      void openResumeUrl(candidate.resume_url);
+                    }}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-3 py-1.5 rounded-md bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100"

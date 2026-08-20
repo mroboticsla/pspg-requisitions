@@ -3,6 +3,7 @@
 
 import React, { useState, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { rewritePublicStorageUrl } from '@/lib/storageUrls';
 import { validateImageFile, isSquareImage, resizeAndConvertToWebP } from '@/lib/imageUtils';
 import ImageCropModal from './ImageCropModal';
 import ConfirmModal from './ConfirmModal';
@@ -113,6 +114,9 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate, d
 
       if (uploadError) {
         console.error('❌ Error de subida:', uploadError);
+        if (/bucket not found/i.test(uploadError.message)) {
+          throw new Error('El bucket "avatars" no existe en Storage. Ejecuta scripts/setup-storage-selfhosted.sql y scripts/migrate-storage-from-cloud.js');
+        }
         throw new Error(`Error al subir imagen: ${uploadError.message}`);
       }
 
@@ -258,7 +262,7 @@ export default function AvatarUpload({ user, currentAvatarUrl, onAvatarUpdate, d
       <div className="relative inline-block">
         {avatarUrl ? (
           <img
-            src={avatarUrl}
+            src={rewritePublicStorageUrl(avatarUrl) || avatarUrl}
             alt="Avatar"
             className={`${getSizeClasses()} rounded-full object-cover border-4 border-white shadow-lg`}
           />

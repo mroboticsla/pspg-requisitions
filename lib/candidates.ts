@@ -141,9 +141,14 @@ export async function uploadResume(userId: string, file: File) {
 
   const { error: uploadError } = await supabase.storage
     .from('resumes')
-    .upload(fileName, file, { upsert: true });
+    .upload(fileName, file, { upsert: true, contentType: file.type || 'application/pdf' });
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    if (/bucket not found/i.test(uploadError.message)) {
+      throw new Error('El bucket "resumes" no existe en Storage. Ejecuta scripts/setup-storage-selfhosted.sql y scripts/migrate-storage-from-cloud.js')
+    }
+    throw uploadError
+  }
 
   const { data: { publicUrl } } = supabase.storage
     .from('resumes')

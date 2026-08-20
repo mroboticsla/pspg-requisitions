@@ -64,20 +64,20 @@ DROP POLICY IF EXISTS "Users can update their own metadata" ON user_metadata;
 CREATE POLICY "Users can view their own metadata"
 ON user_metadata FOR SELECT
 TO authenticated
-USING (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id);
 
 -- Los usuarios pueden insertar su propia metadata
 CREATE POLICY "Users can insert their own metadata"
 ON user_metadata FOR INSERT
 TO authenticated
-WITH CHECK (auth.uid() = user_id);
+WITH CHECK ((select auth.uid()) = user_id);
 
 -- Los usuarios pueden actualizar su propia metadata
 CREATE POLICY "Users can update their own metadata"
 ON user_metadata FOR UPDATE
 TO authenticated
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
+USING ((select auth.uid()) = user_id)
+WITH CHECK ((select auth.uid()) = user_id);
 
 -- 7. Función para actualizar updated_at automáticamente
 -- =====================================================
@@ -101,9 +101,12 @@ EXECUTE FUNCTION update_user_metadata_updated_at();
 -- =====================================================
 -- POLÍTICAS DE STORAGE (RLS)
 -- =====================================================
--- NOTA: Estas políticas deben ejecutarse en el bucket 'avatars'
--- que debe ser creado manualmente en la UI de Supabase
--- con la opción "Public bucket" activada
+-- Crear el bucket si no existe (público)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- NOTA: Estas políticas aplican al bucket 'avatars'
 -- =====================================================
 
 -- Primero eliminar políticas existentes si las hay (para re-ejecución)
@@ -128,7 +131,7 @@ ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
   bucket_id = 'avatars' 
-  AND (storage.foldername(name))[1] = concat('user-', auth.uid()::text)
+  AND (storage.foldername(name))[1] = concat('user-', (select auth.uid())::text)
 );
 
 -- Política de Actualización
@@ -139,7 +142,7 @@ ON storage.objects FOR UPDATE
 TO authenticated
 USING (
   bucket_id = 'avatars' 
-  AND (storage.foldername(name))[1] = concat('user-', auth.uid()::text)
+  AND (storage.foldername(name))[1] = concat('user-', (select auth.uid())::text)
 );
 
 -- Política de Eliminación
@@ -150,7 +153,7 @@ ON storage.objects FOR DELETE
 TO authenticated
 USING (
   bucket_id = 'avatars' 
-  AND (storage.foldername(name))[1] = concat('user-', auth.uid()::text)
+  AND (storage.foldername(name))[1] = concat('user-', (select auth.uid())::text)
 );
 
 -- =====================================================
@@ -199,10 +202,7 @@ COMMENT ON FUNCTION get_user_avatar_url(UUID) IS
 -- NOTAS IMPORTANTES
 -- =====================================================
 -- 
--- 1. Asegúrate de crear el bucket 'avatars' ANTES de ejecutar este script:
---    - Ve a Storage en Supabase
---    - Crea un nuevo bucket llamado 'avatars'
---    - Marca la opción "Public bucket"
+-- 1. El bucket 'avatars' se crea con el INSERT de arriba (público).
 --
 -- 2. Estructura de carpetas esperada:
 --    avatars/

@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import React, { useState } from 'react';
+import { rewritePublicStorageUrl } from '@/lib/storageUrls';
 
 interface UserAvatarProps {
   avatarUrl?: string | null;
@@ -21,11 +22,13 @@ export default function UserAvatar({ avatarUrl, initials, size = 'md', className
   const [imageError, setImageError] = useState(false);
   const baseClasses = sizeClasses[size];
   
+  const resolvedAvatarUrl = rewritePublicStorageUrl(avatarUrl);
+
   // Si hay URL y no ha fallado la carga
-  if (avatarUrl && !imageError) {
+  if (resolvedAvatarUrl && !imageError) {
     return (
       <img
-        src={avatarUrl}
+        src={resolvedAvatarUrl}
         alt="Avatar"
         className={`${baseClasses} rounded-full object-cover shadow-md ${className}`}
         onError={() => {

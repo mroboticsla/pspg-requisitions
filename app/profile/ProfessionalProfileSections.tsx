@@ -22,6 +22,7 @@ import {
 import { useToast } from '@/lib/useToast';
 import { Plus, Trash2, Edit2, Upload, FileText, ExternalLink } from 'lucide-react';
 import JobProfileForm from '@/app/components/JobProfileForm';
+import { openResumeUrl } from '@/lib/storageUrls';
 
 interface Props {
   userId: string;
@@ -323,7 +324,11 @@ export default function ProfessionalProfileSections({ userId, onSectionChange }:
                     <span className="text-sm text-gray-600 truncate">CV Cargado</span>
                   </div>
                   <a 
-                    href={profile.resume_url} 
+                    href={profile.resume_url || '#'} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      void openResumeUrl(profile.resume_url);
+                    }}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-brand-accent hover:text-brand-dark"
